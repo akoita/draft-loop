@@ -39,6 +39,11 @@
   --teal-wash: rgba(47, 208, 184, 0.13);
   --teal-line: rgba(47, 208, 184, 0.32);
 
+  --violet: #b2a6ff;
+  --violet-ink: #15112e;
+  --violet-wash: rgba(178, 166, 255, 0.14);
+  --violet-line: rgba(178, 166, 255, 0.36);
+
   --amber: #f0b53c;
   --amber-ink: #0f1319;
   --amber-wash: rgba(240, 181, 60, 0.12);
@@ -186,6 +191,11 @@
   --teal-ink: #f2fbf8;
   --teal-wash: rgba(30, 170, 145, 0.14);
   --teal-line: rgba(12, 114, 97, 0.4);
+
+  --violet: #5541bd;
+  --violet-ink: #f6f4ff;
+  --violet-wash: rgba(100, 80, 215, 0.12);
+  --violet-line: rgba(85, 65, 189, 0.42);
 
   --amber: #7f5205;
   --amber-ink: #fdf6ea;
@@ -1067,95 +1077,403 @@ input[type="text"].workspace-title-input {
   white-space: nowrap;
 }
 
-.loop-rail {
-  position: relative;
+/* The run's stage track (#3214): who works each step, round by round. The wide form shows
+   when its row has room; otherwise one line with a bar coloured by actor opens the rounds. */
+.stage-track {
   min-width: 0;
   max-width: 100%;
-  padding-bottom: var(--space-4);
+  color: var(--text-2);
+  font-size: var(--text-xs);
 }
 
-.loop-steps {
+.stage-track-wide {
+  display: none;
+  gap: var(--space-2);
+}
+
+@container (min-width: 44rem) {
+  .stage-track-wide {
+    display: grid;
+  }
+
+  .stage-track-narrow {
+    display: none;
+  }
+}
+
+.stage-cast,
+.stage-now {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+}
+
+.stage-now {
+  gap: var(--space-2);
+  color: var(--text-1);
+}
+
+.stage-cast-member {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stage-cast-member strong {
+  color: var(--text-1);
+  font-weight: 650;
+}
+
+.stage-badge {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 0.66rem;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.stage-badge-author {
+  background: var(--teal);
+  color: var(--teal-ink);
+}
+
+.stage-badge-critic {
+  background: var(--violet);
+  color: var(--violet-ink);
+}
+
+.stage-badge-you {
+  background: var(--amber);
+  color: var(--amber-ink);
+}
+
+.stage-pulse {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: stage-pulse 1.6s ease-out infinite;
+}
+
+.stage-pulse-author {
+  background: var(--teal);
+  color: var(--teal-line);
+}
+
+.stage-pulse-critic {
+  background: var(--violet);
+  color: var(--violet-line);
+}
+
+@keyframes stage-pulse {
+  0% {
+    box-shadow: 0 0 0 0 currentcolor;
+  }
+
+  100% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+
+.stage-rounds {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.loop-step {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  color: var(--text-4);
-  font-size: var(--text-micro);
-  font-weight: 700;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.loop-step + .loop-step::before {
-  width: clamp(12px, 4vw, 40px);
-  height: 1px;
-  margin: 0 var(--space-3);
-  background: var(--border-strong);
-  content: "";
-}
-
-.loop-node {
-  flex: none;
+.stage-round {
   display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border: 1px solid var(--border-strong);
-  border-radius: 50%;
-  color: transparent;
-  font-size: 0.58rem;
+  gap: 3px;
 }
 
-.loop-step-done {
-  color: var(--text-3);
-}
-
-.loop-step-done .loop-node {
-  border-color: var(--teal-line);
-  color: var(--teal);
-}
-
-.loop-step-active {
-  color: var(--text-1);
-}
-
-.loop-step-active .loop-node {
-  border-color: var(--teal);
-  background: var(--teal);
-  color: var(--teal-ink);
-}
-
-.loop-arc {
-  position: absolute;
-  inset: auto 0 0;
-  width: 100%;
-  height: 13px;
-  color: var(--border-strong);
-  pointer-events: none;
-}
-
-.loop-round {
-  position: absolute;
-  bottom: -7px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0 var(--space-2);
+.stage-round-label {
   color: var(--text-4);
-  background: var(--surface);
   font-size: var(--text-micro);
   font-weight: 650;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.stage-round-changed {
+  color: var(--violet);
+}
+
+.stage-steps {
+  display: flex;
+  gap: var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  background: var(--surface-2);
+}
+
+.stage-round-current .stage-steps {
+  border-color: var(--teal-line);
+}
+
+.stage-gate .stage-steps {
+  border-style: dashed;
+}
+
+.stage-gate.stage-round-current .stage-steps {
+  border-color: var(--amber-line);
+}
+
+.stage-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 4px;
+  padding: 2px 8px 2px 3px;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.stage-step-label {
+  font-weight: 650;
+}
+
+.stage-step-model {
+  color: var(--text-3);
+}
+
+.stage-step-status {
+  color: var(--teal);
+  font-weight: 700;
+}
+
+.stage-step-author {
+  background: var(--teal-wash);
+}
+
+.stage-step-critic {
+  background: var(--violet-wash);
+}
+
+.stage-step-you {
+  background: var(--amber-wash);
+}
+
+.stage-step-waiting {
+  background: transparent;
+  color: var(--text-4);
+}
+
+.stage-step-waiting .stage-badge {
+  opacity: 0.45;
+}
+
+.stage-step.stage-step-active {
+  outline: 2px solid var(--teal);
+  outline-offset: -2px;
+}
+
+.stage-step-critic.stage-step-active {
+  outline-color: var(--violet);
+}
+
+.stage-step-you.stage-step-active {
+  outline-color: var(--amber);
+}
+
+/* Older rounds fold into one chip; open, they line up in place. */
+.stage-round-folded details {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.stage-round-folded summary {
+  display: grid;
+  grid-template-columns: auto;
+  gap: 3px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.stage-round-folded summary::-webkit-details-marker {
+  display: none;
+}
+
+.stage-round-folded summary .stage-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px var(--space-2);
+  background: var(--surface-2);
+}
+
+.stage-dots > span {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.stage-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.stage-dot-author {
+  background: var(--teal);
+}
+
+.stage-dot-critic {
+  background: var(--violet);
+}
+
+.stage-fold-hint {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.stage-round-folded details[open] .stage-dots {
+  border-color: var(--border-strong);
+}
+
+.stage-rounds-nested {
+  flex-wrap: nowrap;
+}
+
+.stage-round-folded summary:focus-visible,
+.stage-track-narrow summary:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Narrow: one line and a bar; the rounds open as a list under it. */
+.stage-track-narrow summary {
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.stage-track-narrow summary::-webkit-details-marker {
+  display: none;
+}
+
+.stage-track-narrow summary .stage-now {
+  flex-wrap: nowrap;
+}
+
+.stage-track-narrow summary .stage-now::after {
+  margin-left: auto;
+  color: var(--text-3);
+  content: "▾";
+}
+
+.stage-track-narrow[open] summary .stage-now::after {
+  content: "▴";
+}
+
+.stage-bar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.stage-bar-round {
+  display: flex;
+  flex: 1;
+  gap: 3px;
+}
+
+.stage-bar-seg {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--surface-4);
+}
+
+.stage-bar-gate {
+  flex: 0 0 18%;
+  border: 1px dashed var(--amber-line);
+  background: transparent;
+}
+
+.stage-bar-author.stage-bar-done {
+  background: var(--teal);
+}
+
+.stage-bar-critic.stage-bar-done {
+  background: var(--violet);
+}
+
+.stage-bar-author.stage-bar-active {
+  background: repeating-linear-gradient(90deg, var(--teal) 0 6px, var(--teal-line) 6px 12px);
+}
+
+.stage-bar-critic.stage-bar-active {
+  background: repeating-linear-gradient(90deg, var(--violet) 0 6px, var(--violet-line) 6px 12px);
+}
+
+.stage-bar-gate.stage-bar-active,
+.stage-bar-gate.stage-bar-done {
+  border-style: solid;
+  background: var(--amber);
+}
+
+.stage-track-narrow .stage-cast {
+  margin-top: var(--space-3);
+}
+
+.stage-timeline {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage-timeline ul {
+  display: grid;
+  gap: var(--space-1);
+  margin: 3px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage-timeline ul li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-1);
+}
+
+.stage-timeline .stage-step-waiting {
+  color: var(--text-4);
+}
+
+.stage-timeline .stage-step-active .stage-step-label {
+  font-weight: 750;
+}
+
+.stage-timeline .stage-step-status {
+  margin-left: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-pulse {
+    animation: none;
+  }
 }
 
 /* =========================================================================
@@ -6995,34 +7313,9 @@ input[type="text"].workspace-title-input {
    Responsive
    ========================================================================= */
 
-/* Loop degradation in the spine. Where its row is too narrow for the labels, the steps
-   compact to dots first; the labels stay in the accessibility tree, because LoopRail carries
-   aria-current on the active step and that step needs a name. Below the narrow breakpoint the
-   loop leaves the spine entirely rather than squeezing the run identity out. */
-@container (max-width: 34rem) {
-  .loop-step > span:not(.loop-node) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-  }
-
-  .spine-loop .loop-step + .loop-step::before {
-    width: clamp(10px, 2vw, 22px);
-    margin: 0 var(--space-2);
-  }
-}
-
 @media (max-width: 1180px) {
   .spine {
-    grid-template-areas: "identity meta";
     padding-block: var(--space-2);
-  }
-
-  .spine-loop {
-    display: none;
   }
 }
 

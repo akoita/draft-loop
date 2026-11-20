@@ -17,16 +17,20 @@ source-only CLI has its own review and export commands
 
 ## How to use it
 
-1. Open the run. Decide each finding, or edit a block directly.
-2. Approve the draft, or ask for another round; a worker drafts it. You can
+1. Open the run. The header's stage track names who works each step, round
+   by round: the author drafts (round 1) or revises (later rounds), the
+   critic critiques, and you approve. On a narrow screen it folds to one
+   line; tap it for the rounds.
+2. Decide each finding, or edit a block directly.
+3. Approve the draft, or ask for another round; a worker drafts it. You can
    pause, resume or stop a run.
-3. Export the approved draft as Markdown, DOCX or PDF, from the `classic`,
+4. Export the approved draft as Markdown, DOCX or PDF, from the `classic`,
    `compact` or `modern` template (`modern` is the default). **Preview**
    (Alt+P) shows the exact file first, page by page, with the page count
    against the template's target; nothing is saved until you export. A
    Word preview shows the same template's PDF pages, since a browser has no
    Word viewer.
-4. Accept or dismiss the **writing preferences** that DraftLoop suggests from
+5. Accept or dismiss the **writing preferences** that DraftLoop suggests from
    your review choices. An accepted one joins the writing policy, which keeps
    every version. The policy's History tab shows how many runs suggested it.
 

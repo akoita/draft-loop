@@ -879,6 +879,30 @@ msgstr "{when} Vous n’avez rien à faire : attendre ne risque rien, et DraftLo
 msgid "{where}, {day}"
 msgstr "{where}, {day}"
 
+#: packages/ui/src/run-stage-track.tsx
+msgid "{who} is critiquing the draft · round {round}"
+msgstr "{who} relit l’ébauche · tour {round}"
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "{who} is drafting · round {round}"
+msgstr "{who} rédige · tour {round}"
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "{who} is revising the draft · round {round}"
+msgstr "{who} révise l’ébauche · tour {round}"
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "{who} stopped while critiquing · round {round}"
+msgstr "{who} s’est arrêté pendant la relecture · tour {round}"
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "{who} stopped while drafting · round {round}"
+msgstr "{who} s’est arrêté pendant la rédaction · tour {round}"
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "{who} stopped while revising · round {round}"
+msgstr "{who} s’est arrêté pendant la révision · tour {round}"
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "/1M input · $"
 msgstr "/1M en entrée · $"
@@ -887,10 +911,6 @@ msgstr "/1M en entrée · $"
 msgid "/1M output"
 msgstr "/1M en sortie"
 
-#: packages/ui/src/review.tsx
-msgid "↺ round"
-msgstr "↺ tour"
-
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "1 responsibility"
 msgstr "1 responsabilité"
@@ -898,6 +918,10 @@ msgstr "1 responsabilité"
 #: packages/ui/src/profile-fact-suggestions.tsx
 msgid "1 suggested profile update waits for you."
 msgstr "1 mise à jour suggérée de votre profil vous attend."
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "A"
+msgstr "R"
 
 #: apps/web/src/records-model.ts
 msgid "A candidate has that name already. Choose them in the list."
@@ -1515,7 +1539,11 @@ msgstr "L’approbation s’ouvre quand la relecture s’arrête pour vous."
 msgid "Approval remains your decision; unresolved warnings will stay visible in the review history."
 msgstr "L’approbation reste votre décision ; les avertissements non résolus resteront visibles dans l’historique de relecture."
 
-#: packages/ui/src/review.tsx
+#: packages/ui/src/run-stage-track.tsx
+msgid "approve"
+msgstr "approuvez"
+
+#: packages/ui/src/run-stage-track.tsx
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Approve"
 msgstr "Approuver"
@@ -1560,6 +1588,11 @@ msgstr "Approuvée"
 #: packages/ui/src/review-footer.tsx
 msgid "Approved · ready to export"
 msgstr "Approuvé · prêt à exporter"
+
+#. placeholder {0}: countedNouns.round(round)
+#: packages/ui/src/run-stage-track.tsx
+msgid "Approved after {0}"
+msgstr "Approuvé après {0}"
 
 #: packages/ui/src/review-footer.tsx
 msgid "Approved past the final CV checks with a recorded reason · ready to export"
@@ -1652,6 +1685,7 @@ msgstr "La tentative {next} sur {0} démarre dans {1}."
 #: packages/ui/src/model-profile-budget.tsx
 #: packages/ui/src/model-suggestions.tsx
 #: packages/ui/src/run-details.tsx
+#: packages/ui/src/run-stage-track.tsx
 #: packages/ui/src/run-steps.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "Author"
@@ -1714,10 +1748,6 @@ msgstr "Profil du rédacteur"
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Author scenario"
 msgstr "Scénario du rédacteur"
-
-#: packages/ui/src/review.tsx
-msgid "Author–critic loop stage"
-msgstr "Étape de la boucle rédacteur–relecteur"
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Autopilot"
@@ -1867,6 +1897,10 @@ msgstr "Acheter des crédits"
 #: packages/ui/src/home-folders.tsx
 msgid "By folder"
 msgstr "Par dossier"
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "C"
+msgstr "L"
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Call limit"
@@ -2663,10 +2697,15 @@ msgstr "Crédits et consentement"
 #: packages/ui/src/model-profile-budget.tsx
 #: packages/ui/src/model-suggestions.tsx
 #: packages/ui/src/run-details.tsx
+#: packages/ui/src/run-stage-track.tsx
 #: packages/ui/src/run-steps.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "Critic"
 msgstr "Relecteur"
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "critic changed"
+msgstr "relecteur changé"
 
 #: packages/ui/src/review.tsx
 msgid "Critic destination"
@@ -2692,7 +2731,7 @@ msgstr "Scénario du relecteur"
 msgid "Critical"
 msgstr "Critique"
 
-#: packages/ui/src/review.tsx
+#: packages/ui/src/run-stage-track.tsx
 msgid "Critique"
 msgstr "Critique"
 
@@ -3043,6 +3082,7 @@ msgid "does not support"
 msgstr "n’étaie pas"
 
 #: packages/ui/src/getting-started.tsx
+#: packages/ui/src/run-stage-track.tsx
 msgid "done"
 msgstr "fait"
 
@@ -3092,7 +3132,7 @@ msgid "Download Word"
 msgstr "Télécharger en Word"
 
 #: packages/ui/src/home-model.ts
-#: packages/ui/src/review.tsx
+#: packages/ui/src/run-stage-track.tsx
 msgid "Draft"
 msgstr "Ébauche"
 
@@ -5480,6 +5520,10 @@ msgstr "Les nouvelles exécutions utilisent :"
 msgid "New store folder name"
 msgstr "Nom du dossier du nouveau stockage"
 
+#: packages/ui/src/run-stage-track.tsx
+msgid "next"
+msgstr "à venir"
+
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Next-run model profiles"
 msgstr "Profils de modèles de la prochaine exécution"
@@ -6080,6 +6124,10 @@ msgstr "Rien n’a été trouvé à relire. Extrayez de nouveau, ou collez plut�
 #: apps/web/src/microphone.ts
 msgid "Nothing was recorded. Try again."
 msgstr "Rien n’a été enregistré. Réessayez."
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "now"
+msgstr "en cours"
 
 #: packages/ui/src/profile-fact-suggestions.tsx
 msgid "Now"
@@ -7812,7 +7860,7 @@ msgstr "Raisonnement du relecteur"
 msgid "reviews"
 msgstr "relectures"
 
-#: packages/ui/src/review.tsx
+#: packages/ui/src/run-stage-track.tsx
 msgid "Revise"
 msgstr "Réviser"
 
@@ -7851,11 +7899,25 @@ msgstr "Tour"
 msgid "round {0}"
 msgstr "tour {0}"
 
+#. placeholder {0}: round.number
+#: packages/ui/src/run-stage-track.tsx
+msgid "Round {0}"
+msgstr "Tour {0}"
+
+#. placeholder {0}: round.number
+#: packages/ui/src/run-stage-track.tsx
+msgid "Round {0} · now"
+msgstr "Tour {0} · en cours"
+
 #. placeholder {0}: state.round
 #. placeholder {1}: state.round - 1
 #: packages/ui/src/review.tsx
 msgid "Round {0} exceeded the {maximumRounds}-round limit before any provider work began. Return to reviewed Round {1}; its draft and critique remain intact."
 msgstr "Le tour {0} a dépassé la limite de {maximumRounds} tours avant tout travail du fournisseur. Revenez au tour relu {1} ; son ébauche et sa critique restent intactes."
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "Round 1"
+msgstr "Tour 1"
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Round limit"
@@ -7881,6 +7943,15 @@ msgstr "Tours"
 #: packages/ui/src/review.tsx
 msgid "rounds ·"
 msgstr "tours ·"
+
+#. placeholder {0}: folded.length
+#: packages/ui/src/run-stage-track.tsx
+msgid "Rounds 1–{0}"
+msgstr "Tours 1–{0}"
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "Rounds and who works each step"
+msgstr "Tours et qui fait chaque étape"
 
 #: packages/ui/src/workspace-setup.tsx
 msgid "Rounds at most"
@@ -8404,6 +8475,10 @@ msgstr "Filiation partagée passée outre sur justification enregistrée ; la cr
 #: apps/web/src/application-material-model.ts
 msgid "Short"
 msgstr "Court"
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "Show"
+msgstr "Afficher"
 
 #. placeholder {0}: label.toLowerCase()
 #: packages/ui/src/review-panels.tsx
@@ -10927,6 +11002,10 @@ msgstr "En attente de {providerName} ({modelName}). Cela peut prendre une minute
 msgid "Waiting for a worker to start…"
 msgstr "En attente du démarrage d’un exécutant…"
 
+#: packages/ui/src/run-stage-track.tsx
+msgid "Waiting for the first draft"
+msgstr "En attente de la première ébauche"
+
 #: packages/ui/src/provider-recovery.tsx
 msgid "Waiting for you"
 msgstr "En attente de votre action"
@@ -11283,6 +11362,10 @@ msgstr "Versions de la politique de rédaction"
 msgid "Writing sample {0}"
 msgstr "Texte {0}"
 
+#: packages/ui/src/run-stage-track.tsx
+msgid "Y"
+msgstr "V"
+
 #: packages/ui/src/help-ask.tsx
 msgid "Yes"
 msgstr "Oui"
@@ -11290,6 +11373,7 @@ msgstr "Oui"
 #: packages/ui/src/career-interview-live.tsx
 #: packages/ui/src/career-interview-model.ts
 #: packages/ui/src/career-interview-panel.tsx
+#: packages/ui/src/run-stage-track.tsx
 msgid "You"
 msgstr "Vous"
 
@@ -11505,6 +11589,14 @@ msgstr "Votre fichier n’a pas été ajouté : les documents s’ajoutent dans 
 msgid "Your files"
 msgstr "Vos fichiers"
 
+#: packages/ui/src/run-stage-track.tsx
+msgid "Your gate"
+msgstr "Votre validation"
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "Your gate · now"
+msgstr "Votre validation · en cours"
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Your instructions"
 msgstr "Vos consignes"
@@ -11617,6 +11709,10 @@ msgstr "Votre session a expiré. Reconnectez-vous."
 #: apps/web/src/records-model.ts
 msgid "Your team has no candidate yet. Add the first one."
 msgstr "Votre équipe n’a pas encore de candidat. Ajoutez le premier."
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "Your turn: review the findings, then approve"
+msgstr "À vous : examinez les constats, puis approuvez"
 
 #. placeholder {0}: voice.listener
 #: packages/ui/src/career-interview-live.tsx
