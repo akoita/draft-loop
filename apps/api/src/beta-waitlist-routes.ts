@@ -226,7 +226,7 @@ export function registerBetaWaitlistRoutes(
       schema: {
         summary: "Turn a waitlist entry into a beta invite",
         description:
-          "Operator only. Creates an invite for the entry's email, deletes the entry and emails the person a sign-up link with the code where mail is on; `emailed` says whether it went. The answer carries the plain code once. 404 when no entry has that id.",
+          "Operator only. Creates an invite for the entry's email, deletes the entry and emails the person a link to create their account where mail is on; `emailed` says whether it went. The answer carries the plain code once. 404 when no entry has that id.",
         params: z.strictObject({ entryId: z.string().min(1).max(128) }),
         response: {
           201: z.object({

@@ -190,7 +190,7 @@ export function registerBetaSignUpRoutes(
       schema: {
         summary: "Create a single-use beta invite code for one email",
         description:
-          "Operator only. Emails the person a sign-up link with the code where mail is on; `emailed` says whether it went. The answer carries the plain code once.",
+          "Operator only. Emails the person a link to create their account where mail is on; `emailed` says whether it went. The answer carries the plain code once.",
         body: z.strictObject({ email: z.string().max(320) }),
         response: { 201: createdInviteSchema, 400: apiErrorSchema, 403: apiErrorSchema },
       },

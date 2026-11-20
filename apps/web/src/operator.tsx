@@ -104,7 +104,7 @@ export function WaitlistSection({
         <div className="operator-code" role="status">
           <p>
             {outcome.emailed
-              ? t`Invite emailed to ${outcome.email}, with a link that fills in the code. If it does not arrive, send them this code: it is shown only once.`
+              ? t`Invite emailed to ${outcome.email}. Its link lets them create their account, with no code to type. If it does not arrive, send them this code: it is shown only once.`
               : t`Invite created for ${outcome.email}, but no email went out. Send them this code now: it is shown only once.`}
           </p>
           <code>{outcome.code}</code>
