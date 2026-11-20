@@ -159,6 +159,7 @@ import {
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 import { runEvidenceModeDisplay } from "./run-evidence-mode-display.js";
 import type { LoadRunRequirementEvidence } from "./run-requirement-evidence.js";
+import { RunStageTrack } from "./run-stage-track.js";
 import type { LoadRunTrace } from "./run-steps.js";
 import { RunSwitcher } from "./run-switcher.js";
 import { ScreenHint } from "./screen-hint.js";
@@ -521,32 +522,6 @@ function stateLabel(value: ReviewScreenState["state"]): string {
   return value.replaceAll("-", " ");
 }
 
-const loopSteps = () => [t`Draft`, t`Critique`, t`Revise`, t`Approve`] as const;
-
-/** Where the run currently sits on the author–critic loop, for the rail readout. */
-export function loopStageIndex(state: ReviewScreenState): number {
-  switch (state.state) {
-    case "collecting":
-      return -1;
-    case "drafting":
-      return 0;
-    case "reviewing":
-      return 1;
-    case "revising":
-      return 2;
-    case "awaiting-approval":
-      return 3;
-    case "approved":
-    case "exported":
-      return loopSteps().length;
-    default:
-      if (state.execution.step === "author") return 0;
-      if (state.execution.step === "critic") return 1;
-      if (state.execution.step === "revision") return 2;
-      return state.reviewComplete ? 3 : 1;
-  }
-}
-
 /** DraftLoop mark: the author–critic loop, drawn as a returning spiral. */
 export function BrandMark({ className = "rail-mark" }: { readonly className?: string }) {
   return (
@@ -697,54 +672,6 @@ function SideRail({
       <span className="rail-spacer" />
       <ThemeToggle />
     </nav>
-  );
-}
-
-function LoopRail({
-  activeIndex,
-  round,
-}: {
-  readonly activeIndex: number;
-  readonly round: number;
-}) {
-  return (
-    <div className="loop-rail">
-      <ol className="loop-steps" aria-label={t`Author–critic loop stage`}>
-        {loopSteps().map((label, index) => (
-          <li
-            className={`loop-step${index < activeIndex ? " loop-step-done" : ""}${
-              index === activeIndex ? " loop-step-active" : ""
-            }`}
-            key={label}
-            {...(index === activeIndex ? { "aria-current": "step" as const } : {})}
-          >
-            <span className="loop-node" aria-hidden="true">
-              {index < activeIndex ? "✓" : ""}
-            </span>
-            <span>{label}</span>
-          </li>
-        ))}
-      </ol>
-      <svg
-        className="loop-arc"
-        viewBox="0 0 100 12"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path
-          d="M97 1C97 11 3 11 3 1"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1"
-          strokeDasharray="3 3"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-      <span className="loop-round">
-        {t`↺ round`} {round}
-      </span>
-    </div>
   );
 }
 
@@ -2978,7 +2905,7 @@ export function ReviewWorkspace({
               </div>
             </div>
             <div className="spine-loop">
-              <LoopRail activeIndex={loopStageIndex(state)} round={state.round} />
+              <RunStageTrack state={state} />
             </div>
             <div className="spine-meta">
               <RunSwitcher
