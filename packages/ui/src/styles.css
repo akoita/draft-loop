@@ -1290,6 +1290,7 @@ input[type="text"].workspace-title-input {
 /* Older rounds fold into one chip; open, they line up in place. */
 .stage-round-folded details {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--space-2);
 }
@@ -1316,9 +1317,9 @@ input[type="text"].workspace-title-input {
   background: var(--surface-2);
 }
 
-.stage-dots > span {
-  display: inline-flex;
-  gap: 3px;
+.stage-dots-more {
+  color: var(--text-3);
+  line-height: 1;
 }
 
 .stage-dot {
@@ -1347,8 +1348,10 @@ input[type="text"].workspace-title-input {
   border-color: var(--border-strong);
 }
 
+/* Open, the folded rounds wrap onto as many lines as they need. */
 .stage-rounds-nested {
-  flex-wrap: nowrap;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .stage-round-folded summary:focus-visible,
@@ -1403,6 +1406,15 @@ input[type="text"].workspace-title-input {
   background: var(--surface-4);
 }
 
+.stage-bar-folded {
+  flex: 0 0 12%;
+}
+
+.stage-bar-earlier {
+  background: linear-gradient(90deg, var(--teal) 50%, var(--violet) 50%);
+  opacity: 0.6;
+}
+
 .stage-bar-gate {
   flex: 0 0 18%;
   border: 1px dashed var(--amber-line);
@@ -1441,6 +1453,19 @@ input[type="text"].workspace-title-input {
   margin: var(--space-2) 0 0;
   padding: 0;
   list-style: none;
+}
+
+.stage-timeline-folded summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.stage-timeline-folded summary:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .stage-timeline ul {

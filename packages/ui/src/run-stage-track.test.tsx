@@ -119,3 +119,30 @@ describe("RunStageTrack", () => {
     expect(html).toContain("Author is revising the draft · round 2");
   });
 });
+
+describe("RunStageTrack with many rounds", () => {
+  const many: ReviewScreenState = {
+    ...fixture,
+    state: "awaiting-approval",
+    round: 18,
+    execution: idle,
+  };
+
+  it("keeps the folded chip and the phone bar the same size however many rounds there are", () => {
+    const html = renderToStaticMarkup(<RunStageTrack state={many} />);
+    expect(html).toContain("Rounds 1–16");
+    expect(html.match(/stage-dot stage-dot-author/g)).toHaveLength(1);
+    expect(html.match(/stage-bar-earlier/g)).toHaveLength(1);
+    expect(html.match(/class="stage-bar-round"/g)).toHaveLength(2);
+  });
+});
+
+describe("RunStageTrack phone list with many rounds", () => {
+  it("folds the older rounds of the phone list too", () => {
+    const html = renderToStaticMarkup(
+      <RunStageTrack state={{ ...fixture, state: "reviewing", round: 12, execution: idle }} />,
+    );
+    expect(html).toContain('class="stage-timeline-folded"');
+    expect(html.match(/Rounds 1–10/g)).toHaveLength(2);
+  });
+});
