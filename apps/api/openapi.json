@@ -33625,7 +33625,7 @@
     "/v1/organisation/credit-purchases": {
       "post": {
         "summary": "Start buying a credit pack",
-        "description": "Opens a hosted checkout for one credit pack and answers its address. The payment provider sells the pack, collects the buyer's details and tax on its own page and sends the receipt. The credits reach the balance when the provider confirms the payment, not when this route answers. 503 payments_unavailable when the service sells nothing; 502 payment_provider_failed when the provider refuses or cannot be reached. Sign-in mode only.",
+        "description": "Opens a hosted checkout for one credit pack and answers its address. The payment provider sells the pack, collects the buyer's details and tax on its own page and sends the receipt. The credits reach the balance when the provider confirms the payment, not when this route answers. 503 payments_unavailable when the service sells nothing, or nothing to this organisation; 502 payment_provider_failed when the provider refuses or cannot be reached. Sign-in mode only.",
         "requestBody": {
           "required": true,
           "content": {
