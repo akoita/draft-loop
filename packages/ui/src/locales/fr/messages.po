@@ -4563,8 +4563,8 @@ msgstr "Invitation créée pour {0}, mais aucun email n'est parti. Envoyez-lui c
 
 #. placeholder {0}: outcome.email
 #: apps/web/src/operator.tsx
-msgid "Invite emailed to {0}, with a link that fills in the code. If it does not arrive, send them this code: it is shown only once."
-msgstr "Invitation envoyée par email à {0}, avec un lien qui remplit le code. Si elle n'arrive pas, envoyez-lui ce code : il n'est affiché qu'une fois."
+msgid "Invite emailed to {0}. Its link lets them create their account, with no code to type. If it does not arrive, send them this code: it is shown only once."
+msgstr "Invitation envoyée par email à {0}. Son lien lui permet de créer son compte, sans code à saisir. Si elle n'arrive pas, envoyez-lui ce code : il n'est affiché qu'une fois."
 
 #: apps/web/src/operator.tsx
 msgid "Invites"
