@@ -11300,6 +11300,10 @@ msgstr ""
 msgid "You said"
 msgstr ""
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "You used today's live voice time. Keep writing your answers, or talk live again tomorrow."
+msgstr ""
+
 #: packages/ui/src/help-ask.tsx
 msgid "You're asking faster than I can keep up. Wait a minute, then ask again."
 msgstr ""

@@ -60,6 +60,8 @@ export interface LiveInterviewOptions {
   readonly onTurn?: (timing: LiveTurnTiming) => void;
   /** The clock the timings read; `performance.now` when left out. */
   readonly now?: () => number;
+  /** What the candidate sees when the audio limit ends the conversation; the session limit's words by default. */
+  readonly limitRefusal?: { readonly code: string; readonly message: string };
 }
 
 /** How long each step of one turn took, in milliseconds; never words or audio. */
@@ -116,7 +118,8 @@ export interface LiveInterviewUsage {
   readonly outcome: "finished" | "stopped" | "limit" | "failed";
 }
 
-const defaultMaximumSessionSeconds = 30 * 60;
+/** The most audio one live conversation streams when the speech sets no other length. */
+export const defaultLiveSessionSeconds = 30 * 60;
 
 function bytesOf(data: unknown): Uint8Array | undefined {
   if (data instanceof Uint8Array) return data;
@@ -142,7 +145,7 @@ function controlOf(data: unknown): { readonly type?: unknown } | undefined {
 /** Runs one live conversation on one topic until it closes, the candidate stops, or a limit. */
 export async function runLiveInterview(options: LiveInterviewOptions): Promise<LiveInterviewUsage> {
   const { socket, speech } = options;
-  const maximumSeconds = speech.maximumSessionSeconds ?? defaultMaximumSessionSeconds;
+  const maximumSeconds = speech.maximumSessionSeconds ?? defaultLiveSessionSeconds;
   const send = (message: object) => socket.send(JSON.stringify(message));
   const now = options.now ?? (() => performance.now());
   let recognition: LiveRecognition | undefined;
@@ -325,8 +328,10 @@ export async function runLiveInterview(options: LiveInterviewOptions): Promise<L
     if (limited) {
       send({
         type: "error",
-        code: "live_limit_reached",
-        message: "This live conversation reached its time limit. Start it again to go on.",
+        ...(options.limitRefusal ?? {
+          code: "live_limit_reached",
+          message: "This live conversation reached its time limit. Start it again to go on.",
+        }),
       });
     }
   } catch (error) {

@@ -46,11 +46,23 @@ import type { FastifyBaseLogger, FastifyInstance, FastifyReply, FastifyRequest }
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { providerFailureOf } from "./application-material-routes.js";
-import { type LiveInterviewSpeech, runLiveInterview } from "./career-interview-live.js";
+import {
+  defaultLiveSessionSeconds,
+  type LiveInterviewSpeech,
+  runLiveInterview,
+} from "./career-interview-live.js";
 import { consentRecordId } from "./consent-routes.js";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import { apiError, apiErrorSchema } from "./errors.js";
+import { type LiveVoiceAllowance, liveSecondsLeft } from "./live-voice-allowance.js";
 import type { SourceEvidenceKinds } from "./work-journal-routes.js";
+
+/** The refusal when a member has spent the day's live voice allowance. */
+const liveDailyLimit = {
+  code: "live_daily_limit_reached",
+  message:
+    "You used today's live voice time. Keep writing your answers, or talk live again tomorrow.",
+} as const;
 
 /** What the guided career interview needs from a deployment (#1030, #2178). */
 export interface CareerInterviewParts {
@@ -77,6 +89,8 @@ export interface CareerInterviewRoutesOptions {
   readonly screening?: Pick<ContentScreeningHooks, "screenUpload">;
   /** Speech for the live conversation (#2361); without it the live route is not served. */
   readonly live?: LiveInterviewSpeech;
+  /** Each member's daily live voice allowance; without it only the session length bounds it. */
+  readonly liveAllowance?: LiveVoiceAllowance;
 }
 
 const workspaceParams = z.strictObject({
@@ -667,12 +681,24 @@ export function registerCareerInterviewRoutes(
         );
         return;
       }
+      const allowance = options.liveAllowance;
+      const memberId = request.caller?.kind === "member" ? request.caller.memberId : "owner";
+      const secondsLeft =
+        allowance === undefined ? undefined : await liveSecondsLeft(allowance, memberId);
+      if (secondsLeft !== undefined && secondsLeft < 1) {
+        request.log.warn({ workspaceId, sessionId, memberId }, "live voice daily limit reached");
+        refuse(liveDailyLimit.code, liveDailyLimit.message);
+        return;
+      }
+      const sessionSeconds = live.maximumSessionSeconds ?? defaultLiveSessionSeconds;
+      const dailyBound = secondsLeft !== undefined && secondsLeft < sessionSeconds;
       const interviewService = serviceFor(workspaceId, request, query.language);
       const record = await loadRecord(service, workspaceRoot(workspaceId));
       request.log.info({ workspaceId, sessionId }, "live career interview started");
       await runLiveInterview({
         socket,
-        speech: live,
+        speech: dailyBound ? { ...live, maximumSessionSeconds: secondsLeft } : live,
+        ...(dailyBound ? { limitRefusal: liveDailyLimit } : {}),
         language: query.language,
         phrases: careerInterviewSpeechHints(record.facts, record.mayTransmit),
         answer: async (text) => {
@@ -697,8 +723,15 @@ export function registerCareerInterviewRoutes(
         },
         onTurn: (timing) =>
           request.log.info({ workspaceId, sessionId, ...timing }, "live career interview turn"),
-        onEnd: (usage) =>
-          request.log.info({ workspaceId, sessionId, ...usage }, "live career interview ended"),
+        onEnd: (usage) => {
+          request.log.info({ workspaceId, sessionId, ...usage }, "live career interview ended");
+          if (allowance === undefined) return;
+          void allowance.usage
+            .addSeconds(memberId, usage.audioSeconds, allowance.now?.() ?? new Date())
+            .catch((error: unknown) =>
+              request.log.error({ err: error, workspaceId, sessionId }, "live voice use not saved"),
+            );
+        },
       });
     },
   );

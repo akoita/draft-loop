@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
 import type { LiveInterviewSpeech } from "./career-interview-live.js";
+import { createMemoryLiveVoiceUsage, type LiveVoiceUsage } from "./live-voice-allowance.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
 const sessions = "/v1/workspaces/owner/career-interview/sessions";
@@ -86,6 +87,7 @@ async function build(options: {
   route?: AnthropicRouteBuilder;
   consent?: ConsentState;
   liveSpeech?: LiveInterviewSpeech;
+  liveVoiceUsage?: LiveVoiceUsage;
 }): Promise<void> {
   logs = [];
   events = [];
@@ -96,6 +98,9 @@ async function build(options: {
     ownerToken,
     logger: { level: "info", stream: { write: (line: string) => logs.push(line) } },
     ...(options.liveSpeech === undefined ? {} : { liveSpeech: options.liveSpeech }),
+    ...(options.liveVoiceUsage === undefined
+      ? {}
+      : { liveVoiceUsage: options.liveVoiceUsage, liveMinutesPerDay: 1 }),
     application: {
       service,
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
@@ -308,7 +313,8 @@ describe("career interview routes", () => {
     expect(missing.statusCode).toBe(404);
   });
 
-  it("talks a topic through live over a WebSocket, behind the owner token and consent", async () => {
+  it("talks a topic through live over a WebSocket, behind the owner token, consent and daily minutes", async () => {
+    const usage = createMemoryLiveVoiceUsage();
     const voice = { company: "google", model: "scripted" };
     const liveSpeech = (): LiveInterviewSpeech => ({
       stt: createScriptedStreamingSpeechToText(
@@ -366,6 +372,7 @@ describe("career interview routes", () => {
         [],
       ),
       liveSpeech: liveSpeech(),
+      liveVoiceUsage: usage,
     });
     const again = (await call("POST", sessions)).json();
     const topic = again.session.topics[0].key as string;
@@ -408,6 +415,38 @@ describe("career interview routes", () => {
     expect(messages.find((message) => message.type === "question")?.text).toBe("And then?");
     expect(logs.join("\n")).toContain("live career interview turn");
     expect(logs.join("\n")).not.toContain("loan reports");
+    // The streamed tenth of a second counts as one whole second of the member's day.
+    expect(await usage.secondsToday("owner", new Date())).toBe(1);
+
+    // With the day's minute spent, a new live conversation is refused before any speech.
+    await usage.addSeconds("owner", 59, new Date());
+    await build({
+      consent: {
+        ...granted,
+        "provider-transmission": {
+          ...granted["provider-transmission"],
+          providers: ["anthropic", "google"],
+        },
+      } as ConsentState,
+      route: scriptedRoute([{ text: "Who read them?", summary: "" }], []),
+      liveSpeech: liveSpeech(),
+      liveVoiceUsage: usage,
+    });
+    const spent = (await call("POST", sessions)).json();
+    const spentTopic = spent.session.topics[0].key as string;
+    await call("POST", `${sessions}/${spent.session.id}/actions`, {
+      action: "accept",
+      topic_key: spentTopic,
+    });
+    const limited = new WebSocket(
+      `${await listen()}${sessions}/${spent.session.id}/live?topic_key=${encodeURIComponent(spentTopic)}&language=en`,
+      ["draft-loop.live", `bearer.${ownerToken}`],
+    );
+    const limit = await new Promise<string>((resolve) =>
+      limited.addEventListener("message", (event) => resolve(String(event.data)), { once: true }),
+    );
+    expect(JSON.parse(limit)).toMatchObject({ type: "error", code: "live_daily_limit_reached" });
+    limited.close();
   });
 
   it("asks in the screen's language when the action carries one, else in the workspace's", async () => {

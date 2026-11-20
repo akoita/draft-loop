@@ -133,6 +133,8 @@ services:
       DRAFT_LOOP_SPEECH_KEY_FILE: /run/draft-loop/provider-keys/google_speech_api_key
       # The silence that ends a spoken answer, then the longer wait when it sounds cut off (ms).
       DRAFT_LOOP_LIVE_TURN_PAUSE_MS: ${DRAFT_LOOP_LIVE_TURN_PAUSE_MS:-}
+      # Each member's minutes of live voice per UTC day; 30 when unset.
+      DRAFT_LOOP_LIVE_MINUTES_PER_DAY: ${DRAFT_LOOP_LIVE_MINUTES_PER_DAY:-}
     volumes:
       - ./init:/opt/draft-loop:ro
       - secrets:/secrets:ro

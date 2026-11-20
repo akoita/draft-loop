@@ -11295,6 +11295,10 @@ msgstr "Vous avez des modifications non enregistrées. Enregistrez-les avant de 
 msgid "You said"
 msgstr "Vous avez dit"
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "You used today's live voice time. Keep writing your answers, or talk live again tomorrow."
+msgstr "Vous avez utilisé votre temps de voix en direct du jour. Continuez à écrire vos réponses, ou reparlez en direct demain."
+
 #: packages/ui/src/help-ask.tsx
 msgid "You're asking faster than I can keep up. Wait a minute, then ask again."
 msgstr "Vous posez vos questions plus vite que je ne peux suivre. Attendez une minute, puis reposez-la."
