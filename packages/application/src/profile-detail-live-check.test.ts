@@ -1,3 +1,4 @@
+import type { JsonObject } from "@draft-loop/providers";
 import { describe, expect, it } from "vitest";
 
 import type { CanonicalProfileExtractionExecutor } from "./canonical-profile-extraction-fallback.js";
@@ -30,7 +31,7 @@ const quote = (text: string) => [{ sourceId: "synthetic-notes", quote: text }];
 function answering(facts: readonly object[]): CanonicalProfileExtractionExecutor {
   return {
     execute: async (request) => ({
-      output: { schemaVersion: 1, facts: [...facts], issues: [] },
+      output: { schemaVersion: 1, facts: [...facts], issues: [] } as unknown as JsonObject,
       contextSnapshotId: request.contextSnapshotId,
       provider: "anthropic",
       company: "anthropic",
