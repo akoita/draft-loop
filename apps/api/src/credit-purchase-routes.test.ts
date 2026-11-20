@@ -73,6 +73,15 @@ describe("credit pack purchase", () => {
     });
   });
 
+  it("answers 503 to an organisation the service does not sell to", async () => {
+    const provider = { ...payments(), sellsTo: (id: string) => id === "org-south" };
+    const response = await buy(await server({ payments: provider }));
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json().error.code).toBe("payments_unavailable");
+    expect(provider.startCreditPackCheckout).not.toHaveBeenCalled();
+  });
+
   it("answers 503 when the service sells nothing", async () => {
     const response = await buy(await server({}));
 

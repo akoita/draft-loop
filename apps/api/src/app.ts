@@ -1018,7 +1018,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     registerMemberCreditsRoute(app, {
       entitlementsFor,
       signIn: auth.mode === "oidc",
-      sellsPacks: options.payments !== undefined,
+      payments: options.payments,
     });
     registerCreditPurchaseRoutes(app, { payments: options.payments, signIn: auth.mode === "oidc" });
   }

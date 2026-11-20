@@ -906,7 +906,10 @@ sequenceDiagram
   (`stripe-checkout.ts`) creates a Checkout Session with Managed Payments on.
 - **What the provider receives.** The organisation id, the member id, the
   pack id and its credits. No email, name or candidate material.
-- **Test mode only.** A live key stops the start.
+- **Mode.** `DRAFT_LOOP_STRIPE_MODE` is `test` (the default) or `live`, and
+  the key must match it. Live mode sells only to the organisations
+  `DRAFT_LOOP_PAYMENTS_ORGANISATIONS` names, or to all with `*`; others see no
+  pack and get 503 `payments_unavailable`.
 - **Granting.** The provider's signed event reaches `POST /v1/payments/events`
   (#2709). A paid checkout writes one `credit_purchases` row and one ledger
   grant in a single transaction, keyed by the checkout id, so a repeated
@@ -914,7 +917,7 @@ sequenceDiagram
   plan catalog, never from the event.
 - **Trust.** The events route takes no credential. It checks the signature
   over the raw body, refuses one older than five minutes with 400
-  `invalid_signature`, and ignores live events.
+  `invalid_signature`, and ignores events of the other mode.
 - **Answers to the provider.** 200 for an event that granted, repeated or
   cannot grant, so the provider stops retrying. 500 on a storage failure, so
   it retries.

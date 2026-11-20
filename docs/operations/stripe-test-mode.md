@@ -4,8 +4,9 @@ This page is for the operator who wants the server to sell credit packs
 through Stripe Managed Payments in test mode. At the end, a test purchase
 adds credits to an organisation and no real money moves.
 
-The server refuses live keys. Selling for real waits for the live account
-review and the legal pages (#2462).
+Test mode is the default, and a live key stops the start. To check one real
+purchase before selling to anyone, see
+[Check one live purchase](#check-one-live-purchase).
 
 ## What you need
 
@@ -148,16 +149,37 @@ nothing back.
 3. The event delivery shows 200 with `refunded`. Sent again, it answers
    `already_refunded` and changes nothing.
 
+## Check one live purchase
+
+Live mode charges real cards. It is meant for the operator's own purchase
+and refund, with a low-limit company card, before any sale to others.
+
+1. In the live account (not the sandbox), complete the business profile and
+   bank account, then repeat steps 2 to 8 of [Steps in Stripe](#steps-in-stripe).
+   The keys start with `rk_live_` or `sk_live_`.
+2. Set `DRAFT_LOOP_STRIPE_MODE` to `live`, and the live key, signing secret
+   and price ids in place of the test ones.
+3. Set `DRAFT_LOOP_PAYMENTS_ORGANISATIONS` to your own organisation's id,
+   from `GET /v1/organisation/credits`. Live mode refuses to start without
+   it. Other organisations see no pack, and their purchase route answers
+   `503 payments_unavailable`. `*` sells to every organisation.
+4. Buy the 1-credit pack, check the balance, then refund it in full from
+   the Dashboard and check the balance again, as in
+   [Check a refund](#check-a-refund).
+
+In live mode, test events are ignored with the reason `test_event`, and in
+test mode live events with `live_event`.
+
 ## When it fails
 
 | What you see                              | Cause and fix                                                                                     |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| The API does not start                    | Read the message: it names the setting. A live key is refused on purpose.                         |
-| `503 payments_unavailable`                | `DRAFT_LOOP_PAYMENTS` is not `stripe` on the instance that answered.                              |
+| The API does not start                    | Read the message: it names the setting. The key must match `DRAFT_LOOP_STRIPE_MODE`; live mode needs `DRAFT_LOOP_PAYMENTS_ORGANISATIONS`. |
+| `503 payments_unavailable`                | `DRAFT_LOOP_PAYMENTS` is not `stripe`, or the organisation is not in `DRAFT_LOOP_PAYMENTS_ORGANISATIONS`. |
 | `502 payment_provider_failed`             | Stripe refused the checkout. Check the key's access, the price ids and that Managed Payments is on. |
 | `404` on the purchase route               | The server runs with the owner token, or the caller is not a signed-in member.                    |
 | Paid, but no credits                      | In Stripe, open the webhook endpoint's deliveries. A 400 means the signing secret does not match. |
-| The delivery shows 200 and `ignored`      | The API log line `payment event ignored` gives the reason, such as `live_event` or `not_paid`.    |
+| The delivery shows 200 and `ignored`      | The API log line `payment event ignored` gives the reason, such as `live_event`, `test_event` or `not_paid`.    |
 | The same purchase delivered twice         | Nothing to do: the second answers `already_granted` and adds nothing.                             |
 | A refund delivery shows 500               | The API could not ask Stripe which checkout was refunded. Check the key's access; Stripe retries. |
 | Refunded, but the credits stay            | The refund is partial, or the endpoint does not receive `charge.refunded`.                        |

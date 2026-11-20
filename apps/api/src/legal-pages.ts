@@ -8,7 +8,7 @@ import { legalTextsFr } from "./legal-text-fr.js";
  * effect. Change it with any change that matters to users: the web screen's sign-up sends the
  * same literal, so its type check fails until it shows the new version.
  */
-export const legalVersion = "2026-11-18";
+export const legalVersion = "2026-11-20";
 
 export type LegalPageId = "terms" | "privacy" | "notice";
 export type LegalLanguage = "en" | "fr";

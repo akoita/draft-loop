@@ -23,9 +23,22 @@ export interface CreditPackCheckout {
  * outside the adapter names the provider.
  */
 export interface PaymentCheckoutPort {
+  /**
+   * Whether an organisation may buy. A deployment may sell to a few named organisations first,
+   * such as the operator's own for a live check; every organisation may buy when unset.
+   */
+  readonly sellsTo?: (organisationId: string) => boolean;
   readonly startCreditPackCheckout: (
     request: CreditPackCheckoutRequest,
   ) => Promise<CreditPackCheckout>;
+}
+
+/** Whether the deployment sells packs to this organisation. */
+export function sellsPacksTo(
+  payments: Pick<PaymentCheckoutPort, "sellsTo"> | undefined,
+  organisationId: string,
+): boolean {
+  return payments !== undefined && (payments.sellsTo?.(organisationId) ?? true);
 }
 
 /** The provider refused or could not be reached. The message never carries a key or a body. */

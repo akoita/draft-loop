@@ -145,6 +145,7 @@ export const legalTextsFr: LegalTexts = {
               ],
             },
             "Chaque sous-traitant est lié par un accord de traitement des données. Nous ne vendons pas vos données, et ne les communiquons aux autorités que lorsque la loi l'exige.",
+            "Lorsque le service vend des packs de crédits, Stripe (Stripe Payments Europe, Limited, Irlande) les vend en tant que vendeur officiel (merchant of record), via son service Link. Stripe recueille vos données de paiement et votre adresse de facturation sur sa propre page, selon sa propre politique de confidentialité, et envoie le reçu. DraftLoop ne voit jamais votre carte ; il reçoit seulement le pack acheté par votre organisation, le montant et le fait qu'il a été payé ou remboursé.",
           ],
         },
         {

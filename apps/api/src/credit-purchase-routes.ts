@@ -4,7 +4,11 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
-import { type PaymentCheckoutPort, PaymentProviderError } from "./payment-checkout.js";
+import {
+  type PaymentCheckoutPort,
+  PaymentProviderError,
+  sellsPacksTo,
+} from "./payment-checkout.js";
 
 export interface CreditPurchaseRoutesOptions {
   /** The deployment's payment provider; without one the route answers 503. */
@@ -47,7 +51,7 @@ export function registerCreditPurchaseRoutes(
       schema: {
         summary: "Start buying a credit pack",
         description:
-          "Opens a hosted checkout for one credit pack and answers its address. The payment provider sells the pack, collects the buyer's details and tax on its own page and sends the receipt. The credits reach the balance when the provider confirms the payment, not when this route answers. 503 payments_unavailable when the service sells nothing; 502 payment_provider_failed when the provider refuses or cannot be reached. Sign-in mode only.",
+          "Opens a hosted checkout for one credit pack and answers its address. The payment provider sells the pack, collects the buyer's details and tax on its own page and sends the receipt. The credits reach the balance when the provider confirms the payment, not when this route answers. 503 payments_unavailable when the service sells nothing, or nothing to this organisation; 502 payment_provider_failed when the provider refuses or cannot be reached. Sign-in mode only.",
         body: purchaseBody,
         response: {
           201: checkoutSchema,
@@ -63,7 +67,7 @@ export function registerCreditPurchaseRoutes(
       if (!options.signIn || caller?.kind !== "member") {
         return reply.code(404).send(apiError("not_found", "No such route.", { resource: "route" }));
       }
-      if (payments === undefined) {
+      if (payments === undefined || !sellsPacksTo(payments, caller.tenantId)) {
         return reply
           .code(503)
           .send(apiError("payments_unavailable", "This service does not sell credit packs."));

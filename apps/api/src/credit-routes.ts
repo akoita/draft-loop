@@ -9,6 +9,7 @@ import type { AgentSpendGate } from "./agent-spend-gate.js";
 import { creditUsage, creditWarningPercent } from "./credit-usage.js";
 import { EntitlementRefusedError, type TenantEntitlementsFor } from "./entitlement-gate.js";
 import { apiError, apiErrorSchema } from "./errors.js";
+import { type PaymentCheckoutPort, sellsPacksTo } from "./payment-checkout.js";
 import { priceRun } from "./run-pricing.js";
 
 /** The model tiers, as the credit estimate prices them. */
@@ -169,8 +170,11 @@ export interface MemberCreditsRoutesOptions {
   readonly entitlementsFor: TenantEntitlementsFor;
   /** Sign-in mode. Owner-token mode has no organisation to hold a plan: the route answers 404. */
   readonly signIn: boolean;
-  /** Whether the deployment has a payment provider (#2711); without one no pack is listed. */
-  readonly sellsPacks?: boolean;
+  /**
+   * The deployment's payment provider (#2711): packs are listed only to an organisation it
+   * sells to, and to none without one.
+   */
+  readonly payments?: Pick<PaymentCheckoutPort, "sellsTo"> | undefined;
   readonly now?: () => Date;
 }
 
@@ -237,14 +241,13 @@ export function registerMemberCreditsRoute(
         grantsRemaining: balance.grantsRemaining,
         remaining: balance.unlimited ? null : balance.remaining,
         warning,
-        creditPacks:
-          options.sellsPacks === true
-            ? planCatalog.creditPacks.map(({ id, credits, priceEurCents }) => ({
-                id,
-                credits,
-                priceEurCents,
-              }))
-            : [],
+        creditPacks: sellsPacksTo(options.payments, caller.tenantId)
+          ? planCatalog.creditPacks.map(({ id, credits, priceEurCents }) => ({
+              id,
+              credits,
+              priceEurCents,
+            }))
+          : [],
       };
     },
   );

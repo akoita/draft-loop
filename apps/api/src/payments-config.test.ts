@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiConfigError } from "./config.js";
 import { paymentsFrom, readPaymentsConfig } from "./payments-config.js";
 import { stripeApiVersion } from "./stripe-checkout.js";
+import { signStripePayload } from "./stripe-events.js";
 
 const key = "sk_test_fictional0123456789";
 const signingSecret = "whsec_fictional9876543210";
@@ -13,6 +14,11 @@ const stripeEnv = {
   DRAFT_LOOP_STRIPE_PRICE_PACK_1: "price_one",
   DRAFT_LOOP_STRIPE_PRICE_PACK_5: "price_five",
   DRAFT_LOOP_PAYMENTS_RETURN_URL: "https://app.example.test/",
+};
+const liveEnv = {
+  ...stripeEnv,
+  DRAFT_LOOP_STRIPE_MODE: "live",
+  DRAFT_LOOP_STRIPE_SECRET_KEY: "rk_live_fictional0123456789",
 };
 const pack = {
   id: "pack-5",
@@ -36,7 +42,78 @@ describe("payments config", () => {
       webhookSecret: signingSecret,
       prices: { "pack-1": "price_one", "pack-5": "price_five" },
       returnUrl: "https://app.example.test/",
+      live: false,
+      buyers: "all",
     });
+  });
+
+  it("reads a live setup that sells only to the organisations it names", () => {
+    const config = readPaymentsConfig({
+      ...liveEnv,
+      DRAFT_LOOP_PAYMENTS_ORGANISATIONS: " org-a, org-b ",
+    });
+    expect(config).toMatchObject({ live: true, buyers: ["org-a", "org-b"] });
+
+    const payments = paymentsFrom(config);
+    expect(payments?.checkout.sellsTo?.("org-a")).toBe(true);
+    expect(payments?.checkout.sellsTo?.("org-c")).toBe(false);
+  });
+
+  it("opens live sales to every organisation only on purpose", () => {
+    const config = readPaymentsConfig({ ...liveEnv, DRAFT_LOOP_PAYMENTS_ORGANISATIONS: "*" });
+    expect(config).toMatchObject({ live: true, buyers: "all" });
+    expect(paymentsFrom(config)?.checkout.sellsTo?.("org-c")).toBe(true);
+  });
+
+  it.each([
+    ["a live setup without its organisations", { DRAFT_LOOP_PAYMENTS_ORGANISATIONS: "" }],
+    ["a live setup with a bad organisation id", { DRAFT_LOOP_PAYMENTS_ORGANISATIONS: "../org" }],
+    ["a test key in live mode", { DRAFT_LOOP_STRIPE_SECRET_KEY: key }],
+    ["an unknown mode", { DRAFT_LOOP_STRIPE_MODE: "production" }],
+  ])("stops the start on %s, without repeating the key", (_, change) => {
+    expect(() =>
+      readPaymentsConfig({ ...liveEnv, DRAFT_LOOP_PAYMENTS_ORGANISATIONS: "org-a", ...change }),
+    ).toThrow(ApiConfigError);
+    try {
+      readPaymentsConfig({ ...liveEnv, DRAFT_LOOP_PAYMENTS_ORGANISATIONS: "org-a", ...change });
+    } catch (error) {
+      expect((error as Error).message).not.toContain("fictional");
+    }
+  });
+
+  it("acts only on events of its own mode", () => {
+    const paidEvent = (livemode: boolean) =>
+      JSON.stringify({
+        id: "evt_1",
+        type: "checkout.session.completed",
+        livemode,
+        data: {
+          object: {
+            id: "cs_1",
+            payment_status: "paid",
+            metadata: { organisation_id: "org-a", pack_id: "pack-1" },
+          },
+        },
+      });
+    const at = new Date("2026-11-20T08:00:00.000Z");
+    const read = (env: NodeJS.ProcessEnv, livemode: boolean) => {
+      const body = paidEvent(livemode);
+      return paymentsFrom(readPaymentsConfig(env))?.events.readEvent(
+        Buffer.from(body),
+        signStripePayload(body, signingSecret, at),
+        at,
+      );
+    };
+    const live = { ...liveEnv, DRAFT_LOOP_PAYMENTS_ORGANISATIONS: "org-a" };
+
+    expect(read(live, true)).toMatchObject({ kind: "credit_pack_paid", organisationId: "org-a" });
+    expect(read(live, false)).toEqual({ kind: "ignored", eventId: "evt_1", reason: "test_event" });
+    expect(read(stripeEnv, true)).toEqual({
+      kind: "ignored",
+      eventId: "evt_1",
+      reason: "live_event",
+    });
+    expect(read(stripeEnv, false)).toMatchObject({ kind: "credit_pack_paid" });
   });
 
   it.each([

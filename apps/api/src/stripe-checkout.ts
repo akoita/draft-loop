@@ -10,7 +10,9 @@ import {
 export const stripeApiVersion = "2025-03-31.basil";
 
 export interface StripeCheckoutOptions {
-  /** A test-mode secret or restricted key. It is sent only to Stripe, as the request's credential. */
+  /** Whether an organisation may buy; every one when unset. */
+  readonly sellsTo?: (organisationId: string) => boolean;
+  /** A secret or restricted key. It is sent only to Stripe, as the request's credential. */
   readonly secretKey: string;
   /** The Stripe price of each pack, created in the Dashboard with an eligible tax code. */
   readonly prices: Readonly<Record<CreditPackId, string>>;
@@ -34,6 +36,7 @@ export function createStripeCheckout(options: StripeCheckoutOptions): PaymentChe
   const call = options.fetch ?? fetch;
   const timeoutMs = options.timeoutMs ?? 10_000;
   return {
+    ...(options.sellsTo === undefined ? {} : { sellsTo: options.sellsTo }),
     startCreditPackCheckout: async ({ organisationId, memberId, pack }) => {
       const form = new URLSearchParams({
         mode: "payment",
