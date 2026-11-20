@@ -47,6 +47,8 @@ export const canonicalCandidateProfileFactCategories = [
   "role",
   "employer",
   "date",
+  /** An employment's pay or why it ended: interview-only unless the person says otherwise. */
+  "employment-detail",
   "achievement",
   "project",
   "skill",
@@ -57,6 +59,13 @@ export const canonicalCandidateProfileFactCategories = [
 ] as const;
 export type CanonicalCandidateProfileFactCategory =
   (typeof canonicalCandidateProfileFactCategories)[number];
+
+/**
+ * Categories most career evidence never states, so a profile without them is not missing
+ * anything and gets no omission issue (#2722).
+ */
+export const optionalCanonicalCandidateProfileFactCategories: ReadonlySet<CanonicalCandidateProfileFactCategory> =
+  new Set(["employment-detail"]);
 
 /** Exact, path-free origins allowed for a canonical profile fact. */
 export const canonicalCandidateProfileProvenanceKinds = [
