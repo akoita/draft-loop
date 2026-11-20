@@ -8,6 +8,7 @@ import {
   type GettingStartedStepKey,
   gettingStartedView,
 } from "./getting-started-model.js";
+import { ScreenHint } from "./screen-hint.js";
 
 export interface GettingStartedActions {
   readonly onManageEvidence: () => void;
@@ -86,7 +87,8 @@ export function GettingStarted({
   const { preference, choose } = useDisplayPreference();
   if (choose === undefined) return null;
   const view = gettingStartedView(preference, inputs);
-  if (view.kind === "hidden") return null;
+  // Guided keeps a line on Home once the guide is hidden or done, so it never looks like Simple.
+  if (view.kind === "hidden") return <ScreenHint screen="home" />;
   if (view.kind === "offer") {
     return (
       <aside className="getting-started getting-started-offer" aria-label={t`Getting started`}>

@@ -14,7 +14,7 @@ import type {
   SavedModelProfilesResult,
   WorkspaceConfigureModelsInput,
 } from "./bridge.js";
-import type { DesktopReviewState, ReviewAction } from "./model.js";
+import type { ReviewAction, ReviewScreenState } from "./model.js";
 import { effortDisplayName } from "./model-profile-presentation.js";
 
 export interface AppliedModelProfileSelection {
@@ -69,7 +69,7 @@ export class ModelProfileSaveError extends Error {
 export function modelProfileApplyErrorMessage(reason: unknown): string {
   if (reason instanceof ModelProfileSaveError) return reason.message;
   // A host's refusal (a run still executing, a pair it does not serve) says why in its own words.
-  if (reason instanceof Error && reason.name === "DesktopBridgeError" && reason.message !== "") {
+  if (reason instanceof Error && reason.name === "HostBridgeError" && reason.message !== "") {
     return t`The profile pair could not be applied: ${reason.message}`;
   }
   return t`The profile pair could not be applied. Your draft is unchanged.`;
@@ -195,7 +195,7 @@ export function modelProfileStartDisabledReason(
   workspaceId: string,
   generation: number,
   supportState: ModelProfileSupportState,
-  preflight: DesktopReviewState["providerTransmissionPreflight"],
+  preflight: ReviewScreenState["providerTransmissionPreflight"],
 ): string | null {
   if (applied === null) return null;
   if (applied.workspaceId !== workspaceId || applied.generation !== generation) {
@@ -240,7 +240,7 @@ export function workspaceModelsForProfileReferences(
 
 export function profileReferencesMatchPreflight(
   refs: ModelProfileReferences,
-  preflight: DesktopReviewState["providerTransmissionPreflight"],
+  preflight: ReviewScreenState["providerTransmissionPreflight"],
   catalog: readonly ModelProfileCatalogEntry[] = modelProfileCatalog,
 ): boolean {
   const selection = workspaceModelsForProfileReferences(refs, catalog);
@@ -259,7 +259,7 @@ export function profileReferencesMatchPreflight(
  * pair (#1834).
  */
 export function presetReferencesMatchingPreflight(
-  preflight: DesktopReviewState["providerTransmissionPreflight"],
+  preflight: ReviewScreenState["providerTransmissionPreflight"],
   catalog: readonly ModelProfileCatalogEntry[] = modelProfileCatalog,
 ): ModelProfileReferences | null {
   for (const preset of modelProfilePresets) {

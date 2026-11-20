@@ -67,6 +67,13 @@ const completeFactDescriptors: readonly FactDescriptor[] = [
     quote: "Start date: 2021-01",
   },
   {
+    category: "employment-detail",
+    subjectKey: "employment-example",
+    field: "reason for leaving",
+    value: "Moved to a new city",
+    quote: "Reason for leaving: Moved to a new city",
+  },
+  {
     category: "achievement",
     field: "impact",
     value: "Reduced build time by 42%",

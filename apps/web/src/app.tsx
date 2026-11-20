@@ -198,11 +198,12 @@ export function Shell({
                 {...(signInSecurity === undefined ? {} : { signInSecurity })}
                 onOperator={openOperator}
               >
-                {(recordId, onSaved, automaticSetup) => (
+                {(recordId, onSaved, automaticSetup, recordName) => (
                   <RecordScreens
                     key={recordId}
                     client={client}
                     recordId={recordId}
+                    recordName={recordName}
                     mode="sign-in"
                     onSaved={onSaved}
                     automaticSetup={automaticSetup}
@@ -225,6 +226,8 @@ export interface RecordScreensProps {
   readonly client: ApiClient;
   /** The workspace id of the candidate record every step works on. */
   readonly recordId: string;
+  /** The record's name, which the screens show as their title. */
+  readonly recordName?: string;
   /** Called with the record's id once the workspace is read or created. */
   readonly onSaved?: (recordId: string) => void;
   /** Sign-in mode asks for the permission to store material, which only that mode enforces. */
@@ -241,6 +244,7 @@ export interface RecordScreensProps {
 export function RecordScreens({
   client,
   recordId,
+  recordName,
   onSaved,
   mode = "owner",
   automaticSetup = false,
@@ -278,6 +282,7 @@ export function RecordScreens({
         <SharedScreens
           client={client}
           workspaceId={recordId}
+          {...(recordName === undefined ? {} : { workspaceName: recordName })}
           hostActions={
             <>
               <HeaderCredits client={client} mode={mode} />

@@ -176,13 +176,21 @@ export function registerBetaWaitlistRoutes(
       if (!admit(`confirm:${request.ip}`, at.getTime())) {
         return reply.code(429).send(apiError("rate_limited", "Too many requests; retry later."));
       }
-      const confirmed = await waitlist.confirm({
+      const outcome = await waitlist.confirm({
         tokenHash: tokenHash(request.body.token),
         now: at,
         validMs: waitlistConfirmHours * 60 * 60 * 1000,
       });
-      request.log.info({ event: "waitlist_confirm", confirmed }, "waitlist confirm");
-      if (!confirmed) {
+      // `first` is true once per sign-up, so an operator alert on it never repeats (#3208).
+      request.log.info(
+        {
+          event: "waitlist_confirm",
+          confirmed: outcome !== "unknown",
+          first: outcome === "confirmed",
+        },
+        "waitlist confirm",
+      );
+      if (outcome === "unknown") {
         return reply
           .code(404)
           .send(apiError("invalid_token", "That link is unknown or has expired."));
@@ -226,7 +234,7 @@ export function registerBetaWaitlistRoutes(
       schema: {
         summary: "Turn a waitlist entry into a beta invite",
         description:
-          "Operator only. Creates an invite for the entry's email, deletes the entry and emails the person a sign-up link with the code where mail is on; `emailed` says whether it went. The answer carries the plain code once. 404 when no entry has that id.",
+          "Operator only. Creates an invite for the entry's email, deletes the entry and emails the person a link to create their account where mail is on; `emailed` says whether it went. The answer carries the plain code once. 404 when no entry has that id.",
         params: z.strictObject({ entryId: z.string().min(1).max(128) }),
         response: {
           201: z.object({

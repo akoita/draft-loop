@@ -110,7 +110,6 @@ describe("source evidence kinds in Manage career evidence", () => {
           displayName: "Engineering",
           sourceCount: 2,
           blockedCount: 0,
-          semanticLine: null,
         }}
         setup={{
           evidenceSourceCount: 0,

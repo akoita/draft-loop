@@ -90,7 +90,7 @@ const createdInviteSchema = z
     emailed: z
       .boolean()
       .describe(
-        "True when the invite's person was emailed a sign-up link with the code; false when mail is off or the send failed, so the operator sends the code.",
+        "True when the invite's person was emailed: the identity provider's invite to choose a password where the API prepared their sign-in, else a sign-up link with the code. False when mail is off or the send failed, so the operator sends the code.",
       ),
   })
   .meta({ id: "CreatedBetaInvite" });
@@ -190,7 +190,7 @@ export function registerBetaSignUpRoutes(
       schema: {
         summary: "Create a single-use beta invite code for one email",
         description:
-          "Operator only. Emails the person a sign-up link with the code where mail is on; `emailed` says whether it went. The answer carries the plain code once.",
+          "Operator only. Emails the person a link to create their account where mail is on; `emailed` says whether it went. The answer carries the plain code once.",
         body: z.strictObject({ email: z.string().max(320) }),
         response: { 201: createdInviteSchema, 400: apiErrorSchema, 403: apiErrorSchema },
       },
@@ -323,9 +323,16 @@ export function registerBetaSignUpRoutes(
       schema: {
         summary: "Create your account from a beta invite code",
         description:
-          "Takes a verified sign-in that has no account yet and the current terms version it accepts (`accepted_terms`; 400 terms_not_accepted, with the current `version`, when absent or outdated). The code must be open and name the sign-in's verified email, and the beta must have room: 404 invite_unknown, 403 invite_revoked or invite_email_mismatch, 409 invite_used, beta_full or already_member, 429 rate_limited after repeated refusals. The new organisation gets the Beta plan, and the caller is its owner.",
+          "Takes a verified sign-in that has no account yet and the current terms version it accepts (`accepted_terms`; 400 terms_not_accepted, with the current `version`, when absent or outdated). With a `code`, that invite must be open and name the sign-in's verified email; without one, the newest open invite for that email is used. The beta must have room: 404 invite_unknown, 403 invite_revoked or invite_email_mismatch, 409 invite_used, beta_full or already_member, 429 rate_limited after repeated refusals. The new organisation gets the Beta plan, and the caller is its owner.",
         body: z.strictObject({
-          code: z.string().min(1).max(64),
+          code: z
+            .string()
+            .min(1)
+            .max(64)
+            .optional()
+            .describe(
+              "The invite code. Leave it out to use the open invite for the sign-in's verified email: the provider verified that address, and the invite names it.",
+            ),
           accepted_terms: z
             .string()
             .max(32)
@@ -384,8 +391,9 @@ export function registerBetaSignUpRoutes(
           .send(apiError("rate_limited", "Too many attempts; retry later."));
       }
 
+      const { code } = request.body;
       const result = await invites.redeem({
-        code: request.body.code,
+        ...(code === undefined ? {} : { code }),
         verifiedEmail: identity.email,
         cap: options.cap,
         organisationName: "My applications",
@@ -394,11 +402,16 @@ export function registerBetaSignUpRoutes(
       });
       if (!result.redeemed) {
         window.refused += 1;
-        request.log.info({ event: "sign_up_refused", refusal: result.refusal }, "sign-up refused");
+        request.log.info(
+          { event: "sign_up_refused", refusal: result.refusal, withCode: code !== undefined },
+          "sign-up refused",
+        );
         return reply.code(refusalStatus[result.refusal]).send(
           apiError(
             result.refusal,
-            refusalMessage[result.refusal],
+            code === undefined && result.refusal === "invite_unknown"
+              ? "No open invite names this sign-in's email address."
+              : refusalMessage[result.refusal],
             // The caller's own verified address, so the screen can say which sign-in is wrong.
             result.refusal === "invite_email_mismatch" ? { email: identity.email } : undefined,
           ),
@@ -418,6 +431,15 @@ export function registerBetaSignUpRoutes(
         },
         "audit",
       );
+      // The seat this sign-up took was the last one: operators hear of it once (#3208).
+      const [operatorCap, seatsUsed] = await Promise.all([
+        invites.operatorCap(),
+        invites.redeemedCount(),
+      ]);
+      const cap = operatorCap ?? options.cap;
+      if (seatsUsed === cap) {
+        request.log.info({ event: "beta_seat_cap_reached", cap, seatsUsed }, "beta seats full");
+      }
       return reply.code(201).send({
         organisationId: member?.tenantId ?? result.organisationId,
         memberId: member?.memberId ?? result.memberId,

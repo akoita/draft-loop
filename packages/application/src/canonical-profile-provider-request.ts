@@ -12,7 +12,7 @@ import { isMistralAuthorProfile, isMistralModel } from "./mistral-development-pr
 import { isMistralExtractionProfile } from "./mistral-extraction-profile.js";
 
 export type CanonicalProfileAnthropicAuthMode = "api-key" | "user-session";
-export const promptVersion = "canonical-candidate-profile-extraction-v8" as const;
+export const promptVersion = "canonical-candidate-profile-extraction-v9" as const;
 
 export interface CanonicalProfileProviderRequestContract {
   readonly systemPrompt: string;
@@ -37,6 +37,7 @@ const canonicalCandidateProfileExtractionSystemPrompt = [
   "Use category achievement for a bullet or sentence that describes work done or an outcome, project only for a named project's own description entry, skill only for a skill or skill-group entry, and education, certification, or language for those entries; use the role, employer, and date categories for the employment metadata. Do not repeat employer, role title, or dates in each achievement fact, and do not emit separate employer, date, or skill facts derived from an achievement bullet.",
   "When there are no bullets or lines, treat each prose sentence that states a distinct accomplishment, role, or credential as one entry.",
   "For each employment, represent employer name, role title, and supported dates as separate facts using the same subjectKey; use distinct subjectKeys for distinct employments and do not merge them.",
+  "Use category employment-detail for an employment's stated pay or compensation and for its stated reason for leaving or ending, one fact per stated detail, with that employment's subjectKey and a field such as salary or reason for leaving; never infer one that the source does not state.",
   "A subjectKey identifies one specific real-world entity: reuse it only when the source establishes the same entity, and use distinct subjectKeys for distinct employments, projects, degrees, and individual credentials, courses, and badges. An issuer, platform, skill area, year, or category is not a credential identity; do not merge separate credentials just because they share one.",
   "Use fields to label the kind of entry and to distinguish factual attributes, events, and contexts when the source does so; keep formal titles separate from functional responsibilities, launch dates separate from publication dates, and broad transition spans separate from narrower learning or employment periods.",
   "Propose a conflict only for mutually exclusive claims about the same entity, attribute, and context. Different credentials, independent event dates, aliases, or explicitly compatible broad and narrow contexts are not contradictions solely because their values differ. Preserve genuine disputed titles, dates, and values as conflict issues without resolving them or inventing an authoritative answer.",

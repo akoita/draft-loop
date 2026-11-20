@@ -1,7 +1,9 @@
 # ADR 0002: Electron host for the local desktop alpha
 
-- Status: Accepted; credential handling superseded by
-  [ADR 0004](0004-desktop-credential-boundary.md)
+- Status: Superseded by [ADR 0011, D9](0011-client-server-version.md#d9-clients).
+  The v0.8 desktop host with its own engine was retired on 2026-11-04; the
+  desktop is now an Electron client of a DraftLoop server. Credential handling
+  was earlier superseded by [ADR 0004](0004-desktop-credential-boundary.md)
 - Date: 2026-08-12
 - Decision owners: DraftLoop maintainers
 

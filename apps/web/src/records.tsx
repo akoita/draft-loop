@@ -6,6 +6,7 @@ import { AccountPage } from "./account-page.js";
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { describeStartError } from "./credits-model.js";
 import { useNewFeedbackCount } from "./operator-count.js";
+import { usePhoneLayout } from "./phone-layout.js";
 import { DeleteRecord, DownloadEverything, RecordActions } from "./record-actions.js";
 import { canExportAndDelete, withoutRecord } from "./record-actions-model.js";
 import {
@@ -24,6 +25,7 @@ import {
   recordLabel,
   recordNameMaxLength,
   recordNames,
+  recordTitle,
   sharesAccess,
   tidyRecordName,
   unassignMemberRequest,
@@ -63,12 +65,14 @@ export interface RecordsProps {
   /**
    * The screens for the chosen record; they call `onSaved` once they create or read the record.
    * `automaticSetup` is true on a one-person plan: a new record is created with the defaults,
-   * with no setup screen, since that person has nothing to name or choose.
+   * with no setup screen, since that person has nothing to name or choose. `recordName` is what
+   * the screens call the record.
    */
   readonly children: (
     recordId: string,
     onSaved: (recordId: string) => void,
     automaticSetup: boolean,
+    recordName: string,
   ) => ReactNode;
 }
 
@@ -95,6 +99,7 @@ export function Records({
   /** New records whose name waits for the record to exist, by id. */
   const unsavedNames = useRef(new Map<string, string>());
   const newNotes = useNewFeedbackCount(client, state.kind === "ready" ? state.me : undefined);
+  const phone = usePhoneLayout();
 
   useEffect(() => {
     let current = true;
@@ -153,11 +158,12 @@ export function Records({
     [client],
   );
 
-  const topBar = (account: ReactNode) => (
+  // On a phone the shell's actions fold into the account menu, so one button stays on screen.
+  const topBar = (account: ReactNode, folded = false) => (
     <div className="record-rail account-rail">
       <div className="page-actions account-bar">
         {account}
-        {shellActions}
+        {folded ? null : shellActions}
         {account === null && onSignOut !== undefined ? (
           <SignOutButton onSignOut={onSignOut} />
         ) : null}
@@ -248,6 +254,8 @@ export function Records({
         onSignOut === undefined ? null : (
           <AccountMenu
             me={state.me}
+            compact={phone}
+            {...(phone ? { shellActions } : {})}
             onePerson={onePerson}
             yourData={yourData}
             onAccount={hasAccountPage ? () => setOnAccountPage(true) : undefined}
@@ -257,6 +265,7 @@ export function Records({
             newNotes={newNotes}
           />
         ),
+        phone && onSignOut !== undefined,
       )}
       {accountPage}
       <div className="records-screens" hidden={accountPage !== null}>
@@ -310,7 +319,7 @@ export function Records({
         )}
         {chosen === undefined ? null : (
           <ReleaseAccess.Provider value={canReleaseScreening(state.me)}>
-            {children(chosen, onSaved, onePerson)}
+            {children(chosen, onSaved, onePerson, recordTitle(chosen, state.names, onePerson))}
           </ReleaseAccess.Provider>
         )}
       </div>

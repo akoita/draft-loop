@@ -28,6 +28,7 @@ export const hostedProfileCapabilities = [
   "profile.get",
   "profile.list",
   "profile.freshness",
+  "profile.estimate",
   "profile.edit",
   "profile.review",
   "profile.catalog",
@@ -200,6 +201,16 @@ export function createProfileAnswers(client: ApiClient, options: ProfileAnswerOp
           profilePath(workspaceId, profileId),
         );
         return projectProfileFreshness(workspaceId, profileId, freshness);
+      }
+      case "profile.estimate": {
+        const { workspaceId, profileId, fullExtraction } = command.input;
+        return await client.call(
+          "GET /v1/workspaces/{workspaceId}/profiles/{profileId}/derivation-estimate",
+          {
+            ...profilePath(workspaceId, profileId),
+            ...(fullExtraction === true ? { query: { fullExtraction: "true" as const } } : {}),
+          },
+        );
       }
       case "profile.edit": {
         const { workspaceId, profileId, expectedVersion, patch } = command.input;

@@ -82,6 +82,18 @@ export function balanceLine(credits: MemberCredits, locale?: string): string {
   return `${remainingOfAllowance(credits.remaining, credits.allowance)}.${ends}${extra}`;
 }
 
+/**
+ * The balance in a few characters for a phone's header, such as `38 / 50`: the count alone when
+ * bought credits exceed the allowance, and `∞` when unlimited. The full line stays for screen
+ * readers.
+ */
+export function balanceChipShort(credits: MemberCredits): string {
+  if (credits.unlimited || credits.remaining === null || credits.allowance === null) return "∞";
+  return credits.remaining > credits.allowance
+    ? String(credits.remaining)
+    : `${credits.remaining} / ${credits.allowance}`;
+}
+
 /** The balance as a few words for the header, such as `38 of 50 credits left`. */
 export function balanceChip(credits: MemberCredits): string {
   if (credits.unlimited || credits.remaining === null || credits.allowance === null)

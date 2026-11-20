@@ -158,17 +158,6 @@ describe("application scope in the desktop review port", () => {
     });
   });
 
-  it("clears the scope when another workspace is opened", async () => {
-    const { port, invoke, state } = portWith([...bridgeCapabilities]);
-    invoke.mockImplementationOnce(async () => ({
-      ok: true,
-      value: { workspace: { id: state.workspaceId, name: "Other" } },
-    }));
-    port.selectApplication?.("app-1");
-    await port.openRecentWorkspace?.("123e4567-e89b-12d3-a456-426614174000");
-    expect(invoke).toHaveBeenLastCalledWith({ type: "review.load", input: {} });
-  });
-
   it("creates an application from an approved URL", async () => {
     const { port, invoke, state } = portWith([...bridgeCapabilities]);
     await port.createApplication?.(state.workspaceId, "Acme", {

@@ -27,7 +27,6 @@ const selected: Extract<CareerEvidenceStatus, { kind: "selected" }> = {
   displayName: "Engineering",
   sourceCount: 3,
   blockedCount: 0,
-  semanticLine: null,
 };
 
 function render(
@@ -166,20 +165,6 @@ describe("Career evidence setup card", () => {
     expect(everything({ advancedOpen: false })).not.toContain(open);
   });
 
-  it("offers Add folder under Advanced options only when evidence goes into a knowledge base", () => {
-    const withFolder = { onAddFolder: () => undefined };
-    expect(render(selected, withFolder)).toMatch(
-      /Advanced options.*Add a whole folder.*<button[^>]*>Add folder</s,
-    );
-    expect(render(selected)).not.toContain(">Add folder<");
-    expect(render({ kind: "none" }, withFolder)).not.toContain(">Add folder<");
-    expect(render({ kind: "unsupported" }, withFolder)).not.toContain(">Add folder<");
-    expect(render({ kind: "none" }, { ...withFolder, automatic: true })).toContain(">Add folder<");
-    expect(render(selected, { ...withFolder, pending: true })).toMatch(
-      /<button[^>]*disabled=""[^>]*>Add folder</,
-    );
-  });
-
   it("offers Paste text next to Add documents only when the host takes text into a base", () => {
     const withText = { onAddText: async () => true };
     expect(render(selected, withText)).toMatch(
@@ -221,11 +206,6 @@ describe("Career evidence setup card", () => {
 
   it("targets the Knowledge base heading", () => {
     expect(knowledgeStoreFocusTargetId).toBe("candidate-knowledge-heading");
-  });
-
-  it("shows the semantic index line in semantic or hybrid mode", () => {
-    const html = render({ ...selected, semanticLine: "Semantic search: model not installed" });
-    expect(html).toContain("Semantic search: model not installed");
   });
 
   it("points to Career profile as the one next step once a document is ready", () => {

@@ -24,6 +24,7 @@ import { AutopilotToggle } from "./autopilot-toggle.js";
 import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { countedNouns } from "./counted-nouns.js";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
+import { DisplayFold, useDisplayFold } from "./display-fold.js";
 import { savingEditsBlocker, useDraftEditBuffer } from "./draft-edit-buffer.js";
 import { BlockRedline, type DraftBlockPair, pairDraftSections } from "./draft-redline.js";
 import { DraftWidthHandle, draftWidthStyle, useDraftWidth } from "./draft-width.js";
@@ -84,7 +85,6 @@ import {
   pendingConfirmedGapIds,
 } from "./known-gaps.js";
 import {
-  type DesktopReviewState,
   type ExportFormat,
   exportFormatLabels,
   type FindingDecision,
@@ -94,10 +94,12 @@ import {
   type ReviewAction,
   type ReviewArtifact,
   type ReviewFinding,
+  type ReviewScreenState,
   reviewFindingSummary,
   roundLimitRecoveryRequired,
 } from "./model.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
+import { ReviewProfileSuggestionsPrompt } from "./profile-fact-suggestions.js";
 import {
   automaticRetryLine,
   ProviderFailureStopButton,
@@ -157,6 +159,7 @@ import {
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 import { runEvidenceModeDisplay } from "./run-evidence-mode-display.js";
 import type { LoadRunRequirementEvidence } from "./run-requirement-evidence.js";
+import { RunStageTrack } from "./run-stage-track.js";
 import type { LoadRunTrace } from "./run-steps.js";
 import { RunSwitcher } from "./run-switcher.js";
 import { ScreenHint } from "./screen-hint.js";
@@ -200,7 +203,7 @@ import { ThemeToggle } from "./theme.js";
 import { usageLimitText } from "./usage-limit.js";
 
 interface ReviewWorkspaceProps {
-  readonly state: DesktopReviewState;
+  readonly state: ReviewScreenState;
   readonly onAction: (action: ReviewAction) => void;
   /** Opens one of the application's runs from the run list; `null` returns to the latest run. */
   readonly onOpenRun?: (runId: string | null) => void;
@@ -262,6 +265,8 @@ interface ReviewWorkspaceProps {
   readonly writingPolicyAction?: ReactNode;
   /** Opens Home, where workspace-level setup (provider authentication) lives. */
   readonly onOpenHome?: () => void;
+  /** Opens the Career profile page, where suggested updates wait (#3168). */
+  readonly onOpenProfile?: () => void;
   /** The run pair's provider sign-in as the host's status reads report it, for the checklist. */
   readonly providerSignInReadiness?: ProviderSignInReadiness;
   /**
@@ -324,7 +329,7 @@ export function exportReviewAction(format: ExportFormat, template: ExportTemplat
 }
 
 export function canExportReview(
-  state: Pick<DesktopReviewState, "state" | "reviewComplete">,
+  state: Pick<ReviewScreenState, "state" | "reviewComplete">,
   pendingReviewAction: PendingReviewAction | null,
 ): boolean {
   // An exported run can be exported again, for example after its file was moved or deleted.
@@ -513,34 +518,8 @@ function findingDomId(prefix: string, findingId: string): string {
   return `${prefix}-${findingId.replace(/[^a-zA-Z0-9_-]/gu, "-")}`;
 }
 
-function stateLabel(value: DesktopReviewState["state"]): string {
+function stateLabel(value: ReviewScreenState["state"]): string {
   return value.replaceAll("-", " ");
-}
-
-const loopSteps = () => [t`Draft`, t`Critique`, t`Revise`, t`Approve`] as const;
-
-/** Where the run currently sits on the author–critic loop, for the rail readout. */
-export function loopStageIndex(state: DesktopReviewState): number {
-  switch (state.state) {
-    case "collecting":
-      return -1;
-    case "drafting":
-      return 0;
-    case "reviewing":
-      return 1;
-    case "revising":
-      return 2;
-    case "awaiting-approval":
-      return 3;
-    case "approved":
-    case "exported":
-      return loopSteps().length;
-    default:
-      if (state.execution.step === "author") return 0;
-      if (state.execution.step === "critic") return 1;
-      if (state.execution.step === "revision") return 2;
-      return state.reviewComplete ? 3 : 1;
-  }
 }
 
 /** DraftLoop mark: the author–critic loop, drawn as a returning spiral. */
@@ -696,54 +675,6 @@ function SideRail({
   );
 }
 
-function LoopRail({
-  activeIndex,
-  round,
-}: {
-  readonly activeIndex: number;
-  readonly round: number;
-}) {
-  return (
-    <div className="loop-rail">
-      <ol className="loop-steps" aria-label={t`Author–critic loop stage`}>
-        {loopSteps().map((label, index) => (
-          <li
-            className={`loop-step${index < activeIndex ? " loop-step-done" : ""}${
-              index === activeIndex ? " loop-step-active" : ""
-            }`}
-            key={label}
-            {...(index === activeIndex ? { "aria-current": "step" as const } : {})}
-          >
-            <span className="loop-node" aria-hidden="true">
-              {index < activeIndex ? "✓" : ""}
-            </span>
-            <span>{label}</span>
-          </li>
-        ))}
-      </ol>
-      <svg
-        className="loop-arc"
-        viewBox="0 0 100 12"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path
-          d="M97 1C97 11 3 11 3 1"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1"
-          strokeDasharray="3 3"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-      <span className="loop-round">
-        {t`↺ round`} {round}
-      </span>
-    </div>
-  );
-}
-
 /**
  * The approval-gate label for the recorded independence claim.
  *
@@ -844,7 +775,7 @@ export function useModalFocusTrap(
 const useSheetLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 function claimSectionTitle(
-  artifact: DesktopReviewState["artifact"],
+  artifact: ReviewScreenState["artifact"],
   claimId: string,
 ): string | null {
   for (const section of artifact.sections) {
@@ -853,7 +784,7 @@ function claimSectionTitle(
   return null;
 }
 
-function claimBlockId(artifact: DesktopReviewState["artifact"], claimId: string): string | null {
+function claimBlockId(artifact: ReviewScreenState["artifact"], claimId: string): string | null {
   for (const section of artifact.sections) {
     for (const block of section.blocks) {
       if (block.claimIds.includes(claimId)) return block.id;
@@ -864,8 +795,8 @@ function claimBlockId(artifact: DesktopReviewState["artifact"], claimId: string)
 
 /** A draft line is "sourced" only when every claim it asserts links to candidate material. */
 function blockSourceState(
-  block: DesktopReviewState["artifact"]["sections"][number]["blocks"][number],
-  claimById: ReadonlyMap<string, DesktopReviewState["artifact"]["claims"][number]>,
+  block: ReviewScreenState["artifact"]["sections"][number]["blocks"][number],
+  claimById: ReadonlyMap<string, ReviewScreenState["artifact"]["claims"][number]>,
 ): "none" | "sourced" | "unsourced" {
   if (block.claimIds.length === 0) return "none";
   return block.claimIds
@@ -959,7 +890,7 @@ function sameMarginLayout(left: MarginNoteLayout | null, right: MarginNoteLayout
   return true;
 }
 
-function claimSourceLabel(claim: DesktopReviewState["artifact"]["claims"][number]): string {
+function claimSourceLabel(claim: ReviewScreenState["artifact"]["claims"][number]): string {
   if (claim.status === "disputed") return "source conflict";
   return claim.evidence.length > 0 ? "source linked" : "not linked to candidate materials";
 }
@@ -1015,6 +946,7 @@ export function ReviewWorkspace({
   profilePanel,
   writingPolicyAction,
   onOpenHome,
+  onOpenProfile,
   providerSignInReadiness,
   setupSummary,
   modelPairChoice,
@@ -1301,12 +1233,12 @@ export function ReviewWorkspace({
   const draftWidth = useDraftWidth();
   const { collapsed: collapsedPanels, toggle: togglePanel } = useCollapsedReviewPanels();
   // The footer's Details hold the checklist; a refused approval opens them.
-  const [gateDetailsOpen, setGateDetailsOpen] = useState(false);
+  const [gateDetailsOpen, setGateDetailsOpen] = useDisplayFold();
   // The gate lives in the side panel, so revealing it opens a folded panel too.
   const expandGate = useCallback(() => {
     setGateDetailsOpen(true);
     setSidePanelCollapsed(false);
-  }, [setSidePanelCollapsed]);
+  }, [setSidePanelCollapsed, setGateDetailsOpen]);
   // A refused approval or export explains itself in the footer, so a folded panel opens to show it.
   useEffect(() => {
     if (approvalExportErrorVisible) setSidePanelCollapsed(false);
@@ -2508,10 +2440,10 @@ export function ReviewWorkspace({
                 {preflight.budget.maxRounds} {t`rounds. Your complete evidence is never sent.`}
               </p>
             ) : null}
-            <details className="setup-details">
+            <DisplayFold className="setup-details">
               <summary>{t`See exactly what is sent`}</summary>
               {details}
-            </details>
+            </DisplayFold>
           </>
         ) : (
           details
@@ -2973,7 +2905,7 @@ export function ReviewWorkspace({
               </div>
             </div>
             <div className="spine-loop">
-              <LoopRail activeIndex={loopStageIndex(state)} round={state.round} />
+              <RunStageTrack state={state} />
             </div>
             <div className="spine-meta">
               <RunSwitcher
@@ -3160,9 +3092,9 @@ export function ReviewWorkspace({
             tabIndex={-1}
             ref={reviewColumnRef}
           >
-            {/* The hint asks for decisions: it waits for a draft and a paused review, and ends at approval. */}
-            {hasArtifact && !reviewWorking && state.approval !== "approved" ? (
-              <ScreenHint screen="review" />
+            {/* The hint waits for a draft and a paused review: decisions first, then the export. */}
+            {hasArtifact && !reviewWorking ? (
+              <ScreenHint screen={state.approval === "approved" ? "approved" : "review"} />
             ) : null}
             <div className="doc-toolbar">
               <div className="section-heading">
@@ -3387,7 +3319,7 @@ export function ReviewWorkspace({
             {/* Traceability is an inspection, not a third copy of the draft: it stays one
                 disclosure away, closed until a reviewer asks where wording came from. */}
             <section className="claims-panel" aria-label={t`claim to source inspection`}>
-              <details className="claims-disclosure" ref={traceabilityRef}>
+              <DisplayFold className="claims-disclosure" ref={traceabilityRef}>
                 <summary className="claims-disclosure-summary" ref={traceabilitySummaryRef}>
                   <span className="claims-disclosure-title">
                     <span className="eyebrow">{t`Traceability`}</span>
@@ -3462,7 +3394,7 @@ export function ReviewWorkspace({
                     );
                   })}
                 </div>
-              </details>
+              </DisplayFold>
             </section>
           </section>
           {afterReview}
@@ -3997,6 +3929,13 @@ export function ReviewWorkspace({
               />
             )}
           </div>
+
+          {state.profileSuggestions === undefined || state.profileSuggestions === null ? null : (
+            <ReviewProfileSuggestionsPrompt
+              pending={state.profileSuggestions.pending}
+              onOpenProfile={onOpenProfile}
+            />
+          )}
 
           {/* The gate lives in the footer: its blocker line, actions and Details stay on screen
               however long the queue above them grows. */}

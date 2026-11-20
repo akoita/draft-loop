@@ -142,10 +142,10 @@ describe("the shared screens' commands over HTTP", () => {
     const { port, calls } = portOver({});
 
     expect(port.capabilities).toEqual([...hostedBridgeCapabilities]);
-    for (const desktopOnly of ["workspace.open", "knowledge.import-directory", "credential.set"]) {
+    for (const desktopOnly of ["knowledge.list", "knowledge.open"]) {
       expect(port.hasCapability(desktopOnly as never)).toBe(false);
     }
-    const result = await port.execute({ type: "workspace.open", input: {} });
+    const result = await port.execute({ type: "knowledge.list", input: { storeId: "store-1" } });
 
     expect(result).toMatchObject({ ok: false, error: { code: "capability-unavailable" } });
     expect(calls).toEqual([]);
@@ -778,6 +778,29 @@ describe("the shared screens' commands over HTTP", () => {
         input: { path: { workspaceId }, query: { runId: "run-1" } },
       },
     ]);
+  });
+
+  it("titles the record on screen by the name the shell gives it, read on each load (#3197)", async () => {
+    const projected = { workspaceId: "default-record", runId: "pending", state: "collecting" };
+    const { client } = scriptedClient({
+      "GET /v1/workspaces/{workspaceId}/review-state": () => projected,
+    });
+    let name = "My job search";
+    const bridge = createHttpBridge({
+      client,
+      workspaceId: "default-record",
+      workspaceName: () => name,
+    });
+
+    const first = await bridge.invoke({ type: "review.load", input: {} });
+    name = "Product roles 2026";
+    const renamed = await bridge.invoke({ type: "review.load", input: {} });
+
+    expect(first).toEqual({ ok: true, value: { ...projected, workspaceName: "My job search" } });
+    expect(renamed).toEqual({
+      ok: true,
+      value: { ...projected, workspaceName: "Product roles 2026" },
+    });
   });
 
   it("starts a review from the application's reviewed brief, then loads its new run", async () => {

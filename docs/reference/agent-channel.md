@@ -20,8 +20,8 @@ The channel is `draftloop-mcp`, a stdio MCP server that calls the
 [self-hosted server](../operations/self-hosted.md)'s API with an agent token.
 An agent token reaches one workspace, and only the scopes ticked when it was
 created: `journal` (file notes and list their titles), `applications:read`,
-`jobs:write`, `drafts:read`, `runs:start` and `evidence:write`. Every other
-route refuses it.
+`jobs:write`, `drafts:read`, `runs:start`, `evidence:write` and
+`profile:suggest`. Every other route refuses it.
 Candidate data stays on your machine. Without the self-hosted stack, there is
 nothing for it to call: the CLI-only path is not served.
 
@@ -265,6 +265,28 @@ sentence, and `fields` names the note fields to fix.
 | `true`      | The server is unreachable, or answers 408, 425, 429, 500, 502, 503 or 504                    | Tries the same call again later  |
 | `false`     | Validation, permission, not found, conflict, no token (`not_signed_in`), or `internal_error` | Fixes the input or asks the user |
 
+## Suggesting career profile updates
+
+With `profile:suggest`, the agent reads the candidate's newest reviewed career
+profile with `get_profile`. Facts the candidate marked never-say are left out,
+and only counted. The agent then files one change at a time with
+`suggest_profile_update`: add a fact, correct a value, retire a fact, set a
+usage level or confirm a fact. Each change quotes the words behind it and says
+whether the candidate said them or the agent read them.
+
+A suggestion waits on the Career profile page with the others
+([Suggested profile updates](../features/career-profile.md)). Only the
+candidate accepts, edits or rejects it; the decision routes refuse agent
+tokens. `list_profile_suggestions` shows what the token filed and how each
+stands.
+
+The server refuses with a content-free code: `fact_not_found`,
+`target_required`, `target_not_allowed`, `secret_like_content`,
+`flagged_content` (text that reads like instructions to a model),
+`no_reviewed_profile` and `rate_limited` (20 an hour per token, 100 pending per
+profile). A repeat answers `duplicate`, and a change the candidate rejected
+answers `previously_rejected`.
+
 ## Job applications and runs
 
 With the matching scopes, the agent can also see the candidate's job
@@ -289,6 +311,9 @@ returns a run's open draft, its findings or career evidence.
 | `draft_interview_prep` | `runs:start`        | Drafts and saves interview questions with talking points, within the cap                           |
 | `send_feedback`        | `journal`           | Passes the candidate's own note about DraftLoop to the people who run it                           |
 | `add_project`          | `evidence:write`    | Files a project card about one repository, pending the candidate's approval                        |
+| `get_profile`          | `profile:suggest`   | Reads the reviewed career profile with fact ids, without the facts marked never-say                |
+| `suggest_profile_update` | `profile:suggest` | Files one change to the profile with the words behind it, pending the candidate's decision         |
+| `list_profile_suggestions` | `profile:suggest` | Lists the suggestions this token filed and their status                                        |
 | `search_help`          | `journal`           | Searches DraftLoop's user guide, in English or French, for how a feature works                     |
 | `service_notice`       | none (public)       | Says whether planned maintenance is coming or under way, and until when changes are paused         |
 
@@ -425,8 +450,8 @@ sequenceDiagram
 ```
 
 - **Default scopes.** The server asks for `journal`, `applications:read` and
-  `jobs:write`. `drafts:read`, `runs:start` and `evidence:write` are granted
-  only when the person adds them.
+  `jobs:write`. `drafts:read`, `runs:start`, `evidence:write` and
+  `profile:suggest` are granted only when the person adds them.
 - **Runs and drafts.** With `runs:start`, the assistant starts them within
   [the connection's spend cap](#the-connections-spend-cap). Without a cap, the
   tool tells the person to set one in Settings > Agents.

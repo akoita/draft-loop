@@ -42,7 +42,6 @@ function summaryProps(
       displayName: "Main career evidence",
       sourceCount: 4,
       blockedCount: 0,
-      semanticLine: null,
     },
     legacyEvidenceSourceCount: 0,
     reviewed: {

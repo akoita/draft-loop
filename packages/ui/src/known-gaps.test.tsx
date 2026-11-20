@@ -12,9 +12,9 @@ import {
 } from "./known-gaps.js";
 import {
   createFixtureReviewState,
-  type DesktopReviewState,
   type ReviewAction,
   type ReviewFinding,
+  type ReviewScreenState,
   reduceReviewState,
 } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
@@ -33,7 +33,7 @@ function gap(id: string, overrides: Partial<ReviewFinding> = {}): ReviewFinding 
   };
 }
 
-function stateWith(findings: readonly ReviewFinding[]): DesktopReviewState {
+function stateWith(findings: readonly ReviewFinding[]): ReviewScreenState {
   return { ...createFixtureReviewState(), findings };
 }
 
@@ -160,7 +160,7 @@ describe("settled known gaps at approval (#1903)", () => {
 
   it("lets Approve record the reasons without a separate override", () => {
     const fixture = createFixtureReviewState();
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fixture,
       state: "awaiting-approval",
       findings: [gap("a", known), gap("b", known)],
@@ -180,7 +180,7 @@ describe("settled known gaps at approval (#1903)", () => {
 
   it("keeps Approve disabled and the override offered when another check fails", () => {
     const fixture = createFixtureReviewState();
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fixture,
       state: "awaiting-approval",
       findings: [gap("a", known)],

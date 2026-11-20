@@ -119,7 +119,7 @@ server at 0.14.0 or later to remember your sign-in.
 The v0.8 alpha with its own local engine is retired: its code left the
 repository after v0.9.0. To keep a v0.8 workspace, send its applications and
 career evidence to a self-hosted server with `draft-loop server import`; see
-[Coming from the desktop app](docs/operations/self-hosted.md#coming-from-the-desktop-app).
+[Coming from the v0.8 desktop alpha](docs/operations/self-hosted.md#coming-from-the-v08-desktop-alpha).
 
 ### Installing
 

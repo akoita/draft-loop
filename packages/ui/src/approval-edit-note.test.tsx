@@ -1,12 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import { approvalEditNote, ReviewWorkspace } from "./review.js";
 
 const fixture = createFixtureReviewState();
 
-function withEditedFirstBlock(state: DesktopReviewState): DesktopReviewState {
+function withEditedFirstBlock(state: ReviewScreenState): ReviewScreenState {
   const [section, ...rest] = state.artifact.sections;
   if (section === undefined) throw new Error("The fixture has no sections.");
   const [block, ...blocks] = section.blocks;
@@ -47,7 +47,7 @@ describe("the candidate's edits at approval", () => {
   });
 
   it("lets Approve send the edits past checks that failed on the reviewed version", () => {
-    const blocked: DesktopReviewState = {
+    const blocked: ReviewScreenState = {
       ...fixture,
       state: "awaiting-approval",
       findings: fixture.findings

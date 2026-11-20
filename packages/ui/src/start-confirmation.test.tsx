@@ -5,7 +5,7 @@ import type { ApplicationRunRowView } from "./application-run-list.js";
 import { createCapabilityPort, type NativeBridge } from "./bridge.js";
 import { HostPanelsContext } from "./host-panels.js";
 import { localWriterWarning } from "./local-writer-warning.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import type { ProviderRoutesView } from "./provider-routes.js";
 import { ReviewWorkspace } from "./review.js";
 import {
@@ -27,7 +27,7 @@ const sessions: ProviderRoutesView = {
   sessionCallLimitMs: 600_000,
 };
 
-function liveState(overrides: Partial<DesktopReviewState> = {}): DesktopReviewState {
+function liveState(overrides: Partial<ReviewScreenState> = {}): ReviewScreenState {
   const fixture = createFixtureReviewState();
   return {
     ...fixture,

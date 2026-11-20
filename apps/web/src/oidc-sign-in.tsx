@@ -116,6 +116,11 @@ export interface OidcAppProps {
   readonly waitlist?: boolean;
   /** The code an invite email's link carried: sign-in comes first and sign-up fills it in. */
   readonly inviteCode?: string;
+  /**
+   * The person just chose their password from the invite email (`#welcome`): the screen goes
+   * straight on to the provider's sign-in, without the landing page or a Sign in press.
+   */
+  readonly welcome?: boolean;
   /** Called once the invite's account exists, so the kept code is forgotten. */
   readonly onInviteUsed?: () => void;
   /** The token of a waitlist confirmation link the visitor opened. */
@@ -132,6 +137,7 @@ export function OidcApp({
   navigation,
   signInSecurity,
   waitlist = false,
+  welcome = false,
   inviteCode,
   onInviteUsed,
   waitlistConfirmToken,
@@ -150,7 +156,7 @@ export function OidcApp({
       session.takeNotice() ??
       (inviteCode === undefined
         ? undefined
-        : t`Your invite is ready. Sign in, or create an account, with the email address the invite was sent to; the code is filled in for you.`),
+        : t`Your invite is ready. Sign in with the email address the invite was sent to; the code is filled in for you.`),
   );
   const [leaving, setLeaving] = useState(false);
   // A verified sign-in with no account sees beta sign-up; a new account remounts the app.
@@ -162,6 +168,22 @@ export function OidcApp({
   useEffect(() => {
     if (phase === "signed-out" && !waitlist) session.prepare();
   }, [phase, waitlist, session]);
+
+  // Back from choosing a password: go on to sign-in once, without a press. A failure leaves the
+  // ordinary screen and its notice.
+  const [welcoming, setWelcoming] = useState(welcome);
+  useEffect(() => {
+    if (!welcoming || phase !== "signed-out") return;
+    setWelcoming(false);
+    setLeaving(true);
+    session.begin().then(
+      (url) => navigation.assign(url),
+      (error: unknown) => {
+        setLeaving(false);
+        setNotice(error instanceof SignInEndedError ? error.notice : signInNotices().unreachable);
+      },
+    );
+  }, [welcoming, phase, session, navigation]);
 
   // Someone already signed in at the provider opens the app in a new tab without the landing page
   // or a second press of Sign in; with no session there, the provider sends them straight back.
@@ -231,7 +253,7 @@ export function OidcApp({
     return (
       <OidcSignIn
         // An invited visitor skips the landing page and goes straight to sign-in.
-        waitlist={waitlist && inviteCode === undefined}
+        waitlist={waitlist && inviteCode === undefined && !welcome}
         {...(waitlistConfirmToken === undefined ? {} : { waitlistConfirmToken })}
         {...(notice === undefined ? {} : { notice })}
         busy={phase === "completing" || phase === "resuming" || leaving}

@@ -63,9 +63,24 @@ organisation; it erases everything with `draft-loop-server`
 
 On the public beta, only an invite creates a DraftLoop account. Where the
 API holds the identity provider's account client, an invite also creates the
-person's sign-in: Keycloak emails them a link to choose a password, valid 7
-days, and the invite email says to open it first. The realm can then refuse
-registration. A sign-in made any other way reaches nothing alone.
+person's sign-in, and Keycloak sends the only invite email: one button to
+choose a password, valid 7 days, worded by the realm's DraftLoop theme
+(`deploy/keycloak`). The realm can then refuse registration. A sign-in made
+any other way reaches nothing alone.
+
+```mermaid
+flowchart LR
+  A[Operator invites] --> B[Keycloak invite email]
+  B --> C[Choose a password]
+  C --> D[Sign in]
+  D --> E[Accept the terms]
+  E --> F[Account created]
+```
+
+After choosing the password, the screen goes straight on to sign-in.
+Sign-up then finds the open invite by the verified email, so the person types
+no code. The emailed link proves they hold that mailbox, and the email must
+still match the invite.
 
 Before turning registration off, prepare the invites sent earlier with
 `POST /v1/operator/beta-invites/sign-ins` (owner token). It creates each open
@@ -77,7 +92,7 @@ had a password, or failed; call it again for the failures.
 | New visitor            | Gets a confirmation link, then waits once confirmed | Sees "Join the DraftLoop beta" and needs a code; every other route answers `no_account` |
 | Waiting, not confirmed | A fresh link, at most 3, 10 minutes apart           | Same as a new visitor                                                                   |
 | Waiting, confirmed     | Nothing changes and no mail is sent                 | Same as a new visitor                                                                   |
-| Holds an open invite   | Nothing is stored and no mail is sent               | Enters the code, or opens the invite link, with the invited email                       |
+| Holds an open invite   | Nothing is stored and no mail is sent               | Accepts the terms; the invite of the verified email is used, with no code               |
 | Has an account         | Nothing is stored and no mail is sent               | Goes into the app; a new tab opens it directly while the provider's session lasts       |
 | Invite withdrawn       | Joins like a new visitor                            | Same as a new visitor                                                                   |
 
@@ -128,18 +143,21 @@ The lists read again every 30 seconds while the tab is visible, and when it
 comes back into view; **Refresh** reads them at once. A list grown with
 **Show more** waits for **Refresh**, so the operator keeps their place.
 
-| Section  | What it shows                                                                                                                                                                                                                                                                                                                                             |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Feedback | Members' [notes and support tickets](feedback.md) as an inbox: New, Kept, Linked to an issue and Closed, with Close first and bulk close. Opens first                                                                                                                                                                                                     |
-| Waitlist | The seats used, then one row per person still waiting, oldest first, searched by email. A sign-up that has not confirmed its email yet is left out. An email that holds an open or redeemed invite is left out, so nobody is invited twice. **Invite** turns one into an invite, emails it and shows its code once; past the cap it asks to confirm first |
-| Invites  | One row per invite, newest first, filtered by state (sent, redeemed, revoked) and searched by email; the seats used and left, and where the cap comes from                                                                                                                                                                                                |
+| Section   | What it shows                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Feedback  | Members' [notes and support tickets](feedback.md) as an inbox: New, Kept, Linked to an issue and Closed, with Close first and bulk close. Opens first                                                                                                                                                                                                                                                                             |
+| Waitlist  | The seats used, then one row per person still waiting, oldest first, searched by email. A sign-up that has not confirmed its email yet is left out. An email that holds an open or redeemed invite is left out, so nobody is invited twice. **Invite** turns one into an invite, emails it and shows its code once; past the cap it asks to confirm first                                                                         |
+| Invites   | One row per invite, newest first, filtered by state (sent, redeemed, revoked) and searched by email; the seats used and left, and where the cap comes from                                                                                                                                                                                                                                                                        |
 | Run trace | One member's run by organisation and run id. A feedback note that names a run opens it with **View the run's trace**, and shows its organisation under Context. The trace lists each step nested under its parent, with status, duration, provider, model, error class, tokens, cost and the request id. Content-free; each read is written to the audit log (`GET /v1/operator/organisations/:organisationId/runs/:runId/trace`) |
 
-Where the server sends mail, each new invite emails its person a link,
-`/#invite=<code>`, in French and English. The link opens sign-in, and sign-up
-then has the code filled in; the code rides after `#`, so no server log sees
-it. The screen says whether the email went. When it did not, because mail is
-off or the send failed, send the code yourself. Each invite is written to the
+Where the server sends mail, each new invite emails its person once. With
+the account client, that email is Keycloak's choose-a-password invite. Without
+it, or when preparing the sign-in failed, or for someone who already has a
+password, the API emails a link, `/#invite=<code>`, in French and English. The
+link opens sign-in, and sign-up then has the code filled in; the code rides
+after `#`, so no server log sees it. The screen says whether the email went.
+When it did not, because mail is off or the send failed, send the code
+yourself. Each invite is written to the
 audit log under the operator's sign-in.
 
 The cap starts small and rises in steps, with no redeploy:

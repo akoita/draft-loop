@@ -132,3 +132,46 @@ describe("career profile derivation routes", () => {
     expect(derivations.queue).not.toHaveBeenCalled();
   });
 });
+
+describe("career profile derivation estimate route (#3182)", () => {
+  it("answers the estimate for the workspace's profile, passing the full-extraction choice", async () => {
+    const estimate = vi.fn(async () => ({
+      reusedSourceCount: 2,
+      extractedSourceCount: 1,
+      extractedCharacters: 245_000,
+      calls: 9,
+      estimatedUsd: { low: 0.75, high: 1.1 },
+    }));
+    const service = {
+      estimateCanonicalCandidateProfileDerivation: estimate,
+    } as unknown as ApplicationService;
+    app = await buildApi({
+      ownerToken,
+      application: {
+        service,
+        workspaceRoot: (workspaceId) => `/roots/${workspaceId}`,
+        enqueueRun: async () => undefined,
+        budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
+        monthUsage: async () => [],
+      },
+    });
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/workspaces/r1/profiles/career/derivation-estimate?fullExtraction=true",
+      headers: { authorization },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      reusedSourceCount: 2,
+      extractedSourceCount: 1,
+      extractedCharacters: 245_000,
+      calls: 9,
+      estimatedUsd: { low: 0.75, high: 1.1 },
+    });
+    expect(estimate).toHaveBeenCalledWith({
+      root: "/roots/r1",
+      profileId: "career",
+      fullExtraction: true,
+    });
+  });
+});

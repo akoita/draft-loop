@@ -1,6 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { type ModelCompany, modelCompanies, type WorkspaceConfigureModelsInput } from "./bridge.js";
-import type { DesktopReviewState } from "./model.js";
+import type { ReviewScreenState } from "./model.js";
 
 export interface WorkspaceModelSettingsDraft {
   readonly authorCompany: ModelCompany;
@@ -17,8 +17,8 @@ export interface WorkspaceModelSettingsPreview {
 }
 
 export function workspaceModelSettingsTransmissionPairChanged(
-  previous: DesktopReviewState["providerTransmissionPreflight"],
-  next: DesktopReviewState["providerTransmissionPreflight"],
+  previous: ReviewScreenState["providerTransmissionPreflight"],
+  next: ReviewScreenState["providerTransmissionPreflight"],
 ): boolean {
   return (
     previous.author.company !== next.author.company ||
@@ -36,8 +36,8 @@ export function workspaceModelSettingsTransmissionPairChanged(
  * acknowledgement time) has nothing for the screen to repeat.
  */
 export function workspaceModelSettingsNeedsFreshAcknowledgement(
-  previous: DesktopReviewState["providerTransmissionPreflight"],
-  next: DesktopReviewState["providerTransmissionPreflight"],
+  previous: ReviewScreenState["providerTransmissionPreflight"],
+  next: ReviewScreenState["providerTransmissionPreflight"],
 ): boolean {
   return (
     workspaceModelSettingsTransmissionPairChanged(previous, next) &&
@@ -99,9 +99,7 @@ function validRationale(value: string): boolean {
 }
 
 /** Starts from the current preflight pair, never from a prior run's exposure. */
-export function workspaceModelSettingsDraft(
-  state: DesktopReviewState,
-): WorkspaceModelSettingsDraft {
+export function workspaceModelSettingsDraft(state: ReviewScreenState): WorkspaceModelSettingsDraft {
   const preflight = state.providerTransmissionPreflight;
   const authorCompany = modelCompany(preflight.author.company);
   const criticCompany = modelCompany(preflight.critic.company);

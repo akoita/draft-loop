@@ -50,7 +50,7 @@ export function webHostPanels(
         client={client}
         revision={revision}
         workJournal
-        liveVoice={mode === "owner"}
+        liveVoice
         openHome={openHome}
         onChanged={onChanged}
       />

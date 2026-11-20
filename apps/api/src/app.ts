@@ -36,6 +36,7 @@ import {
 import { type ZodType, z } from "zod";
 import { registerAccountDeletionRoutes } from "./account-deletion-routes.js";
 import { registerAgentConnectionCapRoutes } from "./agent-connection-cap-routes.js";
+import { registerAgentProfileRoutes } from "./agent-profile-routes.js";
 import { type AgentConnectionCapsFor, registerAgentSpendGate } from "./agent-spend-gate.js";
 import { registerAgentTokenRoutes } from "./agent-token-routes.js";
 import { registerApplicationFileRoutes } from "./application-file-routes.js";
@@ -84,6 +85,11 @@ import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-ac
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerKnowledgeSourceFileRoutes } from "./knowledge-source-file-routes.js";
 import { type LegalPublisher, registerLegalPages } from "./legal-pages.js";
+import {
+  createMemoryLiveVoiceUsage,
+  defaultLiveMinutesPerDay,
+  type LiveVoiceUsage,
+} from "./live-voice-allowance.js";
 import type { MaterialReviews } from "./material-reviews.js";
 import { agentTokenIssuer, memberAgentTokens, requestAgentTokens } from "./member-agent-tokens.js";
 import { registerMemberSettingsRoutes } from "./member-settings-routes.js";
@@ -298,6 +304,10 @@ export interface ApiOptions {
   readonly localModels?: readonly string[];
   /** Speech for the live career interview (#2361); unset, the live route is not served. */
   readonly liveSpeech?: LiveInterviewSpeech;
+  /** Each member's live voice use shared by every instance; without it, instance memory. */
+  readonly liveVoiceUsage?: LiveVoiceUsage;
+  /** Each member's daily live voice minutes; 30 when unset. */
+  readonly liveMinutesPerDay?: number;
   /** The payment provider that sells credit packs (#2708); without one nothing is sold. */
   readonly payments?: PaymentCheckoutPort;
   /** The payment provider's signed events (#2709); with a tenant's purchases, they grant credits. */
@@ -692,6 +702,12 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
         ...(screening === undefined ? {} : { screening }),
       });
+      registerAgentProfileRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        store: application.factSuggestions,
+        ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
+      });
     }
     registerRunRequirementEvidenceRoutes(app, {
       service: application.service,
@@ -778,6 +794,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     registerReviewStateRoutes(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
+      ...(application.factSuggestions === undefined
+        ? {}
+        : { factSuggestions: application.factSuggestions }),
       ...(knowledgeIntake === undefined ? {} : { knowledgeIntake }),
       ...(application.preferenceSuggestions === undefined
         ? {}
@@ -880,7 +899,15 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
               },
             }),
         ...(screening === undefined ? {} : { screening }),
-        ...(options.liveSpeech === undefined ? {} : { live: options.liveSpeech }),
+        ...(options.liveSpeech === undefined
+          ? {}
+          : {
+              live: options.liveSpeech,
+              liveAllowance: {
+                usage: options.liveVoiceUsage ?? createMemoryLiveVoiceUsage(),
+                minutesPerDay: options.liveMinutesPerDay ?? defaultLiveMinutesPerDay,
+              },
+            }),
       });
     }
     if (application.careerInterview !== undefined) {

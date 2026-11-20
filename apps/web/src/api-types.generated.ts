@@ -7,10 +7,54 @@ export interface ApiSchemas {
     readonly spent_this_month_usd: number;
     readonly updated_at: string;
   };
+  "AgentProfileSuggestionList": {
+    readonly suggestions: readonly ({
+      readonly id: string;
+      readonly factId?: string;
+      readonly change: {
+        readonly kind: "add";
+        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+        readonly subjectId?: string;
+        readonly field: string;
+        readonly value: string;
+      } | {
+        readonly kind: "correct";
+        readonly value: string;
+      } | {
+        readonly kind: "retire";
+      } | {
+        readonly kind: "set-usage";
+        readonly usage: "cv" | "interview-only" | "never-say";
+      } | {
+        readonly kind: "confirm";
+      };
+      readonly status: "pending" | "accepted" | "edited" | "rejected" | "stale";
+      readonly createdAt: string;
+    })[];
+  };
+  "AgentProfileSuggestionResult": {
+    readonly suggestionId: string;
+    readonly status: "pending" | "duplicate" | "previously_rejected";
+    readonly message: string;
+  };
+  "AgentProfileView": {
+    readonly profileId: string;
+    readonly version: number;
+    readonly reviewedAt?: string;
+    readonly facts: readonly ({
+      readonly id: string;
+      readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+      readonly subjectId?: string;
+      readonly field: string;
+      readonly value: string;
+      readonly usage: "cv" | "interview-only";
+    })[];
+    readonly withheld: number;
+  };
   "AgentToken": {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write")[];
+    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write" | "profile:suggest")[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
@@ -355,6 +399,16 @@ export interface ApiSchemas {
     readonly message?: string;
     readonly usage?: ApiSchemas["CareerProfileDerivationUsage"];
   };
+  "CareerProfileDerivationEstimate": {
+    readonly reusedSourceCount: number;
+    readonly extractedSourceCount: number;
+    readonly extractedCharacters: number;
+    readonly calls: number;
+    readonly estimatedUsd: {
+      readonly low: number;
+      readonly high: number;
+    } | null;
+  };
   "CareerProfileDerivationUsage": {
     readonly calls: number;
     readonly failedCalls: number;
@@ -491,7 +545,7 @@ export interface ApiSchemas {
       readonly baseVersionId: string;
       readonly change: {
         readonly kind: "add";
-        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
         readonly subjectId?: string;
         readonly field: string;
         readonly value: string;
@@ -531,7 +585,7 @@ export interface ApiSchemas {
       };
       readonly appliedChange?: {
         readonly kind: "add";
-        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
         readonly subjectId?: string;
         readonly field: string;
         readonly value: string;
@@ -693,7 +747,7 @@ export interface ApiSchemas {
   "IssuedAgentToken": {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write")[];
+    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write" | "profile:suggest")[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
@@ -1858,7 +1912,7 @@ export interface ApiOperations {
     };
     readonly body: {
       readonly kind: "section";
-      readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+      readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
       readonly level: "cv" | "interview-only" | "never-say" | null;
     } | {
       readonly kind: "fact";
@@ -1890,7 +1944,7 @@ export interface ApiOperations {
         readonly id: string;
         readonly edit?: {
           readonly kind: "add";
-          readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+          readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
           readonly subjectId?: string;
           readonly field: string;
           readonly value: string;
@@ -1916,6 +1970,49 @@ export interface ApiOperations {
       readonly suggestionId: string;
     };
     readonly response: void;
+  };
+  "GET /v1/workspaces/{workspaceId}/agent-profile": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: ApiSchemas["AgentProfileView"];
+  };
+  "POST /v1/workspaces/{workspaceId}/agent-profile/suggestions": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly factId?: string;
+      readonly change: {
+        readonly kind: "add";
+        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+        readonly subjectId?: string;
+        readonly field: string;
+        readonly value: string;
+      } | {
+        readonly kind: "correct";
+        readonly value: string;
+      } | {
+        readonly kind: "retire";
+      } | {
+        readonly kind: "set-usage";
+        readonly usage: "cv" | "interview-only" | "never-say";
+      } | {
+        readonly kind: "confirm";
+      };
+      readonly quote: string;
+      readonly speaker: "agent" | "candidate";
+    };
+    readonly response: ApiSchemas["AgentProfileSuggestionResult"];
+  };
+  "GET /v1/workspaces/{workspaceId}/agent-profile/suggestions": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly query?: {
+      readonly limit?: number;
+    };
+    readonly response: ApiSchemas["AgentProfileSuggestionList"];
   };
   "GET /v1/workspaces/{workspaceId}/runs/{runId}/requirement-evidence": {
     readonly path: {
@@ -2166,7 +2263,7 @@ export interface ApiOperations {
       readonly patch: {
         readonly facts?: readonly ({
           readonly id: string;
-          readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+          readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
           readonly subjectId?: string;
           readonly field: string;
           readonly value: string;
@@ -2221,6 +2318,16 @@ export interface ApiOperations {
       readonly profileId: string;
     };
     readonly response: ApiSchemas["CareerProfileFreshness"];
+  };
+  "GET /v1/workspaces/{workspaceId}/profiles/{profileId}/derivation-estimate": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly profileId: string;
+    };
+    readonly query?: {
+      readonly fullExtraction?: "true" | "false";
+    };
+    readonly response: ApiSchemas["CareerProfileDerivationEstimate"];
   };
   "POST /v1/workspaces/{workspaceId}/profiles/{profileId}/derivation": {
     readonly path: {
@@ -3017,7 +3124,7 @@ export interface ApiOperations {
     readonly body: {
       readonly label: string;
       readonly expires_in_days?: number;
-      readonly scopes?: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write")[];
+      readonly scopes?: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write" | "profile:suggest")[];
       readonly monthly_cap_usd?: number;
     };
     readonly response: ApiSchemas["IssuedAgentToken"];
@@ -3271,7 +3378,7 @@ export interface ApiOperations {
   };
   "POST /v1/sign-up": {
     readonly body: {
-      readonly code: string;
+      readonly code?: string;
       readonly accepted_terms?: string;
     };
     readonly response: ApiSchemas["SignedUp"];

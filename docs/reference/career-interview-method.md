@@ -88,8 +88,8 @@ starting topics at once, in this order, and no job-post theme (#2732):
 - **Where it starts.** While the record has no document, the Career evidence
   card and Home offer **Tell it in a conversation** beside **Add documents**,
   on servers that show the interview (#2734). The web shows the written
-  interview to signed-in users and with the owner token; live voice stays
-  with the owner token until plans say who may use it (#2735).
+  interview and live voice to signed-in users and with the owner token. Each
+  member has daily live voice minutes ([voice input](voice-input.md)).
 - **Facts before stories.** For work history the interviewer takes one job at
   a time, most recent first, and asks for the employer, title and years the
   candidate has not given. It still suggests none of them.

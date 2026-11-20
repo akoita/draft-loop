@@ -631,6 +631,272 @@
           "updated_at"
         ]
       },
+      "AgentProfileViewInput": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "reviewedAt": {
+            "type": "string"
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "identity",
+                    "contact",
+                    "role",
+                    "employer",
+                    "date",
+                    "employment-detail",
+                    "achievement",
+                    "project",
+                    "skill",
+                    "certification",
+                    "education",
+                    "language",
+                    "approved-link"
+                  ]
+                },
+                "subjectId": {
+                  "type": "string"
+                },
+                "field": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                },
+                "usage": {
+                  "type": "string",
+                  "enum": [
+                    "cv",
+                    "interview-only"
+                  ],
+                  "description": "cv: any output may use it. interview-only: interview preparation only."
+                }
+              },
+              "required": [
+                "id",
+                "category",
+                "field",
+                "value",
+                "usage"
+              ]
+            }
+          },
+          "withheld": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Facts left out because the candidate marked them never-say."
+          }
+        },
+        "required": [
+          "profileId",
+          "version",
+          "facts",
+          "withheld"
+        ]
+      },
+      "AgentProfileSuggestionResultInput": {
+        "type": "object",
+        "properties": {
+          "suggestionId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "duplicate",
+              "previously_rejected"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "suggestionId",
+          "status",
+          "message"
+        ]
+      },
+      "AgentProfileSuggestionListInput": {
+        "type": "object",
+        "properties": {
+          "suggestions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "factId": {
+                  "type": "string"
+                },
+                "change": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "add"
+                        },
+                        "category": {
+                          "type": "string",
+                          "enum": [
+                            "identity",
+                            "contact",
+                            "role",
+                            "employer",
+                            "date",
+                            "employment-detail",
+                            "achievement",
+                            "project",
+                            "skill",
+                            "certification",
+                            "education",
+                            "language",
+                            "approved-link"
+                          ]
+                        },
+                        "subjectId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "field": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "category",
+                        "field",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "correct"
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "retire"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "set-usage"
+                        },
+                        "usage": {
+                          "type": "string",
+                          "enum": [
+                            "cv",
+                            "interview-only",
+                            "never-say"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "usage"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "confirm"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "accepted",
+                    "edited",
+                    "rejected",
+                    "stale"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "change",
+                "status",
+                "createdAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "suggestions"
+        ]
+      },
       "InterviewDetailsInput": {
         "type": "object",
         "properties": {
@@ -1420,9 +1686,10 @@
                 "jobs:write",
                 "drafts:read",
                 "runs:start",
-                "evidence:write"
+                "evidence:write",
+                "profile:suggest"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval. profile:suggest: read the reviewed career profile and suggest updates, which wait for the candidate's decision."
             },
             "description": "What the token may do."
           },
@@ -1477,9 +1744,10 @@
                 "jobs:write",
                 "drafts:read",
                 "runs:start",
-                "evidence:write"
+                "evidence:write",
+                "profile:suggest"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval. profile:suggest: read the reviewed career profile and suggest updates, which wait for the candidate's decision."
             },
             "description": "What the token may do."
           },
@@ -3551,7 +3819,7 @@
           },
           "emailed": {
             "type": "boolean",
-            "description": "True when the invite's person was emailed a sign-up link with the code; false when mail is off or the send failed, so the operator sends the code."
+            "description": "True when the invite's person was emailed: the identity provider's invite to choose a password where the API prepared their sign-in, else a sign-up link with the code. False when mail is off or the send failed, so the operator sends the code."
           }
         },
         "required": [
@@ -4561,6 +4829,7 @@
                         "role",
                         "employer",
                         "date",
+                        "employment-detail",
                         "achievement",
                         "project",
                         "skill",
@@ -4936,6 +5205,62 @@
           }
         ],
         "description": "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them. A derivation that called a model gives what its calls used."
+      },
+      "CareerProfileDerivationEstimateInput": {
+        "type": "object",
+        "properties": {
+          "reusedSourceCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "extractedSourceCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "extractedCharacters": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "low": {
+                    "type": "number"
+                  },
+                  "high": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "low",
+                  "high"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A cost range in US dollars; null when the extraction model has no price."
+          }
+        },
+        "required": [
+          "reusedSourceCount",
+          "extractedSourceCount",
+          "extractedCharacters",
+          "calls",
+          "estimatedUsd"
+        ],
+        "description": "What a derivation would send now, counts only; no model is called."
       },
       "CareerProfileFreshnessInput": {
         "oneOf": [
@@ -5632,6 +5957,7 @@
                             "role",
                             "employer",
                             "date",
+                            "employment-detail",
                             "achievement",
                             "project",
                             "skill",
@@ -5744,7 +6070,7 @@
                     },
                     "factKey": {
                       "type": "string",
-                      "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+                      "pattern": "^fu1-(?:identity|contact|role|employer|date|employment-detail|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
                     }
                   },
                   "required": [
@@ -5876,6 +6202,7 @@
                             "role",
                             "employer",
                             "date",
+                            "employment-detail",
                             "achievement",
                             "project",
                             "skill",
@@ -6064,6 +6391,7 @@
                 "role",
                 "employer",
                 "date",
+                "employment-detail",
                 "achievement",
                 "project",
                 "skill",
@@ -6087,7 +6415,7 @@
             "type": "object",
             "propertyNames": {
               "type": "string",
-              "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+              "pattern": "^fu1-(?:identity|contact|role|employer|date|employment-detail|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
             },
             "additionalProperties": {
               "type": "string",
@@ -10568,6 +10896,277 @@
         ],
         "additionalProperties": false
       },
+      "AgentProfileView": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "reviewedAt": {
+            "type": "string"
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "identity",
+                    "contact",
+                    "role",
+                    "employer",
+                    "date",
+                    "employment-detail",
+                    "achievement",
+                    "project",
+                    "skill",
+                    "certification",
+                    "education",
+                    "language",
+                    "approved-link"
+                  ]
+                },
+                "subjectId": {
+                  "type": "string"
+                },
+                "field": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                },
+                "usage": {
+                  "type": "string",
+                  "enum": [
+                    "cv",
+                    "interview-only"
+                  ],
+                  "description": "cv: any output may use it. interview-only: interview preparation only."
+                }
+              },
+              "required": [
+                "id",
+                "category",
+                "field",
+                "value",
+                "usage"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "withheld": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Facts left out because the candidate marked them never-say."
+          }
+        },
+        "required": [
+          "profileId",
+          "version",
+          "facts",
+          "withheld"
+        ],
+        "additionalProperties": false
+      },
+      "AgentProfileSuggestionResult": {
+        "type": "object",
+        "properties": {
+          "suggestionId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "duplicate",
+              "previously_rejected"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "suggestionId",
+          "status",
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "AgentProfileSuggestionList": {
+        "type": "object",
+        "properties": {
+          "suggestions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "factId": {
+                  "type": "string"
+                },
+                "change": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "add"
+                        },
+                        "category": {
+                          "type": "string",
+                          "enum": [
+                            "identity",
+                            "contact",
+                            "role",
+                            "employer",
+                            "date",
+                            "employment-detail",
+                            "achievement",
+                            "project",
+                            "skill",
+                            "certification",
+                            "education",
+                            "language",
+                            "approved-link"
+                          ]
+                        },
+                        "subjectId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "field": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "category",
+                        "field",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "correct"
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "retire"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "set-usage"
+                        },
+                        "usage": {
+                          "type": "string",
+                          "enum": [
+                            "cv",
+                            "interview-only",
+                            "never-say"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "usage"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "confirm"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "accepted",
+                    "edited",
+                    "rejected",
+                    "stale"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "change",
+                "status",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "suggestions"
+        ],
+        "additionalProperties": false
+      },
       "InterviewDetails": {
         "type": "object",
         "properties": {
@@ -11373,9 +11972,10 @@
                 "jobs:write",
                 "drafts:read",
                 "runs:start",
-                "evidence:write"
+                "evidence:write",
+                "profile:suggest"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval. profile:suggest: read the reviewed career profile and suggest updates, which wait for the candidate's decision."
             },
             "description": "What the token may do."
           },
@@ -11431,9 +12031,10 @@
                 "jobs:write",
                 "drafts:read",
                 "runs:start",
-                "evidence:write"
+                "evidence:write",
+                "profile:suggest"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval. profile:suggest: read the reviewed career profile and suggest updates, which wait for the candidate's decision."
             },
             "description": "What the token may do."
           },
@@ -13528,7 +14129,7 @@
           },
           "emailed": {
             "type": "boolean",
-            "description": "True when the invite's person was emailed a sign-up link with the code; false when mail is off or the send failed, so the operator sends the code."
+            "description": "True when the invite's person was emailed: the identity provider's invite to choose a password where the API prepared their sign-in, else a sign-up link with the code. False when mail is off or the send failed, so the operator sends the code."
           }
         },
         "required": [
@@ -14264,6 +14865,64 @@
         ],
         "description": "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them. A derivation that called a model gives what its calls used."
       },
+      "CareerProfileDerivationEstimate": {
+        "type": "object",
+        "properties": {
+          "reusedSourceCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "extractedSourceCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "extractedCharacters": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "low": {
+                    "type": "number"
+                  },
+                  "high": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "low",
+                  "high"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A cost range in US dollars; null when the extraction model has no price."
+          }
+        },
+        "required": [
+          "reusedSourceCount",
+          "extractedSourceCount",
+          "extractedCharacters",
+          "calls",
+          "estimatedUsd"
+        ],
+        "additionalProperties": false,
+        "description": "What a derivation would send now, counts only; no model is called."
+      },
       "CareerProfileFreshness": {
         "oneOf": [
           {
@@ -14977,6 +15636,7 @@
                             "role",
                             "employer",
                             "date",
+                            "employment-detail",
                             "achievement",
                             "project",
                             "skill",
@@ -15089,7 +15749,7 @@
                     },
                     "factKey": {
                       "type": "string",
-                      "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+                      "pattern": "^fu1-(?:identity|contact|role|employer|date|employment-detail|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
                     }
                   },
                   "required": [
@@ -15221,6 +15881,7 @@
                             "role",
                             "employer",
                             "date",
+                            "employment-detail",
                             "achievement",
                             "project",
                             "skill",
@@ -15412,6 +16073,7 @@
                 "role",
                 "employer",
                 "date",
+                "employment-detail",
                 "achievement",
                 "project",
                 "skill",
@@ -15435,7 +16097,7 @@
             "type": "object",
             "propertyNames": {
               "type": "string",
-              "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+              "pattern": "^fu1-(?:identity|contact|role|employer|date|employment-detail|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
             },
             "additionalProperties": {
               "type": "string",
@@ -21312,6 +21974,7 @@
                           "role",
                           "employer",
                           "date",
+                          "employment-detail",
                           "achievement",
                           "project",
                           "skill",
@@ -21355,7 +22018,7 @@
                       },
                       "key": {
                         "type": "string",
-                        "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+                        "pattern": "^fu1-(?:identity|contact|role|employer|date|employment-detail|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
                       },
                       "level": {
                         "anyOf": [
@@ -21595,6 +22258,7 @@
                                     "role",
                                     "employer",
                                     "date",
+                                    "employment-detail",
                                     "achievement",
                                     "project",
                                     "skill",
@@ -21863,6 +22527,430 @@
             }
           },
           "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/agent-profile": {
+      "get": {
+        "summary": "Read the reviewed career profile as an agent sees it",
+        "description": "What the MCP tool get_profile reads: the newest reviewed profile's facts with their ids, without the facts the candidate marked never-say. 404 when no profile is reviewed yet.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProfileView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/agent-profile/suggestions": {
+      "post": {
+        "summary": "Suggest an update to the reviewed career profile",
+        "description": "What the MCP tool suggest_profile_update sends: one change with the words behind it. It waits for the candidate, who accepts, edits or rejects it on the Career profile page; an agent never decides. Refusals: fact_not_found, target_required, target_not_allowed, secret_like_content, flagged_content (422), no_reviewed_profile (404), rate_limited (429). A repeat answers duplicate, a change the candidate rejected previously_rejected.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "factId": {
+                    "description": "The fact a correct, retire, set-usage or confirm changes; no factId for an add.",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "change": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "add"
+                            ]
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "identity",
+                              "contact",
+                              "role",
+                              "employer",
+                              "date",
+                              "employment-detail",
+                              "achievement",
+                              "project",
+                              "skill",
+                              "certification",
+                              "education",
+                              "language",
+                              "approved-link"
+                            ]
+                          },
+                          "subjectId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "field": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "value": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2000
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "category",
+                          "field",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "correct"
+                            ]
+                          },
+                          "value": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2000
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "retire"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "set-usage"
+                            ]
+                          },
+                          "usage": {
+                            "type": "string",
+                            "enum": [
+                              "cv",
+                              "interview-only",
+                              "never-say"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "usage"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "confirm"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "quote": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000,
+                    "description": "The words behind the change, as read or as the candidate said them."
+                  },
+                  "speaker": {
+                    "type": "string",
+                    "enum": [
+                      "agent",
+                      "candidate"
+                    ],
+                    "description": "agent: the agent read it somewhere. candidate: the candidate stated it."
+                  }
+                },
+                "required": [
+                  "change",
+                  "quote",
+                  "speaker"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProfileSuggestionResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProfileSuggestionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List the profile suggestions this agent filed",
+        "description": "What the MCP tool list_profile_suggestions reads: this token's suggestions, newest first, with their status (pending, accepted, edited, rejected or stale).",
+        "parameters": [
+          {
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProfileSuggestionList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
             "description": "Default Response",
             "content": {
               "application/json": {
@@ -23805,6 +24893,7 @@
                                 "role",
                                 "employer",
                                 "date",
+                                "employment-detail",
                                 "achievement",
                                 "project",
                                 "skill",
@@ -24282,6 +25371,87 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CareerProfileFreshness"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/profiles/{profileId}/derivation-estimate": {
+      "get": {
+        "summary": "Estimate what deriving a career profile would send and cost",
+        "description": "Reads the selected evidence as a derivation would and plans its model calls, without calling a model: sources reused from the latest version and extracted again, their characters, the expected calls and a cost range.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "in": "query",
+            "name": "fullExtraction",
+            "required": false,
+            "description": "Estimate extracting every source again instead of only new or changed ones."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "profileId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CareerProfileDerivationEstimate"
                 }
               }
             }
@@ -31210,7 +32380,7 @@
     "/v1/workspaces/{workspaceId}/agent-tokens": {
       "post": {
         "summary": "Issue an agent token",
-        "description": "A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) drafts:read (a run's exports and the saved cover letters and interview questions), runs:start (price and start CV runs, and draft cover letters and interview questions, within monthly_cap_usd, which it requires) and evidence:write (add_project: project cards that wait for the candidate's approval). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
+        "description": "A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) drafts:read (a run's exports and the saved cover letters and interview questions), runs:start (price and start CV runs, and draft cover letters and interview questions, within monthly_cap_usd, which it requires) evidence:write (add_project: project cards that wait for the candidate's approval) and profile:suggest (get_profile, suggest_profile_update, list_profile_suggestions: changes that wait for the candidate's decision). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
         "requestBody": {
           "required": true,
           "content": {
@@ -31233,7 +32403,7 @@
                   "scopes": {
                     "description": "What the token may do; [\"journal\"] by default.",
                     "minItems": 1,
-                    "maxItems": 6,
+                    "maxItems": 7,
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -31243,9 +32413,10 @@
                         "jobs:write",
                         "drafts:read",
                         "runs:start",
-                        "evidence:write"
+                        "evidence:write",
+                        "profile:suggest"
                       ],
-                      "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
+                      "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval. profile:suggest: read the reviewed career profile and suggest updates, which wait for the candidate's decision."
                     }
                   },
                   "monthly_cap_usd": {
@@ -33304,7 +34475,7 @@
     "/v1/operator/beta-invites": {
       "post": {
         "summary": "Create a single-use beta invite code for one email",
-        "description": "Operator only. Emails the person a sign-up link with the code where mail is on; `emailed` says whether it went. The answer carries the plain code once.",
+        "description": "Operator only. Emails the person a link to create their account where mail is on; `emailed` says whether it went. The answer carries the plain code once.",
         "requestBody": {
           "required": true,
           "content": {
@@ -33620,7 +34791,7 @@
     "/v1/sign-up": {
       "post": {
         "summary": "Create your account from a beta invite code",
-        "description": "Takes a verified sign-in that has no account yet and the current terms version it accepts (`accepted_terms`; 400 terms_not_accepted, with the current `version`, when absent or outdated). The code must be open and name the sign-in's verified email, and the beta must have room: 404 invite_unknown, 403 invite_revoked or invite_email_mismatch, 409 invite_used, beta_full or already_member, 429 rate_limited after repeated refusals. The new organisation gets the Beta plan, and the caller is its owner.",
+        "description": "Takes a verified sign-in that has no account yet and the current terms version it accepts (`accepted_terms`; 400 terms_not_accepted, with the current `version`, when absent or outdated). With a `code`, that invite must be open and name the sign-in's verified email; without one, the newest open invite for that email is used. The beta must have room: 404 invite_unknown, 403 invite_revoked or invite_email_mismatch, 409 invite_used, beta_full or already_member, 429 rate_limited after repeated refusals. The new organisation gets the Beta plan, and the caller is its owner.",
         "requestBody": {
           "required": true,
           "content": {
@@ -33629,6 +34800,7 @@
                 "type": "object",
                 "properties": {
                   "code": {
+                    "description": "The invite code. Leave it out to use the open invite for the sign-in's verified email: the provider verified that address, and the invite names it.",
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 64
@@ -33639,9 +34811,6 @@
                     "maxLength": 32
                   }
                 },
-                "required": [
-                  "code"
-                ],
                 "additionalProperties": false
               }
             }
@@ -33957,7 +35126,7 @@
     "/v1/operator/waitlist/{entryId}/invite": {
       "post": {
         "summary": "Turn a waitlist entry into a beta invite",
-        "description": "Operator only. Creates an invite for the entry's email, deletes the entry and emails the person a sign-up link with the code where mail is on; `emailed` says whether it went. The answer carries the plain code once. 404 when no entry has that id.",
+        "description": "Operator only. Creates an invite for the entry's email, deletes the entry and emails the person a link to create their account where mail is on; `emailed` says whether it went. The answer carries the plain code once. 404 when no entry has that id.",
         "parameters": [
           {
             "schema": {

@@ -4,10 +4,12 @@ import { compactSeparator, findCompactRuns } from "./compact-list.js";
 import { headerLines } from "./header-lines.js";
 import {
   type InlineLabel,
+  isProseSection,
   type LabelledLines,
   labelledTextLines,
   layoutLabelled,
   splitInlineLabel,
+  splitProseInlineLabel,
 } from "./inline-label.js";
 import { embeddedPdfFonts, embeddedTextUnits, type PdfFontFamily } from "./pdf-fonts.js";
 import { isRoleHeaderBlock, layoutRoleHeader, type RoleHeaderLines } from "./role-header.js";
@@ -31,6 +33,8 @@ export interface LayoutBlock {
   readonly text: string;
   /** For a compact list, the original bullet texts; `text` is these joined with " · ". */
   readonly items?: readonly string[];
+  /** A block of a letter or an answer: only the renderer's own labels are bold, bullets stay left. */
+  readonly prose?: true;
 }
 
 /** The page measurements the layout and the length estimate need; a subset of a layout profile. */
@@ -120,7 +124,11 @@ export function layoutSectionBlocks(
         : isRoleHeaderBlock(section.kind, section.blocks, index)
           ? "role"
           : "paragraph";
-    blocks.push({ kind, text: block.text });
+    blocks.push({
+      kind,
+      text: block.text,
+      ...(isProseSection(section.kind) ? { prose: true } : {}),
+    });
     index += 1;
   }
   return blocks;
@@ -261,7 +269,8 @@ export function labelledLayout(
   profile: LayoutMetricsProfile,
 ): LabelledLines | null {
   if (block.kind !== "paragraph" && block.kind !== "bullet") return null;
-  const parts: InlineLabel | null = splitInlineLabel(block.text);
+  const parts: InlineLabel | null =
+    block.prose === true ? splitProseInlineLabel(block.text) : splitInlineLabel(block.text);
   if (parts === null) return null;
   const body = profile.typography.bodyFontSizePt;
   const font = profilePdfFont(profile);

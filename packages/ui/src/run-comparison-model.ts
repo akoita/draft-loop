@@ -7,7 +7,7 @@ import { t } from "@lingui/core/macro";
  * comparison drops this state and the review shows the open run as it was.
  */
 import type { ApplicationRunRowView } from "./application-run-list.js";
-import type { DesktopReviewState, ReviewArtifact } from "./model.js";
+import type { ReviewArtifact, ReviewScreenState } from "./model.js";
 import type { FooterBlocker } from "./review-footer.js";
 import { runModelsLabel, runNumber } from "./run-switcher.js";
 
@@ -27,7 +27,7 @@ export interface RunComparisonState {
   readonly otherSide: "left" | "right";
   readonly other: ComparedRunDraft;
   /** The chosen run's review state once read, for the facts it recorded; null until then. */
-  readonly otherState?: DesktopReviewState | null;
+  readonly otherState?: ReviewScreenState | null;
 }
 
 export type RunComparisonEvent =
@@ -37,7 +37,7 @@ export type RunComparisonEvent =
       readonly openRunId: string;
       readonly otherRunId: string;
     }
-  | { readonly type: "loaded"; readonly state: DesktopReviewState }
+  | { readonly type: "loaded"; readonly state: ReviewScreenState }
   | { readonly type: "failed"; readonly runId: string; readonly message: string }
   | { readonly type: "swap" }
   | { readonly type: "close" };
@@ -97,7 +97,7 @@ export function runComparisonReducer(
  */
 export function runComparisonActive(
   comparison: RunComparisonState | null,
-  state: Pick<DesktopReviewState, "workspaceId" | "runId">,
+  state: Pick<ReviewScreenState, "workspaceId" | "runId">,
 ): comparison is RunComparisonState {
   return (
     comparison !== null &&
@@ -154,7 +154,7 @@ export interface ComparisonSide {
   readonly open: boolean;
   readonly draft: ComparedRunDraft;
   /** The run's review state, with what it recorded; null while the other run is being read. */
-  readonly state: DesktopReviewState | null;
+  readonly state: ReviewScreenState | null;
 }
 
 /**
@@ -163,7 +163,7 @@ export interface ComparisonSide {
  */
 export function comparisonSides(
   comparison: RunComparisonState,
-  state: DesktopReviewState,
+  state: ReviewScreenState,
 ): { readonly left: ComparisonSide; readonly right: ComparisonSide } {
   const open: ComparisonSide = {
     facts: comparedRunFacts(state.applicationRuns, comparison.openRunId),

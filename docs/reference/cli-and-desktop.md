@@ -116,7 +116,7 @@ and account or provider availability is unchecked.
   Claude Sonnet 5.5 with a 64,000-token output budget. A workspace that saved
   version 1 keeps its 32,768-token budget until the preset is chosen again.
 - **The two Anthropic-only pairs** suit a deployment without an OpenAI budget.
-- **The two Google writer pairs** run in the CLI and the local-first desktop with
+- **The two Google writer pairs** run in the CLI with
   your own Gemini key. A DraftLoop server does not route Gemini yet
   ([#2704](https://github.com/akoita/draft-loop/issues/2704)).
   A different Claude model reviews each draft, so author and critic still
@@ -479,7 +479,7 @@ pnpm --filter @draft-loop/cli start application import ./home-workspace \
 
 The `draft-loop server import` command, which moves v0.8 desktop workspaces to
 a server, is a different command. It is covered in the
-[self-hosted guide](../operations/self-hosted.md#coming-from-the-desktop-app).
+[self-hosted guide](../operations/self-hosted.md#coming-from-the-v08-desktop-alpha).
 
 ### Renaming
 
@@ -537,7 +537,7 @@ With more than six applications, Home shows a toolbar above the list:
 ### Folders on Home
 
 On the client-server version, folders group applications into sections. The
-local-first desktop has no folders and shows none of these controls.
+CLI has no folders.
 
 | Control                       | What it does                                                                      |
 | ----------------------------- | --------------------------------------------------------------------------------- |
@@ -989,7 +989,7 @@ source chunk it was quoted from, so the writer never sees either.
 - **A fact's own level wins.** "Like section" follows the section's level.
 - **Kept by content.** A level follows the fact's text, so it survives a source
   refresh. Editing a fact's value starts it again from its section's level.
-- **Web only for now.** The local-first desktop shows no usage controls.
+- **Web only.** The CLI shows no usage controls.
 
 ### Incremental derivation
 

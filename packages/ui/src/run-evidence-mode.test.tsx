@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { createCapabilityPort, type NativeBridge } from "./bridge.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import { normalizeRunEvidenceMode, type RunEvidenceModeView } from "./run-evidence-mode.js";
 import { runEvidenceModeDisplay } from "./run-evidence-mode-display.js";
@@ -14,7 +14,7 @@ const fullSource: RunEvidenceModeView = {
 };
 
 /** The fixture with readiness saying a fresh retrieval would select 20 excerpts. */
-function stateWith(evidenceMode?: RunEvidenceModeView | null): DesktopReviewState {
+function stateWith(evidenceMode?: RunEvidenceModeView | null): ReviewScreenState {
   const fixture = createFixtureReviewState();
   return {
     ...fixture,
@@ -28,7 +28,7 @@ function stateWith(evidenceMode?: RunEvidenceModeView | null): DesktopReviewStat
   };
 }
 
-function render(state: DesktopReviewState): string {
+function render(state: ReviewScreenState): string {
   return renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
 }
 

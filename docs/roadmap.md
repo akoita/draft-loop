@@ -132,9 +132,9 @@ so candidate material needs a paid-tier key.
 The same adapter serves Gemini 4 Hydrogen, Carbon, and Argon as opt-in authors
 ([#2703](https://github.com/akoita/draft-loop/issues/2703)). The `balanced-google`
 preset pairs Hydrogen with GPT-6.1 Terra, and `standard-google` pairs Carbon with
-GPT-6.1 Sol; Argon is selectable by profile only. They run in the CLI and the
-local-first desktop. The server route through Vertex AI in the EU is blocked on
-Google's regional availability
+GPT-6.1 Sol; Argon is selectable by profile only. They run in the CLI. The
+server route through Vertex AI in the EU is blocked on Google's regional
+availability
 ([#2704](https://github.com/akoita/draft-loop/issues/2704)).
 
 The opt-in `development-mistral` preset pairs Mistral Large 4 (public preview)

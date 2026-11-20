@@ -44,6 +44,8 @@ export const tenantWideTables = new Set([
   "support_question_counts",
   // Deployment-wide support assistant spend per day: no tenant, member or record.
   "support_daily_spend",
+  // Deployment-wide live voice seconds: an opaque member id and a number, swept after a day.
+  "live_voice_seconds",
 ]);
 
 /**

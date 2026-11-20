@@ -110,13 +110,6 @@ import {
   workspaceEvidenceMigrationResultKeys,
 } from "./career-evidence-contract.js";
 import { normalizeReviewCoverage } from "./coverage-contract.js";
-import {
-  type CredentialTestInput,
-  type CredentialTestResult,
-  credentialTestInputKeys,
-  credentialTestProviders,
-  normalizeCredentialTestResult,
-} from "./credential-test-contract.js";
 import { normalizeEarlierRun } from "./earlier-run.js";
 import { exportTemplates } from "./export-template.js";
 import {
@@ -144,7 +137,6 @@ import {
 import { normalizeFindingRequirement } from "./finding-requirement.js";
 import type {
   CriticFallbackView,
-  DesktopReviewState,
   IndependentReviewView,
   OpportunityBriefSelection,
   PendingWritingPolicyOverride,
@@ -152,6 +144,7 @@ import type {
   ProviderFailureView,
   ReviewAction,
   ReviewFinding,
+  ReviewScreenState,
   RunWritingPolicyProjection,
   UsageLimitView,
   WritingPolicyIdentity,
@@ -179,6 +172,12 @@ import {
   type ReviewedCanonicalCandidateProfileCatalogResult,
 } from "./profile-catalog.js";
 import {
+  normalizeProfileDerivationEstimateResult,
+  type ProfileDerivationEstimateInput,
+  type ProfileDerivationEstimateResult,
+  validateProfileDerivationEstimateInput,
+} from "./profile-derivation-estimate-contract.js";
+import {
   normalizeProfileDerivationUsage,
   type ProfileDerivationUsage,
 } from "./profile-derivation-usage.js";
@@ -189,24 +188,6 @@ import {
   profileFreshnessInputKeys,
 } from "./profile-freshness-contract.js";
 import { normalizeProviderRoutes } from "./provider-routes.js";
-import type {
-  RecentWorkspaceOpenInput,
-  RecentWorkspaceRemoveInput,
-  RecentWorkspaceRemoveResult,
-  RecentWorkspacesClearInput,
-  RecentWorkspacesClearResult,
-  RecentWorkspacesListInput,
-  RecentWorkspacesListResult,
-} from "./recent-workspaces.js";
-import {
-  parseRecentWorkspaceOpenInput,
-  parseRecentWorkspaceRemoveInput,
-  parseRecentWorkspaceRemoveResult,
-  parseRecentWorkspacesClearInput,
-  parseRecentWorkspacesClearResult,
-  parseRecentWorkspacesListInput,
-  parseRecentWorkspacesListResult,
-} from "./recent-workspaces.js";
 import { maximumRevisionDirectionLength } from "./revision-direction.js";
 import { normalizeRunApplicationPlan } from "./run-application-plan.js";
 import { normalizeRunAuthorInput } from "./run-author-input.js";
@@ -224,30 +205,6 @@ import {
   type RunTraceResult,
   validateRunTraceInput,
 } from "./run-trace-contract.js";
-import {
-  type EmbeddingModelCancelResult,
-  type EmbeddingModelInstallInput,
-  type EmbeddingModelPlanResult,
-  type EmbeddingModelProgressResult,
-  type EmbeddingModelStatusResult,
-  type EmbeddingModelTierInput,
-  embeddingModelCancelResultKeys,
-  embeddingModelInstallKeys,
-  embeddingModelPlanFileKeys,
-  embeddingModelPlanResultKeys,
-  embeddingModelProgressResultKeys,
-  embeddingModelStates,
-  embeddingModelStatusResultKeys,
-  embeddingModelTierKeys,
-  embeddingModelTiers,
-  retrievalModes,
-  type WorkspaceRetrievalModeGetInput,
-  type WorkspaceRetrievalModeResult,
-  type WorkspaceRetrievalModeSetInput,
-  workspaceRetrievalModeGetKeys,
-  workspaceRetrievalModeResultKeys,
-  workspaceRetrievalModeSetKeys,
-} from "./semantic-retrieval-contract.js";
 import {
   normalizeSourceEvidenceKindSetResult,
   normalizeSourceEvidenceKindsResult,
@@ -299,12 +256,6 @@ export type {
   ApplicationJobResult,
 } from "./application-job-contract.js";
 export type {
-  CredentialTestInput,
-  CredentialTestOutcome,
-  CredentialTestProvider,
-  CredentialTestResult,
-} from "./credential-test-contract.js";
-export type {
   FactSuggestionAcceptInput,
   FactSuggestionAcceptItem,
   FactSuggestionAcceptResult,
@@ -334,6 +285,10 @@ export type {
   SavedCanonicalCandidateProfileSummary,
 } from "./profile-catalog.js";
 export type {
+  ProfileDerivationEstimateInput,
+  ProfileDerivationEstimateResult,
+} from "./profile-derivation-estimate-contract.js";
+export type {
   ProfileFreshnessInput,
   ProfileFreshnessResult,
   ProfileFreshnessState,
@@ -344,17 +299,6 @@ export type {
   RunRequirementEvidenceView,
 } from "./run-requirement-evidence-contract.js";
 export type { RunTraceInput, RunTraceResult, RunTraceSpanView } from "./run-trace-contract.js";
-export type {
-  EmbeddingModelCancelResult,
-  EmbeddingModelInstallInput,
-  EmbeddingModelPlanResult,
-  EmbeddingModelProgressResult,
-  EmbeddingModelStatusResult,
-  EmbeddingModelTierInput,
-  WorkspaceRetrievalModeGetInput,
-  WorkspaceRetrievalModeResult,
-  WorkspaceRetrievalModeSetInput,
-} from "./semantic-retrieval-contract.js";
 
 export type {
   SourceEvidenceKindSetInput,
@@ -390,21 +334,6 @@ export type SupportedMediaType = (typeof supportedMediaTypes)[number];
 export const exportFormats = ["docx", "markdown", "pdf"] as const;
 export type ExportFormat = (typeof exportFormats)[number];
 
-export const credentialProviders = [
-  "anthropic",
-  "openai",
-  "deepinfra",
-  "google",
-  "mistral",
-] as const;
-export type CredentialProvider = (typeof credentialProviders)[number];
-
-export const providerAuthModeProviders = ["anthropic", "openai"] as const;
-export type ProviderAuthModeProvider = (typeof providerAuthModeProviders)[number];
-
-export const providerAuthModes = ["api-key", "user-session"] as const;
-export type ProviderAuthMode = (typeof providerAuthModes)[number];
-
 /**
  * The provider companies a workspace can be configured to use.
  *
@@ -425,20 +354,6 @@ export type ModelCompany = (typeof modelCompanies)[number];
  */
 export const modelDiscoveryProviders = modelCompanies;
 export type ModelDiscoveryProvider = (typeof modelDiscoveryProviders)[number];
-
-export const credentialSources = ["app", "env", "user-session", "none"] as const;
-export type CredentialSource = (typeof credentialSources)[number];
-
-export const credentialProtections = [
-  "os-backed",
-  "basic-text",
-  "local-aes-gcm",
-  "environment",
-  "session-memory",
-  "provider-managed-session",
-  "none",
-] as const;
-export type CredentialProtection = (typeof credentialProtections)[number];
 
 export const runStates = [
   "collecting",
@@ -539,44 +454,6 @@ const knowledgeDuplicatesKeys = knowledgeReadinessKeys;
 export type KnowledgeInventoryInput = KnowledgeStoreListInput;
 const knowledgeInventoryKeys = knowledgeStoreListKeys;
 
-export interface KnowledgeBackupExportInput extends KnowledgeStoreListInput {
-  readonly selection: "native-dialog";
-  readonly name: string;
-  readonly approved: true;
-}
-
-const knowledgeBackupExportKeys = inputKeys<KnowledgeBackupExportInput>()([
-  "storeId",
-  "selection",
-  "name",
-  "approved",
-]);
-
-export interface KnowledgeBackupInspectInput {
-  readonly selection: "native-dialog";
-}
-
-const knowledgeBackupInspectKeys = inputKeys<KnowledgeBackupInspectInput>()(["selection"]);
-
-/**
- * Restore is deliberately path-free at the renderer boundary. The host opens
- * the package picker first, then chooses a new destination parent; the only
- * renderer-supplied destination value is a single safe directory name.
- */
-export interface KnowledgeBackupRestoreInput {
-  readonly packageSelection: "native-dialog";
-  readonly destinationSelection: "native-dialog";
-  readonly name: string;
-  readonly collision: "fail-if-destination-exists";
-}
-
-const knowledgeBackupRestoreKeys = inputKeys<KnowledgeBackupRestoreInput>()([
-  "packageSelection",
-  "destinationSelection",
-  "name",
-  "collision",
-]);
-
 export interface KnowledgeFileImportInput extends KnowledgeReadinessInput {
   /** The native host owns the file picker; no filesystem path crosses this API. */
   readonly selection: "native-dialog";
@@ -604,17 +481,6 @@ const knowledgeTextImportKeys = inputKeys<KnowledgeTextImportInput>()([
   "text",
 ]);
 
-export interface KnowledgeDirectoryImportInput extends KnowledgeReadinessInput {
-  /** The native host owns the directory picker; no filesystem path crosses this API. */
-  readonly selection: "native-dialog";
-}
-
-const knowledgeDirectoryImportKeys = inputKeys<KnowledgeDirectoryImportInput>()([
-  "storeId",
-  "knowledgeBaseId",
-  "selection",
-]);
-
 export interface KnowledgeWorkspaceSourcesImportInput {
   readonly workspaceId: string;
   readonly storeId: string;
@@ -627,101 +493,6 @@ const knowledgeWorkspaceSourcesImportKeys = inputKeys<KnowledgeWorkspaceSourcesI
   "storeId",
   "knowledgeBaseId",
   "approved",
-]);
-
-export interface KnowledgeDirectoryRootRebindPreviewInput extends KnowledgeReadinessInput {
-  readonly directoryId: string;
-  /** The native host owns the directory picker; no filesystem path crosses this API. */
-  readonly selection: "native-dialog";
-}
-
-export interface KnowledgeDirectoryRefreshPreviewInput extends KnowledgeReadinessInput {
-  readonly directoryId: string;
-}
-
-const knowledgeDirectoryRefreshPreviewKeys = inputKeys<KnowledgeDirectoryRefreshPreviewInput>()([
-  "storeId",
-  "knowledgeBaseId",
-  "directoryId",
-]);
-
-export interface KnowledgeDirectoryRefreshApplyInput extends KnowledgeDirectoryRefreshPreviewInput {
-  /** Appending changed directory members requires an explicit confirmation. */
-  readonly confirmed: boolean;
-}
-
-const knowledgeDirectoryRefreshApplyKeys = inputKeys<KnowledgeDirectoryRefreshApplyInput>()([
-  "storeId",
-  "knowledgeBaseId",
-  "directoryId",
-  "confirmed",
-]);
-
-export interface KnowledgeDirectoryAddMembersInput extends KnowledgeDirectoryRefreshPreviewInput {
-  /** Adding newly discovered directory members requires an explicit confirmation. */
-  readonly confirmed: boolean;
-}
-
-const knowledgeDirectoryAddMembersKeys = inputKeys<KnowledgeDirectoryAddMembersInput>()([
-  "storeId",
-  "knowledgeBaseId",
-  "directoryId",
-  "confirmed",
-]);
-
-export type KnowledgeDirectoryMovedCandidatesInput = KnowledgeDirectoryRefreshPreviewInput;
-const knowledgeDirectoryMovedCandidatesKeys = knowledgeDirectoryRefreshPreviewKeys;
-
-export interface KnowledgeDirectoryMemberMoveInput extends KnowledgeDirectoryRefreshPreviewInput {
-  readonly sourceId: string;
-  readonly confirmed: boolean;
-}
-
-const knowledgeDirectoryMemberMoveKeys = inputKeys<KnowledgeDirectoryMemberMoveInput>()([
-  "storeId",
-  "knowledgeBaseId",
-  "directoryId",
-  "sourceId",
-  "confirmed",
-]);
-
-export type KnowledgeDirectoryReconciliationPreviewInput = KnowledgeDirectoryRefreshPreviewInput;
-const knowledgeDirectoryReconciliationPreviewKeys = knowledgeDirectoryRefreshPreviewKeys;
-
-export interface KnowledgeDirectoryReconciliationApplyInput
-  extends KnowledgeDirectoryRefreshPreviewInput {
-  readonly approvedRetirementSourceIds: readonly string[];
-  readonly confirmed: boolean;
-}
-const knowledgeDirectoryReconciliationApplyKeys =
-  inputKeys<KnowledgeDirectoryReconciliationApplyInput>()([
-    "storeId",
-    "knowledgeBaseId",
-    "directoryId",
-    "approvedRetirementSourceIds",
-    "confirmed",
-  ]);
-
-const knowledgeDirectoryRootRebindPreviewKeys =
-  inputKeys<KnowledgeDirectoryRootRebindPreviewInput>()([
-    "storeId",
-    "knowledgeBaseId",
-    "directoryId",
-    "selection",
-  ]);
-
-export interface KnowledgeDirectoryRootRebindApplyInput
-  extends KnowledgeDirectoryRootRebindPreviewInput {
-  /** Rebinding every remembered member origin requires an explicit confirmation. */
-  readonly confirmed: boolean;
-}
-
-const knowledgeDirectoryRootRebindApplyKeys = inputKeys<KnowledgeDirectoryRootRebindApplyInput>()([
-  "storeId",
-  "knowledgeBaseId",
-  "directoryId",
-  "selection",
-  "confirmed",
 ]);
 
 export interface KnowledgeUrlImportInput extends KnowledgeReadinessInput {
@@ -872,81 +643,6 @@ const knowledgeBaseDeletionKeys = inputKeys<KnowledgeBaseDeletionInput>()([
   "confirmationToken",
   "confirmed",
 ]);
-
-/**
- * Everything a new workspace can be told about its models.
- *
- * Every field is optional and every omitted field keeps the workspace default,
- * so a host that is handed nothing still creates the same workspace it always
- * did. The names match `InitializeWorkspaceCommand` deliberately: this input
- * exists to fill that command in, and the desktop should be able to express
- * exactly what `draft-loop init` can.
- */
-export interface WorkspaceCreateInput {
-  /** A display name only. The native host owns the destination folder picker. */
-  readonly name: string;
-  /** Real workspaces are empty; demo mode is explicit and deterministic. */
-  readonly mode?: "real" | "demo";
-  /** Author provider company, matching the CLI's `--author-company`. */
-  readonly authorCompany?: ModelCompany;
-  /**
-   * Exact author model id. Omitted uses the workspace default, matching the
-   * CLI's `--author-model`.
-   */
-  readonly authorModel?: string;
-  /** Critic provider company, matching the CLI's `--critic-company`. */
-  readonly criticCompany?: ModelCompany;
-  /** Exact critic model id. Omitted uses the workspace default. */
-  readonly criticModel?: string;
-  /**
-   * The weights the author descends from, as claimed by the operator. Omitted
-   * lets the domain derive one; nothing here derives it.
-   */
-  readonly authorLineage?: string;
-  /** The weights the critic descends from, on the same terms. */
-  readonly criticLineage?: string;
-  /** Loopback base URL of the model server used when a company is `local`. */
-  readonly localEndpoint?: string;
-  /** Why one lineage on both sides is acceptable; recorded with every run. */
-  readonly independenceOverrideRationale?: string;
-  /**
-   * Sections the CV must contain, matching the CLI's `--required-sections`.
-   * Omitted uses the workspace default.
-   */
-  readonly requiredSections?: readonly string[];
-  /** Maximum author-critic rounds before the run returns to human review. */
-  readonly maxRounds?: number;
-}
-
-const workspaceCreateKeys = inputKeys<WorkspaceCreateInput>()([
-  "name",
-  "mode",
-  "authorCompany",
-  "authorModel",
-  "criticCompany",
-  "criticModel",
-  "authorLineage",
-  "criticLineage",
-  "localEndpoint",
-  "independenceOverrideRationale",
-  "requiredSections",
-  "maxRounds",
-]);
-
-/** Renames the open workspace. Only the display name changes, never the folder. */
-export interface WorkspaceRenameInput {
-  readonly workspaceId: string;
-  readonly name: string;
-}
-
-const workspaceRenameKeys = inputKeys<WorkspaceRenameInput>()(["workspaceId", "name"]);
-
-export interface WorkspaceRenameResult {
-  /** The trimmed name that was stored. */
-  readonly name: string;
-}
-
-const workspaceRenameResultKeys = resultKeys<WorkspaceRenameResult>()(["name"]);
 
 /**
  * Shrinks the open workspace's run history. The host keeps a verified backup beside the history
@@ -1144,20 +840,6 @@ const reviewDispatchKeys = inputKeys<ReviewDispatchInput>()([
   "applicationId",
 ]);
 
-export interface FileSelectInput {
-  readonly workspaceId: string;
-  readonly extensions?: readonly SupportedFileExtension[];
-  readonly multiple?: boolean;
-  readonly target?: "evidence" | "job-description" | "writing-policy" | "writing-policy-override";
-}
-
-const fileSelectKeys = inputKeys<FileSelectInput>()([
-  "workspaceId",
-  "extensions",
-  "multiple",
-  "target",
-]);
-
 /**
  * Markdown the renderer prepared, saved where the person picks in a save dialog. The host writes
  * nothing when the dialog is cancelled.
@@ -1202,39 +884,6 @@ const exportWriteKeys = inputKeys<ExportWriteInput>()([
   "format",
   "relativePath",
 ]);
-
-export interface CredentialStatusInput {
-  readonly provider: CredentialProvider;
-}
-
-export interface CredentialSetInput {
-  readonly provider: CredentialProvider;
-  readonly apiKey: string;
-}
-
-const credentialSetKeys = inputKeys<CredentialSetInput>()(["provider", "apiKey"]);
-
-export interface CredentialRemoveInput {
-  readonly provider: CredentialProvider;
-}
-
-export interface ProviderAuthModeStatusInput {
-  readonly provider: ProviderAuthModeProvider;
-}
-
-export interface ProviderAuthModeSetInput {
-  readonly provider: ProviderAuthModeProvider;
-  readonly mode: ProviderAuthMode;
-}
-
-/**
- * credential.status and credential.remove share one validator, so the guard
- * covers both interfaces: either one gaining a key breaks the build.
- */
-const credentialKeys = inputKeys<CredentialStatusInput & CredentialRemoveInput>()(["provider"]);
-
-const providerAuthModeStatusKeys = inputKeys<ProviderAuthModeStatusInput>()(["provider"]);
-const providerAuthModeSetKeys = inputKeys<ProviderAuthModeSetInput>()(["provider", "mode"]);
 
 export interface ModelsListInput {
   readonly provider: ModelDiscoveryProvider;
@@ -1292,13 +941,6 @@ export interface WorkspaceSummary {
   readonly id: string;
   readonly name: string;
 }
-
-export interface WorkspaceResult {
-  readonly workspace: WorkspaceSummary;
-}
-
-const workspaceResultKeys = resultKeys<WorkspaceResult>()(["workspace"]);
-const workspaceSummaryKeys = resultKeys<WorkspaceSummary>()(["id", "name"]);
 
 export interface KnowledgeBaseSummary {
   readonly id: string;
@@ -1388,36 +1030,6 @@ export interface KnowledgeInventoryResult {
   readonly scanLimitReached: boolean;
 }
 
-export interface KnowledgePortableBackupResult {
-  readonly format: "draft-loop-candidate-knowledge-backup";
-  readonly schemaVersion: 1;
-  readonly status: "valid" | "exported";
-  readonly descriptorSchemaVersion: 1;
-  readonly storeId: string;
-  readonly createdAt: string;
-  readonly manifestChecksum: string;
-  readonly knowledgeBaseCount: number;
-  readonly sourceCount: number;
-  readonly versionCount: number;
-  readonly contentObjectCount: number;
-  readonly contentBytes: number;
-  readonly integrity: "integrity-verified-not-authenticity";
-}
-
-export interface KnowledgePortableBackupRestoreResult {
-  readonly status: "restored";
-  readonly format: "draft-loop-candidate-knowledge-backup";
-  readonly schemaVersion: 1;
-  readonly storeId: string;
-  readonly manifestChecksum: string;
-  readonly knowledgeBaseCount: number;
-  readonly sourceCount: number;
-  readonly versionCount: number;
-  readonly contentObjectCount: number;
-  readonly contentBytes: number;
-  readonly integrity: "integrity-verified-not-authenticity";
-}
-
 /**
  * What adding a file did to the knowledge base: made a new source, appended a new version to the
  * source the file came from, or found the same content already held and wrote nothing.
@@ -1455,141 +1067,6 @@ export interface KnowledgeDirectoryImportResult {
   readonly sourceCount: number;
   readonly sources: readonly KnowledgeDirectoryImportSourceResult[];
   readonly sourcesTruncated: boolean;
-}
-
-export interface KnowledgeDirectoryRootRebindResult {
-  readonly storeId: string;
-  readonly knowledgeBaseId: string;
-  readonly directoryId: string;
-  readonly checkedAt: string;
-  readonly status: "current" | "ready" | "rebound";
-  readonly memberCount: number;
-  readonly scannedEntryCount: number;
-  readonly discoveredFileCount: number;
-  readonly skippedEntryCount: number;
-}
-
-export const knowledgeDirectoryRefreshMemberStatuses = [
-  "current",
-  "changed",
-  "missing",
-  "retired",
-  "origin-conflict",
-] as const;
-export type KnowledgeDirectoryRefreshMemberStatus =
-  (typeof knowledgeDirectoryRefreshMemberStatuses)[number];
-
-export interface KnowledgeDirectoryRefreshMemberResult {
-  readonly sourceId: string;
-  readonly status: KnowledgeDirectoryRefreshMemberStatus;
-}
-
-export interface KnowledgeDirectoryRefreshPreviewResult {
-  readonly storeId: string;
-  readonly knowledgeBaseId: string;
-  readonly directoryId: string;
-  readonly checkedAt: string;
-  readonly members: readonly KnowledgeDirectoryRefreshMemberResult[];
-  readonly memberCount: number;
-  readonly membersTruncated: boolean;
-  readonly newSourceCount: number;
-  readonly scannedEntryCount: number;
-  readonly discoveredFileCount: number;
-  readonly skippedEntryCount: number;
-}
-
-export interface KnowledgeDirectoryRefreshApplyResult
-  extends KnowledgeDirectoryRefreshPreviewResult {
-  readonly status: "complete" | "partial";
-  readonly refreshedSourceIds: readonly string[];
-  readonly refreshedSourceCount: number;
-  readonly refreshedSourceIdsTruncated: boolean;
-  readonly failedSourceId?: string;
-  readonly failedStatus?: KnowledgeDirectoryRefreshMemberStatus;
-}
-
-export interface KnowledgeDirectoryAddMembersResult extends KnowledgeDirectoryRefreshPreviewResult {
-  readonly status: "complete" | "partial";
-  readonly addedSourceIds: readonly string[];
-  readonly addedSourceCount: number;
-  readonly addedSourceIdsTruncated: boolean;
-}
-
-export interface KnowledgeDirectoryMovedCandidateResult {
-  readonly sourceId: string;
-  readonly status: "moved-candidate";
-}
-
-export interface KnowledgeDirectoryMovedCandidatesResult {
-  readonly storeId: string;
-  readonly knowledgeBaseId: string;
-  readonly directoryId: string;
-  readonly checkedAt: string;
-  readonly candidates: readonly KnowledgeDirectoryMovedCandidateResult[];
-  readonly candidateCount: number;
-  readonly candidatesTruncated: boolean;
-  readonly newSourceCount: number;
-  readonly scannedEntryCount: number;
-  readonly discoveredFileCount: number;
-  readonly skippedEntryCount: number;
-}
-
-export interface KnowledgeDirectoryMemberMoveResult {
-  readonly storeId: string;
-  readonly knowledgeBaseId: string;
-  readonly directoryId: string;
-  readonly sourceId: string;
-  readonly checkedAt: string;
-  readonly status: "moved" | "current";
-}
-
-export const knowledgeDirectoryReconciliationStatuses = [
-  "current",
-  "changed",
-  "already-retired",
-  "conflicted",
-  "moved-candidate",
-  "missing",
-] as const;
-export type KnowledgeDirectoryReconciliationStatus =
-  (typeof knowledgeDirectoryReconciliationStatuses)[number];
-export interface KnowledgeDirectoryReconciliationMemberResult {
-  readonly sourceId: string;
-  readonly status: KnowledgeDirectoryReconciliationStatus;
-}
-export interface KnowledgeDirectoryReconciliationPreviewResult {
-  readonly storeId: string;
-  readonly knowledgeBaseId: string;
-  readonly directoryId: string;
-  readonly checkedAt: string;
-  readonly members: readonly KnowledgeDirectoryReconciliationMemberResult[];
-  readonly memberCount: number;
-  readonly membersTruncated: boolean;
-  readonly currentCount: number;
-  readonly changedCount: number;
-  readonly alreadyRetiredCount: number;
-  readonly conflictedCount: number;
-  readonly movedCandidateCount: number;
-  readonly missingCount: number;
-  readonly newSourceCount: number;
-  readonly scanStatus: "complete" | "incomplete";
-  readonly scannedEntryCount: number;
-  readonly discoveredFileCount: number;
-  readonly skippedEntryCount: number;
-}
-export interface KnowledgeDirectoryReconciliationApplyResult {
-  readonly storeId: string;
-  readonly knowledgeBaseId: string;
-  readonly directoryId: string;
-  readonly checkedAt: string;
-  readonly status: "applied" | "current" | "partial";
-  readonly retiredSourceIds: readonly string[];
-  readonly retiredSourceCount: number;
-  readonly retiredSourceIdsTruncated: boolean;
-  readonly alreadyRetiredSourceIds: readonly string[];
-  readonly alreadyRetiredSourceCount: number;
-  readonly alreadyRetiredSourceIdsTruncated: boolean;
-  readonly failedSourceId?: string;
 }
 
 export interface KnowledgeUrlImportResult {
@@ -1875,46 +1352,6 @@ const knowledgeInventoryResultKeys = resultKeys<KnowledgeInventoryResult>()([
   "complete",
   "scanLimitReached",
 ]);
-const knowledgePortableBackupResultKeys = resultKeys<KnowledgePortableBackupResult>()([
-  "format",
-  "schemaVersion",
-  "status",
-  "descriptorSchemaVersion",
-  "storeId",
-  "createdAt",
-  "manifestChecksum",
-  "knowledgeBaseCount",
-  "sourceCount",
-  "versionCount",
-  "contentObjectCount",
-  "contentBytes",
-  "integrity",
-]);
-const knowledgePortableBackupRestoreResultKeys = resultKeys<KnowledgePortableBackupRestoreResult>()(
-  [
-    "status",
-    "format",
-    "schemaVersion",
-    "storeId",
-    "manifestChecksum",
-    "knowledgeBaseCount",
-    "sourceCount",
-    "versionCount",
-    "contentObjectCount",
-    "contentBytes",
-    "integrity",
-  ],
-);
-const knowledgeFileWriteResultKeys = resultKeys<KnowledgeFileImportResult>()([
-  "storeId",
-  "knowledgeBaseId",
-  "sourceId",
-  "kind",
-  "versionId",
-  "version",
-  "created",
-  "outcome",
-]);
 const knowledgeDirectoryImportSourceResultKeys = resultKeys<KnowledgeDirectoryImportSourceResult>()(
   ["sourceId", "versionId", "version", "created"],
 );
@@ -1930,113 +1367,16 @@ const knowledgeDirectoryImportResultKeys = resultKeys<KnowledgeDirectoryImportRe
   "sources",
   "sourcesTruncated",
 ]);
-const knowledgeDirectoryRootRebindResultKeys = resultKeys<KnowledgeDirectoryRootRebindResult>()([
+const knowledgeFileWriteResultKeys = resultKeys<KnowledgeFileImportResult>()([
   "storeId",
   "knowledgeBaseId",
-  "directoryId",
-  "checkedAt",
-  "status",
-  "memberCount",
-  "scannedEntryCount",
-  "discoveredFileCount",
-  "skippedEntryCount",
-]);
-const knowledgeDirectoryRefreshMemberResultKeys =
-  resultKeys<KnowledgeDirectoryRefreshMemberResult>()(["sourceId", "status"]);
-const knowledgeDirectoryRefreshPreviewResultKeys =
-  resultKeys<KnowledgeDirectoryRefreshPreviewResult>()([
-    "storeId",
-    "knowledgeBaseId",
-    "directoryId",
-    "checkedAt",
-    "members",
-    "memberCount",
-    "membersTruncated",
-    "newSourceCount",
-    "scannedEntryCount",
-    "discoveredFileCount",
-    "skippedEntryCount",
-  ]);
-const knowledgeDirectoryRefreshApplyResultKeys = resultKeys<KnowledgeDirectoryRefreshApplyResult>()(
-  [
-    ...knowledgeDirectoryRefreshPreviewResultKeys,
-    "status",
-    "refreshedSourceIds",
-    "refreshedSourceCount",
-    "refreshedSourceIdsTruncated",
-    "failedSourceId",
-    "failedStatus",
-  ],
-);
-const knowledgeDirectoryAddMembersResultKeys = resultKeys<KnowledgeDirectoryAddMembersResult>()([
-  ...knowledgeDirectoryRefreshPreviewResultKeys,
-  "status",
-  "addedSourceIds",
-  "addedSourceCount",
-  "addedSourceIdsTruncated",
-]);
-const knowledgeDirectoryMovedCandidateResultKeys =
-  resultKeys<KnowledgeDirectoryMovedCandidateResult>()(["sourceId", "status"]);
-const knowledgeDirectoryMovedCandidatesResultKeys =
-  resultKeys<KnowledgeDirectoryMovedCandidatesResult>()([
-    "storeId",
-    "knowledgeBaseId",
-    "directoryId",
-    "checkedAt",
-    "candidates",
-    "candidateCount",
-    "candidatesTruncated",
-    "newSourceCount",
-    "scannedEntryCount",
-    "discoveredFileCount",
-    "skippedEntryCount",
-  ]);
-const knowledgeDirectoryMemberMoveResultKeys = resultKeys<KnowledgeDirectoryMemberMoveResult>()([
-  "storeId",
-  "knowledgeBaseId",
-  "directoryId",
   "sourceId",
-  "checkedAt",
-  "status",
+  "kind",
+  "versionId",
+  "version",
+  "created",
+  "outcome",
 ]);
-const knowledgeDirectoryReconciliationMemberResultKeys =
-  resultKeys<KnowledgeDirectoryReconciliationMemberResult>()(["sourceId", "status"]);
-const knowledgeDirectoryReconciliationPreviewResultKeys =
-  resultKeys<KnowledgeDirectoryReconciliationPreviewResult>()([
-    "storeId",
-    "knowledgeBaseId",
-    "directoryId",
-    "checkedAt",
-    "members",
-    "memberCount",
-    "membersTruncated",
-    "currentCount",
-    "changedCount",
-    "alreadyRetiredCount",
-    "conflictedCount",
-    "movedCandidateCount",
-    "missingCount",
-    "newSourceCount",
-    "scanStatus",
-    "scannedEntryCount",
-    "discoveredFileCount",
-    "skippedEntryCount",
-  ]);
-const knowledgeDirectoryReconciliationApplyResultKeys =
-  resultKeys<KnowledgeDirectoryReconciliationApplyResult>()([
-    "storeId",
-    "knowledgeBaseId",
-    "directoryId",
-    "checkedAt",
-    "status",
-    "retiredSourceIds",
-    "retiredSourceCount",
-    "retiredSourceIdsTruncated",
-    "alreadyRetiredSourceIds",
-    "alreadyRetiredSourceCount",
-    "alreadyRetiredSourceIdsTruncated",
-    "failedSourceId",
-  ]);
 const knowledgeUrlImportResultKeys = resultKeys<KnowledgeUrlImportResult>()([
   "storeId",
   "knowledgeBaseId",
@@ -2177,7 +1517,7 @@ const workspaceReadinessKeys = [
   "ready",
   "nextSteps",
 ] as const;
-const desktopReviewStateKeys = [
+const reviewScreenStateKeys = [
   "workspaceId",
   "workspaceName",
   "runId",
@@ -2211,6 +1551,7 @@ const desktopReviewStateKeys = [
   "runInputs",
   "applicationPlan",
   "earlierRun",
+  "profileSuggestions",
   "setup",
 ] as const;
 
@@ -2300,19 +1641,7 @@ function normalizeReviewFindings(value: unknown): readonly unknown[] {
   });
 }
 
-export type ReviewStateResult = DesktopReviewState;
-
-export interface SelectedFile {
-  readonly id: string;
-  readonly name: string;
-  readonly relativePath: string;
-  readonly mediaType: SupportedMediaType;
-  readonly byteLength: number;
-}
-
-export interface FileSelectResult {
-  readonly files: readonly SelectedFile[];
-}
+export type ReviewStateResult = ReviewScreenState;
 
 /** Whether the file was saved, and the name the person gave it; no folder crosses back. */
 export interface MarkdownFileSaveResult {
@@ -2321,15 +1650,6 @@ export interface MarkdownFileSaveResult {
 }
 
 const markdownFileSaveResultKeys = resultKeys<MarkdownFileSaveResult>()(["saved", "fileName"]);
-
-const fileSelectResultKeys = resultKeys<FileSelectResult>()(["files"]);
-const selectedFileKeys = resultKeys<SelectedFile>()([
-  "id",
-  "name",
-  "relativePath",
-  "mediaType",
-  "byteLength",
-]);
 
 export interface SourceAddUrlResult {
   readonly sourcePath: string;
@@ -3169,41 +2489,6 @@ const exportResultKeys = resultKeys<ExportResult>()([
   "relativePath",
 ]);
 
-export interface CredentialStatus {
-  readonly provider: CredentialProvider;
-  readonly configured: boolean;
-  readonly source: CredentialSource;
-  /** Non-secret description of how the active credential is protected. */
-  readonly protection: CredentialProtection;
-}
-
-export type CredentialResult = CredentialStatus;
-
-const credentialResultKeys = resultKeys<CredentialResult>()([
-  "provider",
-  "configured",
-  "source",
-  "protection",
-]);
-
-export interface ProviderAuthModeStatus {
-  readonly provider: ProviderAuthModeProvider;
-  readonly activeMode: ProviderAuthMode;
-  readonly preferredMode: ProviderAuthMode;
-  readonly restartRequired: boolean;
-  readonly environmentOverride: boolean;
-}
-
-export type ProviderAuthModeResult = ProviderAuthModeStatus;
-
-const providerAuthModeResultKeys = resultKeys<ProviderAuthModeResult>()([
-  "provider",
-  "activeMode",
-  "preferredMode",
-  "restartRequired",
-  "environmentOverride",
-]);
-
 /**
  * A model id the provider says the configured credential can reach.
  *
@@ -3265,16 +2550,9 @@ const modelsPreviewIndependenceResultKeys = resultKeys<ModelsPreviewIndependence
 const maximumDiscoveredModels = 200;
 
 export interface BridgeCommandInputMap {
-  "workspace.open": WorkspaceOpenInput;
-  "workspace.create": WorkspaceCreateInput;
   "workspace.configure-models": WorkspaceConfigureModelsInput;
   "writing-policy.read": WritingPolicyReadInput;
   "writing-policy.save": WritingPolicySaveInput;
-  "workspace.recent-list": RecentWorkspacesListInput;
-  "workspace.recent-open": RecentWorkspaceOpenInput;
-  "workspace.recent-remove": RecentWorkspaceRemoveInput;
-  "workspace.recent-clear": RecentWorkspacesClearInput;
-  "workspace.rename": WorkspaceRenameInput;
   "workspace.compact-history": WorkspaceCompactHistoryInput;
   "application.list": ApplicationListInput;
   "application.get": ApplicationGetInput;
@@ -3310,23 +2588,10 @@ export interface BridgeCommandInputMap {
   "knowledge.source-evidence-kind.set": SourceEvidenceKindSetInput;
   "knowledge.duplicates": KnowledgeDuplicatesInput;
   "knowledge.inventory": KnowledgeInventoryInput;
-  "knowledge.backup-export": KnowledgeBackupExportInput;
-  "knowledge.backup-inspect": KnowledgeBackupInspectInput;
-  "knowledge.backup-restore": KnowledgeBackupRestoreInput;
   "knowledge.import-file": KnowledgeFileImportInput;
   "knowledge.import-text": KnowledgeTextImportInput;
-  "knowledge.import-directory": KnowledgeDirectoryImportInput;
   "knowledge.import-workspace-sources": KnowledgeWorkspaceSourcesImportInput;
   "knowledge.ensure-default": KnowledgeEnsureDefaultInput;
-  "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewInput;
-  "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyInput;
-  "knowledge.directory-add-members": KnowledgeDirectoryAddMembersInput;
-  "knowledge.directory-moved-candidates": KnowledgeDirectoryMovedCandidatesInput;
-  "knowledge.directory-member-move": KnowledgeDirectoryMemberMoveInput;
-  "knowledge.directory-reconciliation-preview": KnowledgeDirectoryReconciliationPreviewInput;
-  "knowledge.directory-reconciliation-apply": KnowledgeDirectoryReconciliationApplyInput;
-  "knowledge.directory-rebind-preview": KnowledgeDirectoryRootRebindPreviewInput;
-  "knowledge.directory-rebind-apply": KnowledgeDirectoryRootRebindApplyInput;
   "knowledge.import-url": KnowledgeUrlImportInput;
   "knowledge.append-file-version": KnowledgeFileVersionAppendInput;
   "knowledge.source-origin-status": KnowledgeSourceOriginStatusInput;
@@ -3355,6 +2620,7 @@ export interface BridgeCommandInputMap {
   "profile.get": CanonicalCandidateProfileGetInput;
   "profile.list": CanonicalCandidateProfileListInput;
   "profile.freshness": ProfileFreshnessInput;
+  "profile.estimate": ProfileDerivationEstimateInput;
   "profile.edit": CanonicalCandidateProfileEditInput;
   "profile.review": CanonicalCandidateProfileReviewInput;
   "profile.catalog": ReviewedCanonicalCandidateProfileCatalogInput;
@@ -3366,44 +2632,22 @@ export interface BridgeCommandInputMap {
   "review.load": ReviewLoadInput;
   "review.dispatch": ReviewDispatchInput;
   "review.preview-evidence": ReviewEvidencePreviewInput;
-  "file.select": FileSelectInput;
   "file.save-markdown": MarkdownFileSaveInput;
   "source.add-url": SourceAddUrlInput;
   "export.write": ExportWriteInput;
-  "credential.status": CredentialStatusInput;
-  "credential.set": CredentialSetInput;
-  "credential.remove": CredentialRemoveInput;
-  "credential.test": CredentialTestInput;
-  "provider-auth.status": ProviderAuthModeStatusInput;
-  "provider-auth.set": ProviderAuthModeSetInput;
   "models.list": ModelsListInput;
   "models.preview-independence": ModelsPreviewIndependenceInput;
   "models.profile-support": ModelProfileSupportInput;
   "models.saved-profiles.read": SavedModelProfilesReadInput;
   "models.saved-profiles.save": SavedModelProfilesSaveInput;
-  "embedding-model.status": EmbeddingModelTierInput;
-  "embedding-model.plan-install": EmbeddingModelTierInput;
-  "embedding-model.install": EmbeddingModelInstallInput;
-  "embedding-model.progress": EmbeddingModelTierInput;
-  "embedding-model.cancel": EmbeddingModelTierInput;
-  "embedding-model.remove": EmbeddingModelTierInput;
-  "workspace.retrieval-mode.get": WorkspaceRetrievalModeGetInput;
-  "workspace.retrieval-mode.set": WorkspaceRetrievalModeSetInput;
   "workspace.evidence-migration.get": WorkspaceEvidenceMigrationInput;
   "workspace.evidence-migration.decline": WorkspaceEvidenceMigrationInput;
 }
 
 export interface BridgeCommandOutputMap {
-  "workspace.open": WorkspaceResult;
-  "workspace.create": WorkspaceResult;
   "workspace.configure-models": WorkspaceModelsResult;
   "writing-policy.read": WritingPolicyReadResult;
   "writing-policy.save": WritingPolicySaveResult;
-  "workspace.recent-list": RecentWorkspacesListResult;
-  "workspace.recent-open": WorkspaceResult;
-  "workspace.recent-remove": RecentWorkspaceRemoveResult;
-  "workspace.recent-clear": RecentWorkspacesClearResult;
-  "workspace.rename": WorkspaceRenameResult;
   "workspace.compact-history": WorkspaceCompactHistoryResult;
   "application.list": ApplicationListResult;
   "application.get": ApplicationRecordResult;
@@ -3439,23 +2683,10 @@ export interface BridgeCommandOutputMap {
   "knowledge.source-evidence-kind.set": SourceEvidenceKindSetResult;
   "knowledge.duplicates": KnowledgeDuplicatesResult;
   "knowledge.inventory": KnowledgeInventoryResult;
-  "knowledge.backup-export": KnowledgePortableBackupResult;
-  "knowledge.backup-inspect": KnowledgePortableBackupResult;
-  "knowledge.backup-restore": KnowledgePortableBackupRestoreResult;
   "knowledge.import-file": KnowledgeFileImportResult;
   "knowledge.import-text": KnowledgeFileImportResult;
-  "knowledge.import-directory": KnowledgeDirectoryImportResult;
   "knowledge.import-workspace-sources": KnowledgeDirectoryImportResult;
   "knowledge.ensure-default": KnowledgeEnsureDefaultResult;
-  "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewResult;
-  "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyResult;
-  "knowledge.directory-add-members": KnowledgeDirectoryAddMembersResult;
-  "knowledge.directory-moved-candidates": KnowledgeDirectoryMovedCandidatesResult;
-  "knowledge.directory-member-move": KnowledgeDirectoryMemberMoveResult;
-  "knowledge.directory-reconciliation-preview": KnowledgeDirectoryReconciliationPreviewResult;
-  "knowledge.directory-reconciliation-apply": KnowledgeDirectoryReconciliationApplyResult;
-  "knowledge.directory-rebind-preview": KnowledgeDirectoryRootRebindResult;
-  "knowledge.directory-rebind-apply": KnowledgeDirectoryRootRebindResult;
   "knowledge.import-url": KnowledgeUrlImportResult;
   "knowledge.append-file-version": KnowledgeFileVersionAppendResult;
   "knowledge.source-origin-status": KnowledgeSourceOriginStatusResult;
@@ -3484,6 +2715,7 @@ export interface BridgeCommandOutputMap {
   "profile.get": CanonicalCandidateProfileRecordResult;
   "profile.list": CanonicalCandidateProfileListResult;
   "profile.freshness": ProfileFreshnessResult;
+  "profile.estimate": ProfileDerivationEstimateResult;
   "profile.edit": CanonicalCandidateProfileRecordResult;
   "profile.review": CanonicalCandidateProfileRecordResult;
   "profile.catalog": ReviewedCanonicalCandidateProfileCatalogResult;
@@ -3495,29 +2727,14 @@ export interface BridgeCommandOutputMap {
   "review.load": ReviewStateResult;
   "review.dispatch": ReviewStateResult;
   "review.preview-evidence": ReviewEvidencePreviewResult;
-  "file.select": FileSelectResult;
   "file.save-markdown": MarkdownFileSaveResult;
   "source.add-url": SourceAddUrlResult;
   "export.write": ExportResult;
-  "credential.status": CredentialStatus;
-  "credential.set": CredentialResult;
-  "credential.remove": CredentialResult;
-  "credential.test": CredentialTestResult;
-  "provider-auth.status": ProviderAuthModeStatus;
-  "provider-auth.set": ProviderAuthModeResult;
   "models.list": ModelsListResult;
   "models.preview-independence": ModelsPreviewIndependenceResult;
   "models.profile-support": ModelProfileSupportResult;
   "models.saved-profiles.read": SavedModelProfilesResult;
   "models.saved-profiles.save": SavedModelProfilesResult;
-  "embedding-model.status": EmbeddingModelStatusResult;
-  "embedding-model.plan-install": EmbeddingModelPlanResult;
-  "embedding-model.install": EmbeddingModelStatusResult;
-  "embedding-model.progress": EmbeddingModelProgressResult;
-  "embedding-model.cancel": EmbeddingModelCancelResult;
-  "embedding-model.remove": EmbeddingModelStatusResult;
-  "workspace.retrieval-mode.get": WorkspaceRetrievalModeResult;
-  "workspace.retrieval-mode.set": WorkspaceRetrievalModeResult;
   "workspace.evidence-migration.get": WorkspaceEvidenceMigrationResult;
   "workspace.evidence-migration.decline": WorkspaceEvidenceMigrationResult;
 }
@@ -3576,17 +2793,6 @@ const errorMessages = (): Readonly<Record<BridgeErrorCode, string>> => ({
 
 const bridgeErrorCodes = Object.freeze(Object.keys(errorMessages()) as BridgeErrorCode[]);
 const maxBridgeErrorMessageLength = 500;
-
-const fileMediaTypeByExtension: Readonly<Record<SupportedFileExtension, SupportedMediaType>> = {
-  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ".htm": "text/html",
-  ".html": "text/html",
-  ".markdown": "text/markdown",
-  ".md": "text/markdown",
-  ".pdf": "application/pdf",
-  ".text": "text/plain",
-  ".txt": "text/plain",
-};
 
 const exportExtensionByFormat: Readonly<Record<ExportFormat, string>> = {
   docx: ".docx",
@@ -3711,37 +2917,6 @@ function modelId(value: unknown): string {
   return result;
 }
 
-/**
- * A human-readable CV section title such as `Summary` or `Work Experience`.
- * Titles are compared against generated headings, so the charset stays close
- * to what a heading can hold.
- */
-function sectionTitle(value: unknown): string {
-  const result = stringValue(value, 64).trim();
-  if (!/^[A-Za-z0-9][A-Za-z0-9 -]{0,63}$/u.test(result)) {
-    return invalidInput();
-  }
-  return result;
-}
-
-/**
- * An empty list is rejected rather than accepted as "no requirements": the
- * application-layer config check only rejects bad entries, so an empty list
- * would pass it and silently disable the completeness check. Duplicates fail
- * loudly instead of being de-duplicated, because a caller sending them has a
- * bug.
- */
-function sectionTitles(value: unknown): readonly string[] {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 12) {
-    return invalidInput();
-  }
-  const titles = value.map((entry) => sectionTitle(entry));
-  if (new Set(titles).size !== titles.length) {
-    return invalidInput();
-  }
-  return titles;
-}
-
 function workspaceName(value: unknown): string {
   const result = stringValue(value, 120);
   if (
@@ -3822,22 +2997,6 @@ function optionalTimestampValue(value: unknown): string | undefined {
   return value === undefined ? undefined : timestampValue(value);
 }
 
-function optionalModelId(value: unknown): string | undefined {
-  return value === undefined ? undefined : modelId(value);
-}
-
-function optionalSectionTitles(value: unknown): readonly string[] | undefined {
-  return value === undefined ? undefined : sectionTitles(value);
-}
-
-function optionalMaxRounds(value: unknown): number | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 20) {
-    return invalidInput();
-  }
-  return value;
-}
-
 /**
  * A lineage label an operator declared, bounded the way the domain bounds one.
  *
@@ -3855,10 +3014,6 @@ function lineageLabel(value: unknown): string {
 
 function optionalLineageLabel(value: unknown): string | undefined {
   return value === undefined ? undefined : lineageLabel(value);
-}
-
-function optionalModelCompany(value: unknown): ModelCompany | undefined {
-  return value === undefined ? undefined : enumValue(value, modelCompanies);
 }
 
 function optionalOverrideRationale(value: unknown): string | undefined {
@@ -3913,14 +3068,6 @@ function requireRecord(value: unknown): Record<string, unknown> {
   return value;
 }
 
-function validateWorkspaceOpenInput(value: unknown): WorkspaceOpenInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, workspaceOpenKeys)) return invalidInput();
-  const selection = input.selection;
-  if (selection !== undefined && selection !== "native-dialog") return invalidInput();
-  return selection === undefined ? {} : { selection };
-}
-
 function nativeDialogSelection(value: unknown): "native-dialog" | undefined {
   if (value !== undefined && value !== "native-dialog") return invalidInput();
   return value;
@@ -3968,44 +3115,6 @@ function validateKnowledgeCurrentInput(value: unknown): KnowledgeCurrentInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, knowledgeCurrentKeys)) return invalidInput();
   return { workspaceId: identifier(input.workspaceId) };
-}
-
-function validateKnowledgeBackupExportInput(value: unknown): KnowledgeBackupExportInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, knowledgeBackupExportKeys)) return invalidInput();
-  if (input.selection !== "native-dialog" || input.approved !== true) return invalidInput();
-  return {
-    storeId: identifier(input.storeId),
-    selection: "native-dialog",
-    name: workspaceName(input.name),
-    approved: true,
-  };
-}
-
-function validateKnowledgeBackupInspectInput(value: unknown): KnowledgeBackupInspectInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, knowledgeBackupInspectKeys) || input.selection !== "native-dialog") {
-    return invalidInput();
-  }
-  return { selection: "native-dialog" };
-}
-
-function validateKnowledgeBackupRestoreInput(value: unknown): KnowledgeBackupRestoreInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, knowledgeBackupRestoreKeys)) return invalidInput();
-  if (
-    input.packageSelection !== "native-dialog" ||
-    input.destinationSelection !== "native-dialog" ||
-    input.collision !== "fail-if-destination-exists"
-  ) {
-    return invalidInput();
-  }
-  return {
-    packageSelection: "native-dialog",
-    destinationSelection: "native-dialog",
-    name: workspaceName(input.name),
-    collision: "fail-if-destination-exists",
-  };
 }
 
 function validateKnowledgeReadinessInput(value: unknown): KnowledgeReadinessInput {
@@ -4068,18 +3177,6 @@ function validateKnowledgeTextImportInput(value: unknown): KnowledgeTextImportIn
   };
 }
 
-function validateKnowledgeDirectoryImportInput(value: unknown): KnowledgeDirectoryImportInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, knowledgeDirectoryImportKeys) || input.selection !== "native-dialog") {
-    return invalidInput();
-  }
-  return {
-    storeId: identifier(input.storeId),
-    knowledgeBaseId: identifier(input.knowledgeBaseId),
-    selection: "native-dialog",
-  };
-}
-
 function validateKnowledgeWorkspaceSourcesImportInput(
   value: unknown,
 ): KnowledgeWorkspaceSourcesImportInput {
@@ -4092,142 +3189,6 @@ function validateKnowledgeWorkspaceSourcesImportInput(
     storeId: identifier(input.storeId),
     knowledgeBaseId: identifier(input.knowledgeBaseId),
     approved: true,
-  };
-}
-
-function validateKnowledgeDirectoryRefreshPreviewInput(
-  value: unknown,
-): KnowledgeDirectoryRefreshPreviewInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, knowledgeDirectoryRefreshPreviewKeys)) return invalidInput();
-  return {
-    storeId: identifier(input.storeId),
-    knowledgeBaseId: identifier(input.knowledgeBaseId),
-    directoryId: identifier(input.directoryId),
-  };
-}
-
-function validateKnowledgeDirectoryRefreshApplyInput(
-  value: unknown,
-): KnowledgeDirectoryRefreshApplyInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, knowledgeDirectoryRefreshApplyKeys)) return invalidInput();
-  return {
-    storeId: identifier(input.storeId),
-    knowledgeBaseId: identifier(input.knowledgeBaseId),
-    directoryId: identifier(input.directoryId),
-    confirmed: booleanValue(input.confirmed),
-  };
-}
-
-function validateKnowledgeDirectoryAddMembersInput(
-  value: unknown,
-): KnowledgeDirectoryAddMembersInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, knowledgeDirectoryAddMembersKeys)) return invalidInput();
-  return {
-    storeId: identifier(input.storeId),
-    knowledgeBaseId: identifier(input.knowledgeBaseId),
-    directoryId: identifier(input.directoryId),
-    confirmed: booleanValue(input.confirmed),
-  };
-}
-
-function validateKnowledgeDirectoryMovedCandidatesInput(
-  value: unknown,
-): KnowledgeDirectoryMovedCandidatesInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, knowledgeDirectoryMovedCandidatesKeys)) return invalidInput();
-  return {
-    storeId: identifier(input.storeId),
-    knowledgeBaseId: identifier(input.knowledgeBaseId),
-    directoryId: identifier(input.directoryId),
-  };
-}
-
-function validateKnowledgeDirectoryMemberMoveInput(
-  value: unknown,
-): KnowledgeDirectoryMemberMoveInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, knowledgeDirectoryMemberMoveKeys)) return invalidInput();
-  return {
-    storeId: identifier(input.storeId),
-    knowledgeBaseId: identifier(input.knowledgeBaseId),
-    directoryId: identifier(input.directoryId),
-    sourceId: identifier(input.sourceId),
-    confirmed: booleanValue(input.confirmed),
-  };
-}
-
-function validateKnowledgeDirectoryReconciliationPreviewInput(
-  value: unknown,
-): KnowledgeDirectoryReconciliationPreviewInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, knowledgeDirectoryReconciliationPreviewKeys)) return invalidInput();
-  return {
-    storeId: identifier(input.storeId),
-    knowledgeBaseId: identifier(input.knowledgeBaseId),
-    directoryId: identifier(input.directoryId),
-  };
-}
-function validateKnowledgeDirectoryReconciliationApplyInput(
-  value: unknown,
-): KnowledgeDirectoryReconciliationApplyInput {
-  const input = requireRecord(value);
-  if (
-    !hasOnlyKeys(input, knowledgeDirectoryReconciliationApplyKeys) ||
-    !Array.isArray(input.approvedRetirementSourceIds) ||
-    input.approvedRetirementSourceIds.length > maximumKnowledgeInspectionEntries
-  )
-    return invalidInput();
-  const approvedRetirementSourceIds = input.approvedRetirementSourceIds
-    .map((sourceId) => identifier(sourceId))
-    .sort((a, b) => a.localeCompare(b));
-  if (new Set(approvedRetirementSourceIds).size !== approvedRetirementSourceIds.length)
-    return invalidInput();
-  return {
-    storeId: identifier(input.storeId),
-    knowledgeBaseId: identifier(input.knowledgeBaseId),
-    directoryId: identifier(input.directoryId),
-    approvedRetirementSourceIds,
-    confirmed: booleanValue(input.confirmed),
-  };
-}
-
-function validateKnowledgeDirectoryRootRebindPreviewInput(
-  value: unknown,
-): KnowledgeDirectoryRootRebindPreviewInput {
-  const input = requireRecord(value);
-  if (
-    !hasOnlyKeys(input, knowledgeDirectoryRootRebindPreviewKeys) ||
-    input.selection !== "native-dialog"
-  ) {
-    return invalidInput();
-  }
-  return {
-    storeId: identifier(input.storeId),
-    knowledgeBaseId: identifier(input.knowledgeBaseId),
-    directoryId: identifier(input.directoryId),
-    selection: "native-dialog",
-  };
-}
-
-function validateKnowledgeDirectoryRootRebindApplyInput(
-  value: unknown,
-): KnowledgeDirectoryRootRebindApplyInput {
-  const input = requireRecord(value);
-  if (
-    !hasOnlyKeys(input, knowledgeDirectoryRootRebindApplyKeys) ||
-    input.selection !== "native-dialog"
-  ) {
-    return invalidInput();
-  }
-  return {
-    storeId: identifier(input.storeId),
-    knowledgeBaseId: identifier(input.knowledgeBaseId),
-    directoryId: identifier(input.directoryId),
-    selection: "native-dialog",
-    confirmed: booleanValue(input.confirmed),
   };
 }
 
@@ -4402,18 +3363,6 @@ function workspaceDisplayName(value: unknown): string {
   return normalizeWorkspaceDisplayName(value) ?? invalidInput();
 }
 
-function validateWorkspaceRenameInput(value: unknown): WorkspaceRenameInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, workspaceRenameKeys)) return invalidInput();
-  return { workspaceId: identifier(input.workspaceId), name: workspaceDisplayName(input.name) };
-}
-
-function normalizeWorkspaceRenameResult(value: unknown): WorkspaceRenameResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, workspaceRenameResultKeys)) return invalidInput();
-  return { name: workspaceDisplayName(result.name) };
-}
-
 function validateWorkspaceCompactHistoryInput(value: unknown): WorkspaceCompactHistoryInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, workspaceCompactHistoryKeys)) return invalidInput();
@@ -4440,39 +3389,6 @@ function normalizeWorkspaceCompactHistoryResult(value: unknown): WorkspaceCompac
     afterBytes: byteCount(result.afterBytes),
     backupFileName,
     runsVerified: byteCount(result.runsVerified),
-  };
-}
-
-function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, workspaceCreateKeys)) return invalidInput();
-  const mode =
-    input.mode === undefined ? undefined : enumValue(input.mode, ["real", "demo"] as const);
-  const authorCompany = optionalModelCompany(input.authorCompany);
-  const authorModel = optionalModelId(input.authorModel);
-  const criticCompany = optionalModelCompany(input.criticCompany);
-  const criticModel = optionalModelId(input.criticModel);
-  const authorLineage = optionalLineageLabel(input.authorLineage);
-  const criticLineage = optionalLineageLabel(input.criticLineage);
-  const localEndpoint = optionalLocalEndpointUrl(input.localEndpoint);
-  const independenceOverrideRationale = optionalOverrideRationale(
-    input.independenceOverrideRationale,
-  );
-  const requiredSections = optionalSectionTitles(input.requiredSections);
-  const maxRounds = optionalMaxRounds(input.maxRounds);
-  return {
-    name: workspaceDisplayName(input.name),
-    ...(mode === undefined ? {} : { mode }),
-    ...(authorCompany === undefined ? {} : { authorCompany }),
-    ...(authorModel === undefined ? {} : { authorModel }),
-    ...(criticCompany === undefined ? {} : { criticCompany }),
-    ...(criticModel === undefined ? {} : { criticModel }),
-    ...(authorLineage === undefined ? {} : { authorLineage }),
-    ...(criticLineage === undefined ? {} : { criticLineage }),
-    ...(localEndpoint === undefined ? {} : { localEndpoint }),
-    ...(independenceOverrideRationale === undefined ? {} : { independenceOverrideRationale }),
-    ...(requiredSections === undefined ? {} : { requiredSections }),
-    ...(maxRounds === undefined ? {} : { maxRounds }),
   };
 }
 
@@ -4954,48 +3870,6 @@ function normalizeApplicationList(value: unknown): ApplicationListResult {
 
 function normalizeApplicationRecord(value: unknown): ApplicationRecordResult {
   return normalizeApplicationRecordResult(value) ?? invalidInput();
-}
-
-function validateFileSelectInput(value: unknown): FileSelectInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, fileSelectKeys)) return invalidInput();
-  const extensions = input.extensions;
-  if (extensions !== undefined && !Array.isArray(extensions)) return invalidInput();
-  const normalizedExtensions = extensions?.map((extension) =>
-    enumValue(extension, supportedFileExtensions),
-  );
-  if (
-    normalizedExtensions !== undefined &&
-    new Set(normalizedExtensions).size !== normalizedExtensions.length
-  ) {
-    return invalidInput();
-  }
-  const multiple = optionalBooleanValue(input.multiple);
-  const target =
-    input.target === undefined
-      ? undefined
-      : enumValue(input.target, [
-          "evidence",
-          "job-description",
-          "writing-policy",
-          "writing-policy-override",
-        ] as const);
-  if (target === "writing-policy" || target === "writing-policy-override") {
-    if (multiple === true) return invalidInput();
-    if (
-      normalizedExtensions?.some(
-        (extension) => ![".md", ".markdown", ".txt", ".text"].includes(extension),
-      )
-    ) {
-      return invalidInput();
-    }
-  }
-  return {
-    workspaceId: identifier(input.workspaceId),
-    ...(normalizedExtensions === undefined ? {} : { extensions: normalizedExtensions }),
-    ...(multiple === undefined ? {} : { multiple }),
-    ...(target === undefined ? {} : { target }),
-  };
 }
 
 function validateSourceAddUrlInput(value: unknown): SourceAddUrlInput {
@@ -5721,41 +4595,6 @@ function validateExportWriteInput(value: unknown): ExportWriteInput {
   };
 }
 
-function validateCredentialInput(value: unknown): CredentialStatusInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, credentialKeys)) return invalidInput();
-  return { provider: enumValue(input.provider, credentialProviders) };
-}
-
-function validateCredentialSetInput(value: unknown): CredentialSetInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, credentialSetKeys)) return invalidInput();
-  const provider = enumValue(input.provider, credentialProviders);
-  if (typeof input.apiKey !== "string" || input.apiKey.trim().length === 0) return invalidInput();
-  return { provider, apiKey: input.apiKey.trim() };
-}
-
-function validateCredentialTestInput(value: unknown): CredentialTestInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, credentialTestInputKeys)) return invalidInput();
-  return { provider: enumValue(input.provider, credentialTestProviders) };
-}
-
-function validateProviderAuthModeStatusInput(value: unknown): ProviderAuthModeStatusInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, providerAuthModeStatusKeys)) return invalidInput();
-  return { provider: enumValue(input.provider, providerAuthModeProviders) };
-}
-
-function validateProviderAuthModeSetInput(value: unknown): ProviderAuthModeSetInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, providerAuthModeSetKeys)) return invalidInput();
-  return {
-    provider: enumValue(input.provider, providerAuthModeProviders),
-    mode: enumValue(input.mode, providerAuthModes),
-  };
-}
-
 function validateModelsListInput(value: unknown): ModelsListInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, modelsListKeys)) return invalidInput();
@@ -5788,38 +4627,6 @@ function validateModelsPreviewIndependenceInput(value: unknown): ModelsPreviewIn
   };
 }
 
-const maximumEmbeddingModelBytes = 100_000_000_000;
-const maximumEmbeddingModelFiles = 16;
-
-function validateEmbeddingModelTierInput(value: unknown): EmbeddingModelTierInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, embeddingModelTierKeys)) return invalidInput();
-  return { tier: enumValue(input.tier, embeddingModelTiers) };
-}
-
-function validateEmbeddingModelInstallInput(value: unknown): EmbeddingModelInstallInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, embeddingModelInstallKeys)) return invalidInput();
-  if (input.approved !== true) return invalidInput();
-  return { tier: enumValue(input.tier, embeddingModelTiers), approved: true };
-}
-
-function validateWorkspaceRetrievalModeGetInput(value: unknown): WorkspaceRetrievalModeGetInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, workspaceRetrievalModeGetKeys)) return invalidInput();
-  return { workspaceId: identifier(input.workspaceId) };
-}
-
-function validateWorkspaceRetrievalModeSetInput(value: unknown): WorkspaceRetrievalModeSetInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, workspaceRetrievalModeSetKeys)) return invalidInput();
-  return {
-    workspaceId: identifier(input.workspaceId),
-    mode: enumValue(input.mode, retrievalModes),
-    modelTier: enumValue(input.modelTier, embeddingModelTiers),
-  };
-}
-
 function validateKnowledgeEnsureDefaultInput(value: unknown): KnowledgeEnsureDefaultInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, knowledgeEnsureDefaultKeys)) return invalidInput();
@@ -5834,90 +4641,6 @@ function validateWorkspaceEvidenceMigrationInput(value: unknown): WorkspaceEvide
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, workspaceEvidenceMigrationKeys)) return invalidInput();
   return { workspaceId: identifier(input.workspaceId) };
-}
-
-/** The pinned model pages live on one host; anything else is not a model source. */
-function embeddingModelSourceUrl(value: unknown): string {
-  const result = stringValue(value, 300);
-  if (!result.startsWith("https://huggingface.co/") || /\s/u.test(result)) return invalidInput();
-  return result;
-}
-
-function normalizeEmbeddingModelStatusResult(value: unknown): EmbeddingModelStatusResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, embeddingModelStatusResultKeys)) return invalidInput();
-  return {
-    tier: enumValue(result.tier, embeddingModelTiers),
-    state: enumValue(result.state, embeddingModelStates),
-    modelId: stringValue(result.modelId, 200),
-    revision: stringValue(result.revision, 64),
-    license: stringValue(result.license, 64),
-    totalSizeBytes: finiteInteger(result.totalSizeBytes, maximumEmbeddingModelBytes),
-    sourceUrl: embeddingModelSourceUrl(result.sourceUrl),
-  };
-}
-
-function normalizeEmbeddingModelPlanResult(value: unknown): EmbeddingModelPlanResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, embeddingModelPlanResultKeys)) return invalidInput();
-  if (
-    !Array.isArray(result.files) ||
-    result.files.length === 0 ||
-    result.files.length > maximumEmbeddingModelFiles
-  ) {
-    return invalidInput();
-  }
-  return {
-    tier: enumValue(result.tier, embeddingModelTiers),
-    modelId: stringValue(result.modelId, 200),
-    revision: stringValue(result.revision, 64),
-    license: stringValue(result.license, 64),
-    sourceUrl: embeddingModelSourceUrl(result.sourceUrl),
-    files: (result.files as readonly unknown[]).map((candidate) => {
-      const file = requireRecord(candidate);
-      if (!hasOnlyKeys(file, embeddingModelPlanFileKeys)) return invalidInput();
-      const path = stringValue(file.path, 200);
-      // A relative path inside the model repository; never a local location.
-      if (path.startsWith("/") || path.includes("\\") || path.split("/").includes("..")) {
-        return invalidInput();
-      }
-      return { path, sizeBytes: finiteInteger(file.sizeBytes, maximumEmbeddingModelBytes) };
-    }),
-    totalSizeBytes: finiteInteger(result.totalSizeBytes, maximumEmbeddingModelBytes),
-  };
-}
-
-function normalizeEmbeddingModelProgressResult(value: unknown): EmbeddingModelProgressResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, embeddingModelProgressResultKeys)) return invalidInput();
-  const active = booleanValue(result.active);
-  if (result.receivedBytes === undefined && result.totalBytes === undefined) return { active };
-  if (!active || result.receivedBytes === undefined || result.totalBytes === undefined) {
-    return invalidInput();
-  }
-  const receivedBytes = finiteInteger(result.receivedBytes, maximumEmbeddingModelBytes);
-  const totalBytes = finiteInteger(result.totalBytes, maximumEmbeddingModelBytes);
-  if (totalBytes < 1 || receivedBytes > totalBytes) return invalidInput();
-  return { active, receivedBytes, totalBytes };
-}
-
-function normalizeEmbeddingModelCancelResult(value: unknown): EmbeddingModelCancelResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, embeddingModelCancelResultKeys)) return invalidInput();
-  return { cancelled: booleanValue(result.cancelled) };
-}
-
-function normalizeWorkspaceRetrievalModeResult(value: unknown): WorkspaceRetrievalModeResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, workspaceRetrievalModeResultKeys)) return invalidInput();
-  const updatedAt = result.updatedAt === undefined ? undefined : stringValue(result.updatedAt, 64);
-  if (updatedAt !== undefined && !Number.isFinite(Date.parse(updatedAt))) return invalidInput();
-  return {
-    workspaceId: identifier(result.workspaceId),
-    mode: enumValue(result.mode, retrievalModes),
-    modelTier: enumValue(result.modelTier, embeddingModelTiers),
-    ...(updatedAt === undefined ? {} : { updatedAt }),
-  };
 }
 
 function normalizeKnowledgeEnsureDefaultResult(value: unknown): KnowledgeEnsureDefaultResult {
@@ -5949,10 +4672,6 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
     return invalidCommand();
   }
   switch (command.type as BridgeCommandName) {
-    case "workspace.open":
-      return { type: "workspace.open", input: validateWorkspaceOpenInput(command.input) };
-    case "workspace.create":
-      return { type: "workspace.create", input: validateWorkspaceCreateInput(command.input) };
     case "workspace.configure-models":
       return {
         type: "workspace.configure-models",
@@ -5968,18 +4687,6 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "writing-policy.save",
         input: validateWritingPolicySaveInput(command.input),
       };
-    case "workspace.recent-list":
-      return {
-        type: "workspace.recent-list",
-        input: parseRecentWorkspacesListInput(command.input),
-      };
-    case "workspace.recent-open":
-      return {
-        type: "workspace.recent-open",
-        input: parseRecentWorkspaceOpenInput(command.input),
-      };
-    case "workspace.rename":
-      return { type: "workspace.rename", input: validateWorkspaceRenameInput(command.input) };
     case "workspace.compact-history":
       return {
         type: "workspace.compact-history",
@@ -6081,16 +4788,6 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "run.requirement-evidence",
         input: validateRunRequirementEvidenceInput(command.input) ?? invalidInput(),
       };
-    case "workspace.recent-remove":
-      return {
-        type: "workspace.recent-remove",
-        input: parseRecentWorkspaceRemoveInput(command.input),
-      };
-    case "workspace.recent-clear":
-      return {
-        type: "workspace.recent-clear",
-        input: parseRecentWorkspacesClearInput(command.input),
-      };
     case "knowledge.create":
       return { type: "knowledge.create", input: validateKnowledgeStoreCreateInput(command.input) };
     case "knowledge.open":
@@ -6123,21 +4820,6 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "knowledge.inventory",
         input: validateKnowledgeInventoryInput(command.input),
       };
-    case "knowledge.backup-export":
-      return {
-        type: "knowledge.backup-export",
-        input: validateKnowledgeBackupExportInput(command.input),
-      };
-    case "knowledge.backup-inspect":
-      return {
-        type: "knowledge.backup-inspect",
-        input: validateKnowledgeBackupInspectInput(command.input),
-      };
-    case "knowledge.backup-restore":
-      return {
-        type: "knowledge.backup-restore",
-        input: validateKnowledgeBackupRestoreInput(command.input),
-      };
     case "knowledge.import-file":
       return {
         type: "knowledge.import-file",
@@ -6148,11 +4830,6 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "knowledge.import-text",
         input: validateKnowledgeTextImportInput(command.input),
       };
-    case "knowledge.import-directory":
-      return {
-        type: "knowledge.import-directory",
-        input: validateKnowledgeDirectoryImportInput(command.input),
-      };
     case "knowledge.import-workspace-sources":
       return {
         type: "knowledge.import-workspace-sources",
@@ -6162,51 +4839,6 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "knowledge.ensure-default",
         input: validateKnowledgeEnsureDefaultInput(command.input),
-      };
-    case "knowledge.directory-refresh-preview":
-      return {
-        type: "knowledge.directory-refresh-preview",
-        input: validateKnowledgeDirectoryRefreshPreviewInput(command.input),
-      };
-    case "knowledge.directory-refresh-apply":
-      return {
-        type: "knowledge.directory-refresh-apply",
-        input: validateKnowledgeDirectoryRefreshApplyInput(command.input),
-      };
-    case "knowledge.directory-add-members":
-      return {
-        type: "knowledge.directory-add-members",
-        input: validateKnowledgeDirectoryAddMembersInput(command.input),
-      };
-    case "knowledge.directory-moved-candidates":
-      return {
-        type: "knowledge.directory-moved-candidates",
-        input: validateKnowledgeDirectoryMovedCandidatesInput(command.input),
-      };
-    case "knowledge.directory-member-move":
-      return {
-        type: "knowledge.directory-member-move",
-        input: validateKnowledgeDirectoryMemberMoveInput(command.input),
-      };
-    case "knowledge.directory-reconciliation-preview":
-      return {
-        type: "knowledge.directory-reconciliation-preview",
-        input: validateKnowledgeDirectoryReconciliationPreviewInput(command.input),
-      };
-    case "knowledge.directory-reconciliation-apply":
-      return {
-        type: "knowledge.directory-reconciliation-apply",
-        input: validateKnowledgeDirectoryReconciliationApplyInput(command.input),
-      };
-    case "knowledge.directory-rebind-preview":
-      return {
-        type: "knowledge.directory-rebind-preview",
-        input: validateKnowledgeDirectoryRootRebindPreviewInput(command.input),
-      };
-    case "knowledge.directory-rebind-apply":
-      return {
-        type: "knowledge.directory-rebind-apply",
-        input: validateKnowledgeDirectoryRootRebindApplyInput(command.input),
       };
     case "knowledge.import-url":
       return {
@@ -6333,6 +4965,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "profile.freshness",
         input: validateProfileFreshnessInput(command.input),
       };
+    case "profile.estimate":
+      return {
+        type: "profile.estimate",
+        input: validateProfileDerivationEstimateInput(command.input),
+      };
     case "profile.edit":
       return {
         type: "profile.edit",
@@ -6367,32 +5004,12 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "review.preview-evidence",
         input: validateReviewEvidencePreviewInput(command.input),
       };
-    case "file.select":
-      return { type: "file.select", input: validateFileSelectInput(command.input) };
     case "file.save-markdown":
       return { type: "file.save-markdown", input: validateMarkdownFileSaveInput(command.input) };
     case "source.add-url":
       return { type: "source.add-url", input: validateSourceAddUrlInput(command.input) };
     case "export.write":
       return { type: "export.write", input: validateExportWriteInput(command.input) };
-    case "credential.status":
-      return { type: "credential.status", input: validateCredentialInput(command.input) };
-    case "credential.set":
-      return { type: "credential.set", input: validateCredentialSetInput(command.input) };
-    case "credential.remove":
-      return { type: "credential.remove", input: validateCredentialInput(command.input) };
-    case "credential.test":
-      return { type: "credential.test", input: validateCredentialTestInput(command.input) };
-    case "provider-auth.status":
-      return {
-        type: "provider-auth.status",
-        input: validateProviderAuthModeStatusInput(command.input),
-      };
-    case "provider-auth.set":
-      return {
-        type: "provider-auth.set",
-        input: validateProviderAuthModeSetInput(command.input),
-      };
     case "models.list":
       return { type: "models.list", input: validateModelsListInput(command.input) };
     case "models.preview-independence":
@@ -6414,46 +5031,6 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "models.saved-profiles.save",
         input: parseSavedModelProfilesSaveInput(command.input),
-      };
-    case "embedding-model.status":
-      return {
-        type: "embedding-model.status",
-        input: validateEmbeddingModelTierInput(command.input),
-      };
-    case "embedding-model.plan-install":
-      return {
-        type: "embedding-model.plan-install",
-        input: validateEmbeddingModelTierInput(command.input),
-      };
-    case "embedding-model.progress":
-      return {
-        type: "embedding-model.progress",
-        input: validateEmbeddingModelTierInput(command.input),
-      };
-    case "embedding-model.cancel":
-      return {
-        type: "embedding-model.cancel",
-        input: validateEmbeddingModelTierInput(command.input),
-      };
-    case "embedding-model.remove":
-      return {
-        type: "embedding-model.remove",
-        input: validateEmbeddingModelTierInput(command.input),
-      };
-    case "embedding-model.install":
-      return {
-        type: "embedding-model.install",
-        input: validateEmbeddingModelInstallInput(command.input),
-      };
-    case "workspace.retrieval-mode.get":
-      return {
-        type: "workspace.retrieval-mode.get",
-        input: validateWorkspaceRetrievalModeGetInput(command.input),
-      };
-    case "workspace.retrieval-mode.set":
-      return {
-        type: "workspace.retrieval-mode.set",
-        input: validateWorkspaceRetrievalModeSetInput(command.input),
       };
     case "workspace.evidence-migration.get":
       return {
@@ -6570,19 +5147,6 @@ function displayName(value: unknown): string {
     return invalidInput();
   }
   return result;
-}
-
-function normalizeWorkspaceResult(value: unknown): WorkspaceResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, workspaceResultKeys)) return invalidInput();
-  const workspace = requireRecord(result.workspace);
-  if (!hasOnlyKeys(workspace, workspaceSummaryKeys)) return invalidInput();
-  return {
-    workspace: {
-      id: identifier(workspace.id),
-      name: displayName(workspace.name),
-    },
-  };
 }
 
 const knowledgeBlockerReasons = [
@@ -6931,66 +5495,6 @@ function normalizeKnowledgeInventoryResult(value: unknown): KnowledgeInventoryRe
   };
 }
 
-function normalizeKnowledgePortableBackupResult(value: unknown): KnowledgePortableBackupResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, knowledgePortableBackupResultKeys)) return invalidInput();
-  const checksum = stringValue(result.manifestChecksum, 64);
-  if (!/^[a-f0-9]{64}$/u.test(checksum)) return invalidInput();
-  if (
-    result.format !== "draft-loop-candidate-knowledge-backup" ||
-    result.schemaVersion !== 1 ||
-    result.descriptorSchemaVersion !== 1 ||
-    result.integrity !== "integrity-verified-not-authenticity"
-  ) {
-    return invalidInput();
-  }
-  return {
-    format: "draft-loop-candidate-knowledge-backup",
-    schemaVersion: 1,
-    status: enumValue(result.status, ["valid", "exported"] as const),
-    descriptorSchemaVersion: 1,
-    storeId: identifier(result.storeId),
-    createdAt: timestampValue(result.createdAt),
-    manifestChecksum: checksum,
-    knowledgeBaseCount: finiteInteger(result.knowledgeBaseCount, 1_024),
-    sourceCount: finiteInteger(result.sourceCount, 1_024),
-    versionCount: finiteInteger(result.versionCount, 1_024),
-    contentObjectCount: finiteInteger(result.contentObjectCount, 1_024),
-    contentBytes: finiteInteger(result.contentBytes, 16 * 1024 * 1024 * 1024),
-    integrity: "integrity-verified-not-authenticity",
-  };
-}
-
-function normalizeKnowledgePortableBackupRestoreResult(
-  value: unknown,
-): KnowledgePortableBackupRestoreResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, knowledgePortableBackupRestoreResultKeys)) return invalidInput();
-  const checksum = stringValue(result.manifestChecksum, 64);
-  if (!/^[a-f0-9]{64}$/u.test(checksum)) return invalidInput();
-  if (
-    result.status !== "restored" ||
-    result.format !== "draft-loop-candidate-knowledge-backup" ||
-    result.schemaVersion !== 1 ||
-    result.integrity !== "integrity-verified-not-authenticity"
-  ) {
-    return invalidInput();
-  }
-  return {
-    status: "restored",
-    format: "draft-loop-candidate-knowledge-backup",
-    schemaVersion: 1,
-    storeId: identifier(result.storeId),
-    manifestChecksum: checksum,
-    knowledgeBaseCount: finiteInteger(result.knowledgeBaseCount, 1_024),
-    sourceCount: finiteInteger(result.sourceCount, 1_024),
-    versionCount: finiteInteger(result.versionCount, 1_024),
-    contentObjectCount: finiteInteger(result.contentObjectCount, 1_024),
-    contentBytes: finiteInteger(result.contentBytes, 16 * 1024 * 1024 * 1024),
-    integrity: "integrity-verified-not-authenticity",
-  };
-}
-
 function normalizeKnowledgeFileWriteResult(value: unknown): KnowledgeFileImportResult {
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, knowledgeFileWriteResultKeys)) return invalidInput();
@@ -7069,420 +5573,6 @@ function normalizeKnowledgeDirectoryImportResult(value: unknown): KnowledgeDirec
     sourceCount,
     sources,
     sourcesTruncated,
-  };
-}
-
-function normalizeKnowledgeDirectoryRootRebindResult(
-  value: unknown,
-  statuses: readonly ("current" | "ready" | "rebound")[],
-): KnowledgeDirectoryRootRebindResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, knowledgeDirectoryRootRebindResultKeys)) return invalidInput();
-  const scannedEntryCount = finiteInteger(result.scannedEntryCount, 1_000_000);
-  const discoveredFileCount = finiteInteger(result.discoveredFileCount, scannedEntryCount);
-  const skippedEntryCount = finiteInteger(result.skippedEntryCount, scannedEntryCount);
-  const memberCount = finiteInteger(result.memberCount, discoveredFileCount);
-  if (
-    memberCount !== discoveredFileCount ||
-    discoveredFileCount + skippedEntryCount > scannedEntryCount
-  ) {
-    return invalidInput();
-  }
-  return {
-    storeId: identifier(result.storeId),
-    knowledgeBaseId: identifier(result.knowledgeBaseId),
-    directoryId: identifier(result.directoryId),
-    checkedAt: timestampValue(result.checkedAt),
-    status: enumValue(result.status, statuses),
-    memberCount,
-    scannedEntryCount,
-    discoveredFileCount,
-    skippedEntryCount,
-  };
-}
-
-function normalizeKnowledgeDirectoryRefreshMembers(
-  value: unknown,
-): readonly KnowledgeDirectoryRefreshMemberResult[] {
-  if (!Array.isArray(value) || value.length > maximumKnowledgeInspectionEntries) {
-    return invalidInput();
-  }
-  const members = value.map((entry) => {
-    const member = requireRecord(entry);
-    if (!hasOnlyKeys(member, knowledgeDirectoryRefreshMemberResultKeys)) return invalidInput();
-    return {
-      sourceId: identifier(member.sourceId),
-      status: enumValue(member.status, knowledgeDirectoryRefreshMemberStatuses),
-    } satisfies KnowledgeDirectoryRefreshMemberResult;
-  });
-  if (new Set(members.map(({ sourceId }) => sourceId)).size !== members.length) {
-    return invalidInput();
-  }
-  return members.sort((left, right) => left.sourceId.localeCompare(right.sourceId));
-}
-
-function normalizeKnowledgeDirectoryRefreshPreviewResult(
-  value: unknown,
-): KnowledgeDirectoryRefreshPreviewResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, knowledgeDirectoryRefreshPreviewResultKeys)) return invalidInput();
-  const members = normalizeKnowledgeDirectoryRefreshMembers(result.members);
-  const memberCount = finiteInteger(result.memberCount, 1_000_000);
-  const membersTruncated = booleanValue(result.membersTruncated);
-  const scannedEntryCount = finiteInteger(result.scannedEntryCount, 1_000_000);
-  const discoveredFileCount = finiteInteger(result.discoveredFileCount, scannedEntryCount);
-  const skippedEntryCount = finiteInteger(result.skippedEntryCount, scannedEntryCount);
-  if (
-    memberCount < members.length ||
-    membersTruncated !== memberCount > members.length ||
-    discoveredFileCount + skippedEntryCount > scannedEntryCount
-  ) {
-    return invalidInput();
-  }
-  return {
-    storeId: identifier(result.storeId),
-    knowledgeBaseId: identifier(result.knowledgeBaseId),
-    directoryId: identifier(result.directoryId),
-    checkedAt: timestampValue(result.checkedAt),
-    members,
-    memberCount,
-    membersTruncated,
-    newSourceCount: finiteInteger(result.newSourceCount, discoveredFileCount),
-    scannedEntryCount,
-    discoveredFileCount,
-    skippedEntryCount,
-  };
-}
-
-function normalizeKnowledgeDirectoryRefreshApplyResult(
-  value: unknown,
-): KnowledgeDirectoryRefreshApplyResult {
-  const result = requireRecord(value);
-  if (
-    !hasOnlyKeys(result, knowledgeDirectoryRefreshApplyResultKeys) ||
-    !Array.isArray(result.refreshedSourceIds) ||
-    result.refreshedSourceIds.length > maximumKnowledgeInspectionEntries
-  ) {
-    return invalidInput();
-  }
-  const preview = normalizeKnowledgeDirectoryRefreshPreviewResult({
-    storeId: result.storeId,
-    knowledgeBaseId: result.knowledgeBaseId,
-    directoryId: result.directoryId,
-    checkedAt: result.checkedAt,
-    members: result.members,
-    memberCount: result.memberCount,
-    membersTruncated: result.membersTruncated,
-    newSourceCount: result.newSourceCount,
-    scannedEntryCount: result.scannedEntryCount,
-    discoveredFileCount: result.discoveredFileCount,
-    skippedEntryCount: result.skippedEntryCount,
-  });
-  const status = enumValue(result.status, ["complete", "partial"] as const);
-  const refreshedSourceIds = result.refreshedSourceIds
-    .map((sourceId) => identifier(sourceId))
-    .sort((left, right) => left.localeCompare(right));
-  const refreshedSourceCount = finiteInteger(result.refreshedSourceCount, 1_000_000);
-  const refreshedSourceIdsTruncated = booleanValue(result.refreshedSourceIdsTruncated);
-  const failedSourceId = optionalIdentifier(result.failedSourceId);
-  const failedStatus =
-    result.failedStatus === undefined
-      ? undefined
-      : enumValue(result.failedStatus, knowledgeDirectoryRefreshMemberStatuses);
-  const changedSourceIds = new Set(
-    preview.members.filter(({ status }) => status === "changed").map(({ sourceId }) => sourceId),
-  );
-  const visibleSourceIds = new Set(preview.members.map(({ sourceId }) => sourceId));
-  const isChangedOrTruncated = (sourceId: string): boolean =>
-    changedSourceIds.has(sourceId) || (preview.membersTruncated && !visibleSourceIds.has(sourceId));
-  if (
-    new Set(refreshedSourceIds).size !== refreshedSourceIds.length ||
-    refreshedSourceIds.some((sourceId) => !isChangedOrTruncated(sourceId)) ||
-    refreshedSourceCount < refreshedSourceIds.length ||
-    refreshedSourceIdsTruncated !== refreshedSourceCount > refreshedSourceIds.length ||
-    (status === "partial") !== (failedSourceId !== undefined && failedStatus !== undefined) ||
-    (status === "partial" &&
-      (failedStatus !== "changed" ||
-        failedSourceId === undefined ||
-        refreshedSourceIds.includes(failedSourceId) ||
-        !isChangedOrTruncated(failedSourceId))) ||
-    (status === "complete" &&
-      (Object.hasOwn(result, "failedSourceId") || Object.hasOwn(result, "failedStatus")))
-  ) {
-    return invalidInput();
-  }
-  return {
-    ...preview,
-    status,
-    refreshedSourceIds,
-    refreshedSourceCount,
-    refreshedSourceIdsTruncated,
-    ...(failedSourceId === undefined || failedStatus === undefined
-      ? {}
-      : { failedSourceId, failedStatus }),
-  };
-}
-
-function normalizeKnowledgeDirectoryAddMembersResult(
-  value: unknown,
-): KnowledgeDirectoryAddMembersResult {
-  const result = requireRecord(value);
-  if (
-    !hasOnlyKeys(result, knowledgeDirectoryAddMembersResultKeys) ||
-    !Array.isArray(result.addedSourceIds) ||
-    result.addedSourceIds.length > maximumKnowledgeInspectionEntries
-  ) {
-    return invalidInput();
-  }
-  const preview = normalizeKnowledgeDirectoryRefreshPreviewResult({
-    storeId: result.storeId,
-    knowledgeBaseId: result.knowledgeBaseId,
-    directoryId: result.directoryId,
-    checkedAt: result.checkedAt,
-    members: result.members,
-    memberCount: result.memberCount,
-    membersTruncated: result.membersTruncated,
-    newSourceCount: result.newSourceCount,
-    scannedEntryCount: result.scannedEntryCount,
-    discoveredFileCount: result.discoveredFileCount,
-    skippedEntryCount: result.skippedEntryCount,
-  });
-  const status = enumValue(result.status, ["complete", "partial"] as const);
-  const addedSourceIds = result.addedSourceIds
-    .map((sourceId) => identifier(sourceId))
-    .sort((left, right) => left.localeCompare(right));
-  const addedSourceCount = finiteInteger(result.addedSourceCount, 1_000_000);
-  const addedSourceIdsTruncated = booleanValue(result.addedSourceIdsTruncated);
-  const visibleMemberSourceIds = new Set(preview.members.map(({ sourceId }) => sourceId));
-  if (
-    new Set(addedSourceIds).size !== addedSourceIds.length ||
-    addedSourceIds.some((sourceId) => visibleMemberSourceIds.has(sourceId)) ||
-    addedSourceCount < addedSourceIds.length ||
-    addedSourceCount > preview.newSourceCount ||
-    addedSourceIdsTruncated !== addedSourceCount > addedSourceIds.length ||
-    (status === "complete" && addedSourceCount !== preview.newSourceCount) ||
-    (status === "partial" && addedSourceCount >= preview.newSourceCount)
-  ) {
-    return invalidInput();
-  }
-  return {
-    ...preview,
-    status,
-    addedSourceIds,
-    addedSourceCount,
-    addedSourceIdsTruncated,
-  };
-}
-
-function normalizeKnowledgeDirectoryMovedCandidatesResult(
-  value: unknown,
-): KnowledgeDirectoryMovedCandidatesResult {
-  const result = requireRecord(value);
-  if (
-    !hasOnlyKeys(result, knowledgeDirectoryMovedCandidatesResultKeys) ||
-    !Array.isArray(result.candidates) ||
-    result.candidates.length > maximumKnowledgeInspectionEntries
-  )
-    return invalidInput();
-  const candidates = result.candidates
-    .map((entry) => {
-      const candidate = requireRecord(entry);
-      if (!hasOnlyKeys(candidate, knowledgeDirectoryMovedCandidateResultKeys))
-        return invalidInput();
-      return {
-        sourceId: identifier(candidate.sourceId),
-        status: enumValue(candidate.status, ["moved-candidate"] as const),
-      } satisfies KnowledgeDirectoryMovedCandidateResult;
-    })
-    .sort((left, right) => left.sourceId.localeCompare(right.sourceId));
-  const candidateCount = finiteInteger(result.candidateCount, 1_000_000);
-  const candidatesTruncated = booleanValue(result.candidatesTruncated);
-  const scannedEntryCount = finiteInteger(result.scannedEntryCount, 1_000_000);
-  const discoveredFileCount = finiteInteger(result.discoveredFileCount, scannedEntryCount);
-  const skippedEntryCount = finiteInteger(result.skippedEntryCount, scannedEntryCount);
-  if (
-    new Set(candidates.map(({ sourceId }) => sourceId)).size !== candidates.length ||
-    candidateCount < candidates.length ||
-    candidatesTruncated !== candidateCount > candidates.length ||
-    discoveredFileCount + skippedEntryCount > scannedEntryCount
-  )
-    return invalidInput();
-  return {
-    storeId: identifier(result.storeId),
-    knowledgeBaseId: identifier(result.knowledgeBaseId),
-    directoryId: identifier(result.directoryId),
-    checkedAt: timestampValue(result.checkedAt),
-    candidates,
-    candidateCount,
-    candidatesTruncated,
-    newSourceCount: finiteInteger(result.newSourceCount, discoveredFileCount),
-    scannedEntryCount,
-    discoveredFileCount,
-    skippedEntryCount,
-  };
-}
-
-function normalizeKnowledgeDirectoryMemberMoveResult(
-  value: unknown,
-): KnowledgeDirectoryMemberMoveResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, knowledgeDirectoryMemberMoveResultKeys)) return invalidInput();
-  return {
-    storeId: identifier(result.storeId),
-    knowledgeBaseId: identifier(result.knowledgeBaseId),
-    directoryId: identifier(result.directoryId),
-    sourceId: identifier(result.sourceId),
-    checkedAt: timestampValue(result.checkedAt),
-    status: enumValue(result.status, ["moved", "current"] as const),
-  };
-}
-
-function normalizeKnowledgeDirectoryReconciliationPreviewResult(
-  value: unknown,
-): KnowledgeDirectoryReconciliationPreviewResult {
-  const result = requireRecord(value);
-  if (
-    !hasOnlyKeys(result, knowledgeDirectoryReconciliationPreviewResultKeys) ||
-    !Array.isArray(result.members) ||
-    result.members.length > maximumKnowledgeInspectionEntries
-  )
-    return invalidInput();
-  const members = result.members
-    .map((entry) => {
-      const member = requireRecord(entry);
-      if (!hasOnlyKeys(member, knowledgeDirectoryReconciliationMemberResultKeys))
-        return invalidInput();
-      return {
-        sourceId: identifier(member.sourceId),
-        status: enumValue(member.status, knowledgeDirectoryReconciliationStatuses),
-      } satisfies KnowledgeDirectoryReconciliationMemberResult;
-    })
-    .sort((a, b) => a.sourceId.localeCompare(b.sourceId));
-  const memberCount = finiteInteger(result.memberCount, 1_000_000);
-  const membersTruncated = booleanValue(result.membersTruncated);
-  const currentCount = finiteInteger(result.currentCount, 1_000_000);
-  const changedCount = finiteInteger(result.changedCount, 1_000_000);
-  const alreadyRetiredCount = finiteInteger(result.alreadyRetiredCount, 1_000_000);
-  const conflictedCount = finiteInteger(result.conflictedCount, 1_000_000);
-  const movedCandidateCount = finiteInteger(result.movedCandidateCount, 1_000_000);
-  const missingCount = finiteInteger(result.missingCount, 1_000_000);
-  const totalStatusCount =
-    currentCount +
-    changedCount +
-    alreadyRetiredCount +
-    conflictedCount +
-    movedCandidateCount +
-    missingCount;
-  const visibleCounts = new Map<string, number>();
-  for (const member of members)
-    visibleCounts.set(member.status, (visibleCounts.get(member.status) ?? 0) + 1);
-  const scannedEntryCount = finiteInteger(result.scannedEntryCount, 1_000_000);
-  const discoveredFileCount = finiteInteger(result.discoveredFileCount, scannedEntryCount);
-  const skippedEntryCount = finiteInteger(result.skippedEntryCount, scannedEntryCount);
-  const newSourceCount = finiteInteger(result.newSourceCount, discoveredFileCount);
-  const scanStatus = enumValue(result.scanStatus, ["complete", "incomplete"] as const);
-  const statusTotals = new Map<string, number>([
-    ["current", currentCount],
-    ["changed", changedCount],
-    ["already-retired", alreadyRetiredCount],
-    ["conflicted", conflictedCount],
-    ["moved-candidate", movedCandidateCount],
-    ["missing", missingCount],
-  ]);
-  if (
-    new Set(members.map(({ sourceId }) => sourceId)).size !== members.length ||
-    memberCount !== totalStatusCount ||
-    memberCount < members.length ||
-    membersTruncated !== memberCount > members.length ||
-    [...visibleCounts].some(([status, count]) => count > (statusTotals.get(status) ?? 0)) ||
-    (!membersTruncated &&
-      [
-        ["current", currentCount],
-        ["changed", changedCount],
-        ["already-retired", alreadyRetiredCount],
-        ["conflicted", conflictedCount],
-        ["moved-candidate", movedCandidateCount],
-        ["missing", missingCount],
-      ].some(([status, count]) => (visibleCounts.get(status as string) ?? 0) !== count)) ||
-    discoveredFileCount + skippedEntryCount > scannedEntryCount ||
-    newSourceCount > discoveredFileCount ||
-    (scanStatus === "complete") !== (skippedEntryCount === 0)
-  )
-    return invalidInput();
-  return {
-    storeId: identifier(result.storeId),
-    knowledgeBaseId: identifier(result.knowledgeBaseId),
-    directoryId: identifier(result.directoryId),
-    checkedAt: timestampValue(result.checkedAt),
-    members,
-    memberCount,
-    membersTruncated,
-    currentCount,
-    changedCount,
-    alreadyRetiredCount,
-    conflictedCount,
-    movedCandidateCount,
-    missingCount,
-    newSourceCount,
-    scanStatus,
-    scannedEntryCount,
-    discoveredFileCount,
-    skippedEntryCount,
-  };
-}
-function normalizeKnowledgeDirectoryReconciliationApplyResult(
-  value: unknown,
-): KnowledgeDirectoryReconciliationApplyResult {
-  const result = requireRecord(value);
-  if (
-    !hasOnlyKeys(result, knowledgeDirectoryReconciliationApplyResultKeys) ||
-    !Array.isArray(result.retiredSourceIds) ||
-    !Array.isArray(result.alreadyRetiredSourceIds) ||
-    result.retiredSourceIds.length > maximumKnowledgeInspectionEntries ||
-    result.alreadyRetiredSourceIds.length > maximumKnowledgeInspectionEntries
-  )
-    return invalidInput();
-  const retiredSourceIds = result.retiredSourceIds
-    .map((id) => identifier(id))
-    .sort((a, b) => a.localeCompare(b));
-  const alreadyRetiredSourceIds = result.alreadyRetiredSourceIds
-    .map((id) => identifier(id))
-    .sort((a, b) => a.localeCompare(b));
-  const status = enumValue(result.status, ["applied", "current", "partial"] as const);
-  const failedSourceId = optionalIdentifier(result.failedSourceId);
-  const retiredSourceCount = finiteInteger(result.retiredSourceCount, 1_000_000);
-  const alreadyRetiredSourceCount = finiteInteger(result.alreadyRetiredSourceCount, 1_000_000);
-  if (
-    new Set(retiredSourceIds).size !== retiredSourceIds.length ||
-    new Set(alreadyRetiredSourceIds).size !== alreadyRetiredSourceIds.length ||
-    retiredSourceIds.some((id) => alreadyRetiredSourceIds.includes(id)) ||
-    retiredSourceCount < retiredSourceIds.length ||
-    alreadyRetiredSourceCount < alreadyRetiredSourceIds.length ||
-    booleanValue(result.retiredSourceIdsTruncated) !==
-      retiredSourceCount > retiredSourceIds.length ||
-    booleanValue(result.alreadyRetiredSourceIdsTruncated) !==
-      alreadyRetiredSourceCount > alreadyRetiredSourceIds.length ||
-    (status === "partial") !== (failedSourceId !== undefined) ||
-    (status === "applied" && retiredSourceCount === 0) ||
-    (status === "current" && retiredSourceCount !== 0) ||
-    (failedSourceId !== undefined &&
-      (retiredSourceIds.includes(failedSourceId) ||
-        alreadyRetiredSourceIds.includes(failedSourceId)))
-  )
-    return invalidInput();
-  return {
-    storeId: identifier(result.storeId),
-    knowledgeBaseId: identifier(result.knowledgeBaseId),
-    directoryId: identifier(result.directoryId),
-    checkedAt: timestampValue(result.checkedAt),
-    status,
-    retiredSourceIds,
-    retiredSourceCount,
-    retiredSourceIdsTruncated: booleanValue(result.retiredSourceIdsTruncated),
-    alreadyRetiredSourceIds,
-    alreadyRetiredSourceCount,
-    alreadyRetiredSourceIdsTruncated: booleanValue(result.alreadyRetiredSourceIdsTruncated),
-    ...(failedSourceId === undefined ? {} : { failedSourceId }),
   };
 }
 
@@ -7787,9 +5877,25 @@ function normalizeRunStatus(value: unknown): RunStatus {
   };
 }
 
+/** The run's waiting profile suggestions (#3168): a count only, never their content. */
+function normalizeReviewProfileSuggestions(
+  value: unknown,
+): { readonly pending: number } | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const record = value as Readonly<Record<string, unknown>>;
+  if (!Object.keys(record).every((key) => key === "pending")) return undefined;
+  const { pending } = record;
+  return typeof pending === "number" &&
+    Number.isSafeInteger(pending) &&
+    pending >= 1 &&
+    pending <= 200
+    ? { pending }
+    : undefined;
+}
+
 function normalizeReviewState(value: unknown): ReviewStateResult {
   if (!isRecord(value)) return invalidInput();
-  if (!hasOnlyKeys(value, desktopReviewStateKeys)) return invalidInput();
+  if (!hasOnlyKeys(value, reviewScreenStateKeys)) return invalidInput();
   if (
     typeof value.workspaceId !== "string" ||
     typeof value.runId !== "string" ||
@@ -7933,6 +6039,10 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     value.earlierRun === undefined || value.earlierRun === null
       ? value.earlierRun
       : (normalizeEarlierRun(value.earlierRun) ?? invalidInput());
+  const profileSuggestions =
+    value.profileSuggestions === undefined || value.profileSuggestions === null
+      ? value.profileSuggestions
+      : (normalizeReviewProfileSuggestions(value.profileSuggestions) ?? invalidInput());
   const exposure = requireRecord(value.providerExposure);
   if (!hasOnlyKeys(exposure, providerExposureResultKeys)) return invalidInput();
   const independentReview = exposure.independentReview;
@@ -8049,7 +6159,8 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ...(applicationPlan === undefined ? {} : { applicationPlan }),
     ...(providerRoutes === undefined ? {} : { providerRoutes }),
     ...(earlierRun === undefined ? {} : { earlierRun }),
-  } as unknown as DesktopReviewState;
+    ...(profileSuggestions === undefined ? {} : { profileSuggestions }),
+  } as unknown as ReviewScreenState;
 }
 
 function normalizeMarkdownFileSaveResult(value: unknown): MarkdownFileSaveResult {
@@ -8060,40 +6171,6 @@ function normalizeMarkdownFileSaveResult(value: unknown): MarkdownFileSaveResult
   if (!result.saved)
     return result.fileName === null ? { saved: false, fileName: null } : invalidInput();
   return { saved: true, fileName: pathSegment(result.fileName) };
-}
-
-function normalizeFileResult(value: unknown): FileSelectResult {
-  const result = requireRecord(value);
-  if (
-    !hasOnlyKeys(result, fileSelectResultKeys) ||
-    !Array.isArray(result.files) ||
-    result.files.length > 100
-  ) {
-    return invalidInput();
-  }
-  return {
-    files: result.files.map((item) => {
-      const file = requireRecord(item);
-      if (!hasOnlyKeys(file, selectedFileKeys)) return invalidInput();
-      const path = relativePath(file.relativePath);
-      const name = pathSegment(file.name);
-      const extension = `.${name.split(".").at(-1)?.toLowerCase() ?? ""}`;
-      if (!supportedFileExtensions.includes(extension as SupportedFileExtension)) {
-        return invalidInput();
-      }
-      const mediaType = enumValue(file.mediaType, supportedMediaTypes);
-      if (fileMediaTypeByExtension[extension as SupportedFileExtension] !== mediaType) {
-        return invalidInput();
-      }
-      return {
-        id: identifier(file.id),
-        name,
-        relativePath: path,
-        mediaType,
-        byteLength: finiteInteger(file.byteLength, 2 ** 40),
-      } satisfies SelectedFile;
-    }),
-  };
 }
 
 function normalizeSourceAddUrlResult(value: unknown): SourceAddUrlResult {
@@ -8646,29 +6723,6 @@ function normalizeExportResult(value: unknown): ExportResult {
   };
 }
 
-function normalizeCredentialResult(value: unknown): CredentialResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, credentialResultKeys)) return invalidInput();
-  return {
-    provider: enumValue(result.provider, credentialProviders),
-    configured: booleanValue(result.configured),
-    source: enumValue(result.source, credentialSources),
-    protection: enumValue(result.protection, credentialProtections),
-  };
-}
-
-function normalizeProviderAuthModeResult(value: unknown): ProviderAuthModeResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, providerAuthModeResultKeys)) return invalidInput();
-  return {
-    provider: enumValue(result.provider, providerAuthModeProviders),
-    activeMode: enumValue(result.activeMode, providerAuthModes),
-    preferredMode: enumValue(result.preferredMode, providerAuthModes),
-    restartRequired: booleanValue(result.restartRequired),
-    environmentOverride: booleanValue(result.environmentOverride),
-  };
-}
-
 /**
  * Polices a catalogue on its way to the renderer.
  *
@@ -8723,18 +6777,6 @@ function normalizeModelsPreviewIndependenceResult(value: unknown): ModelsPreview
 
 function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
   switch (command.type) {
-    case "workspace.open":
-    case "workspace.create":
-    case "workspace.recent-open":
-      return normalizeWorkspaceResult(value);
-    case "workspace.recent-list":
-      return parseRecentWorkspacesListResult(value);
-    case "workspace.recent-remove":
-      return parseRecentWorkspaceRemoveResult(value);
-    case "workspace.recent-clear":
-      return parseRecentWorkspacesClearResult(value);
-    case "workspace.rename":
-      return normalizeWorkspaceRenameResult(value);
     case "workspace.compact-history":
       return normalizeWorkspaceCompactHistoryResult(value);
     case "application.list":
@@ -8822,6 +6864,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeCanonicalCandidateProfileListResult(value);
     case "profile.freshness":
       return normalizeProfileFreshnessResult(value) ?? invalidInput();
+    case "profile.estimate":
+      return normalizeProfileDerivationEstimateResult(value) ?? invalidInput();
     case "profile.catalog":
       return parseReviewedCanonicalCandidateProfileCatalogResult(value, command.input.workspaceId);
     case "knowledge.readiness":
@@ -8836,38 +6880,14 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeKnowledgeDuplicatesResult(value);
     case "knowledge.inventory":
       return normalizeKnowledgeInventoryResult(value);
-    case "knowledge.backup-export":
-    case "knowledge.backup-inspect":
-      return normalizeKnowledgePortableBackupResult(value);
-    case "knowledge.backup-restore":
-      return normalizeKnowledgePortableBackupRestoreResult(value);
     case "knowledge.import-file":
     case "knowledge.import-text":
     case "knowledge.append-file-version":
       return normalizeKnowledgeFileWriteResult(value);
-    case "knowledge.import-directory":
     case "knowledge.import-workspace-sources":
       return normalizeKnowledgeDirectoryImportResult(value);
     case "knowledge.ensure-default":
       return normalizeKnowledgeEnsureDefaultResult(value);
-    case "knowledge.directory-refresh-preview":
-      return normalizeKnowledgeDirectoryRefreshPreviewResult(value);
-    case "knowledge.directory-refresh-apply":
-      return normalizeKnowledgeDirectoryRefreshApplyResult(value);
-    case "knowledge.directory-add-members":
-      return normalizeKnowledgeDirectoryAddMembersResult(value);
-    case "knowledge.directory-moved-candidates":
-      return normalizeKnowledgeDirectoryMovedCandidatesResult(value);
-    case "knowledge.directory-member-move":
-      return normalizeKnowledgeDirectoryMemberMoveResult(value);
-    case "knowledge.directory-reconciliation-preview":
-      return normalizeKnowledgeDirectoryReconciliationPreviewResult(value);
-    case "knowledge.directory-reconciliation-apply":
-      return normalizeKnowledgeDirectoryReconciliationApplyResult(value);
-    case "knowledge.directory-rebind-preview":
-      return normalizeKnowledgeDirectoryRootRebindResult(value, ["current", "ready"] as const);
-    case "knowledge.directory-rebind-apply":
-      return normalizeKnowledgeDirectoryRootRebindResult(value, ["current", "rebound"] as const);
     case "knowledge.import-url":
       return normalizeKnowledgeUrlImportResult(value);
     case "knowledge.source-origin-status":
@@ -8895,23 +6915,12 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeReviewState(value);
     case "review.preview-evidence":
       return normalizeReviewEvidencePreviewResult(value);
-    case "file.select":
-      return normalizeFileResult(value);
     case "file.save-markdown":
       return normalizeMarkdownFileSaveResult(value);
     case "source.add-url":
       return normalizeSourceAddUrlResult(value);
     case "export.write":
       return normalizeExportResult(value);
-    case "credential.status":
-    case "credential.set":
-    case "credential.remove":
-      return normalizeCredentialResult(value);
-    case "credential.test":
-      return normalizeCredentialTestResult(value) ?? invalidInput();
-    case "provider-auth.status":
-    case "provider-auth.set":
-      return normalizeProviderAuthModeResult(value);
     case "models.list":
       return normalizeModelsListResult(value);
     case "models.preview-independence":
@@ -8921,19 +6930,6 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "models.saved-profiles.read":
     case "models.saved-profiles.save":
       return parseSavedModelProfilesResult(value, command.input.workspaceId);
-    case "embedding-model.status":
-    case "embedding-model.install":
-    case "embedding-model.remove":
-      return normalizeEmbeddingModelStatusResult(value);
-    case "embedding-model.plan-install":
-      return normalizeEmbeddingModelPlanResult(value);
-    case "embedding-model.progress":
-      return normalizeEmbeddingModelProgressResult(value);
-    case "embedding-model.cancel":
-      return normalizeEmbeddingModelCancelResult(value);
-    case "workspace.retrieval-mode.get":
-    case "workspace.retrieval-mode.set":
-      return normalizeWorkspaceRetrievalModeResult(value);
     case "workspace.evidence-migration.get":
     case "workspace.evidence-migration.decline":
       return normalizeWorkspaceEvidenceMigrationResult(value);

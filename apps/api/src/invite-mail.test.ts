@@ -82,16 +82,6 @@ describe("the invite mailer", () => {
 describe("the invite email with a prepared sign-in (#3082)", () => {
   const serviceUrl = "https://draftloop.example.test";
 
-  it("asks the person to choose their password from the provider's email first", () => {
-    const en = inviteMessage({ code: "ABC", serviceUrl, locale: "en", signIn: "password-email" });
-    const fr = inviteMessage({ code: "ABC", serviceUrl, locale: "fr", signIn: "password-email" });
-
-    expect(en.text).toContain("First, choose your password");
-    expect(en.text).toContain("Forgot password");
-    expect(fr.text).toContain("Choisissez d'abord votre mot de passe");
-    expect(fr.text).toContain("Mot de passe oublié");
-  });
-
   it("tells someone who has a password to sign in with it", () => {
     const en = inviteMessage({ code: "ABC", serviceUrl, locale: "en", signIn: "exists" });
 
@@ -99,7 +89,7 @@ describe("the invite email with a prepared sign-in (#3082)", () => {
     expect(en.text).not.toContain("Forgot password");
   });
 
-  it("prepares the sign-in before the email goes, and still sends when that fails", async () => {
+  it("lets the provider's password email be the only invite, and sends this one otherwise", async () => {
     const sent: unknown[] = [];
     const mailer = async (input: unknown) => {
       sent.push(input);
@@ -109,6 +99,11 @@ describe("the invite email with a prepared sign-in (#3082)", () => {
     const prepared = withInvitedAccount(
       mailer,
       async () => "password-email",
+      (error) => errors.push(error),
+    );
+    const existing = withInvitedAccount(
+      mailer,
+      async () => "exists",
       (error) => errors.push(error),
     );
     const failing = withInvitedAccount(
@@ -122,10 +117,11 @@ describe("the invite email with a prepared sign-in (#3082)", () => {
     await expect(prepared({ email: "ada@example.test", code: "ABC", locale: "fr" })).resolves.toBe(
       true,
     );
+    await expect(existing({ email: "cy@example.test", code: "GHI" })).resolves.toBe(true);
     await expect(failing({ email: "bob@example.test", code: "DEF" })).resolves.toBe(true);
 
     expect(sent).toEqual([
-      { email: "ada@example.test", code: "ABC", locale: "fr", signIn: "password-email" },
+      { email: "cy@example.test", code: "GHI", signIn: "exists" },
       { email: "bob@example.test", code: "DEF" },
     ]);
     expect(errors).toHaveLength(1);

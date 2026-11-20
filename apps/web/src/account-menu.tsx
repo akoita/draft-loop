@@ -30,6 +30,17 @@ export interface AccountMenuProps {
   readonly onOperator?: (() => void) | undefined;
   /** Feedback notes waiting in New, shown on the Operator entry and the menu (#3002). */
   readonly newNotes?: number | undefined;
+  /** Phone layout: the button shows the person's initial, and the menu opens across the window. */
+  readonly compact?: boolean;
+  /** The shell's actions (service status, language, Help), folded in here on a phone. */
+  readonly shellActions?: ReactNode;
+}
+
+/** The first letter of who is signed in, for the phone layout's round account button. */
+export function accountInitial(me: Me): string {
+  const source = me.kind === "member" ? (me.email ?? "") : "";
+  const letter = source.trim().charAt(0).toLocaleUpperCase();
+  return letter === "" ? "•" : letter;
 }
 
 /**
@@ -45,12 +56,24 @@ export function AccountMenu({
   signInSecurity,
   onOperator,
   newNotes,
+  compact = false,
+  shellActions,
 }: AccountMenuProps) {
   const { menu, fold } = useFoldingMenu();
+  const label = accountLabel(me, onePerson);
   return (
-    <details ref={menu} className="account-menu">
+    <details ref={menu} className={compact ? "account-menu account-menu-compact" : "account-menu"}>
       <summary>
-        <span className="account-name">{accountLabel(me, onePerson)}</span>
+        {compact ? (
+          <>
+            <span className="account-avatar" aria-hidden="true">
+              {accountInitial(me)}
+            </span>
+            <span className="sr-only">{t`Account menu: ${label}`}</span>
+          </>
+        ) : (
+          <span className="account-name">{label}</span>
+        )}
         {onOperator !== undefined && canOperate(me) && newNotes !== undefined && newNotes > 0 ? (
           <span className="operator-count" aria-hidden="true">
             {newNotes}
@@ -58,6 +81,10 @@ export function AccountMenu({
         ) : null}
       </summary>
       <div className="account-menu-body">
+        {compact ? <p className="account-menu-who">{label}</p> : null}
+        {shellActions === undefined ? null : (
+          <div className="account-menu-shell-actions">{shellActions}</div>
+        )}
         {yourData}
         {onAccount === undefined ? null : (
           <AccountPageButton

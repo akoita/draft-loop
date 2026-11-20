@@ -26,6 +26,7 @@ const agentScopeNames: Readonly<Record<AgentTokenScope, string>> = {
   "drafts:read": "Read CVs and drafts",
   "runs:start": "Start runs and drafts",
   "evidence:write": "File project cards",
+  "profile:suggest": "Read the profile and suggest updates",
 };
 
 /** Keys are `METHOD /route/:param`, as Fastify names a route. */
@@ -46,6 +47,10 @@ export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
     },
     refusal: "An agent token lists work journal notes by title only.",
   },
+  // The reviewed profile without never-say facts, and changes that wait for a person (#3072).
+  [`GET ${workspace}/agent-profile`]: { scope: "profile:suggest" },
+  [`GET ${workspace}/agent-profile/suggestions`]: { scope: "profile:suggest" },
+  [`POST ${workspace}/agent-profile/suggestions`]: { scope: "profile:suggest" },
   [`GET ${workspace}/applications`]: { scope: "applications:read" },
   [`GET ${workspace}/applications/:applicationId`]: { scope: "applications:read" },
   [`GET ${workspace}/applications/:applicationId/job`]: { scope: "applications:read" },
@@ -156,6 +161,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "GET /v1/workspaces/:workspaceId/profiles",
   "GET /v1/workspaces/:workspaceId/profiles/:profileId",
   "GET /v1/workspaces/:workspaceId/profiles/:profileId/derivation",
+  "GET /v1/workspaces/:workspaceId/profiles/:profileId/derivation-estimate",
   "GET /v1/workspaces/:workspaceId/profiles/:profileId/freshness",
   "GET /v1/workspaces/:workspaceId/profiles/:profileId/suggestions",
   "GET /v1/workspaces/:workspaceId/profiles/:profileId/versions",

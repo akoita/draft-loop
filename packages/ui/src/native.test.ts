@@ -278,46 +278,6 @@ describe("desktop native profile capabilities", () => {
     expect(portWith(["review.load"]).jobPagesAllowed).toBeUndefined();
   });
 
-  it("keeps a workspace open on a host that neither opens nor creates one", () => {
-    const state = createFixtureReviewState();
-    const portWith = (capabilities: readonly string[]) =>
-      createBridgeReviewPort(
-        createNativeCapabilityPort({
-          capabilities: capabilities as never,
-          invoke: async () => ({ ok: true, value: state }),
-        }),
-      );
-
-    expect(portWith(["review.load", "workspace.open"]).workspaceClosable).toBeUndefined();
-    expect(portWith(["review.load", "workspace.create"]).workspaceClosable).toBeUndefined();
-    expect(portWith(["review.load"]).workspaceClosable).toBe(false);
-  });
-
-  it("offers provider keys only from a host that keeps them", () => {
-    const state = createFixtureReviewState();
-    const portWith = (capabilities: readonly string[]) =>
-      createBridgeReviewPort(
-        createNativeCapabilityPort({
-          capabilities: capabilities as never,
-          invoke: async () => ({ ok: true, value: state }),
-        }),
-      );
-    const keeping = portWith([
-      "review.load",
-      "credential.status",
-      "credential.set",
-      "credential.remove",
-    ]);
-    const hosted = portWith(["review.load"]);
-
-    expect(keeping.getCredentialStatus).toBeDefined();
-    expect(keeping.setCredential).toBeDefined();
-    expect(keeping.removeCredential).toBeDefined();
-    expect(hosted.getCredentialStatus).toBeUndefined();
-    expect(hosted.setCredential).toBeUndefined();
-    expect(hosted.removeCredential).toBeUndefined();
-  });
-
   it("keeps profile methods capability-gated", async () => {
     const state = createFixtureReviewState();
     const port = createBridgeReviewPort(
@@ -468,17 +428,6 @@ describe("desktop native profile capabilities", () => {
       created: true,
       outcome: "added" as const,
     };
-    const directoryResult = {
-      storeId: "store-1",
-      knowledgeBaseId: "knowledge-1",
-      status: "partial" as const,
-      scannedEntryCount: 5,
-      discoveredFileCount: 3,
-      skippedEntryCount: 2,
-      sourceCount: 3,
-      sources: [],
-      sourcesTruncated: true,
-    };
     const readinessResult = {
       storeId: "store-1",
       knowledgeBaseId: "knowledge-1",
@@ -490,18 +439,11 @@ describe("desktop native profile capabilities", () => {
     };
     const invoke = vi.fn<NativeBridge["invoke"]>(async (command) => {
       if (command.type === "knowledge.import-file") return { ok: true, value: fileResult };
-      if (command.type === "knowledge.import-directory") {
-        return { ok: true, value: directoryResult };
-      }
       return { ok: true, value: readinessResult };
     });
     const port = createBridgeReviewPort(
       createNativeCapabilityPort({
-        capabilities: [
-          "knowledge.import-file",
-          "knowledge.import-directory",
-          "knowledge.readiness",
-        ],
+        capabilities: ["knowledge.import-file", "knowledge.readiness"],
         invoke,
       }),
     );
@@ -509,19 +451,12 @@ describe("desktop native profile capabilities", () => {
     await expect(port.importCandidateKnowledgeFile?.("store-1", "knowledge-1")).resolves.toEqual(
       fileResult,
     );
-    await expect(
-      port.importCandidateKnowledgeDirectory?.("store-1", "knowledge-1"),
-    ).resolves.toEqual(directoryResult);
     await expect(port.getCandidateKnowledgeReadiness?.("store-1", "knowledge-1")).resolves.toEqual(
       readinessResult,
     );
     expect(invoke.mock.calls.map(([command]) => command)).toEqual([
       {
         type: "knowledge.import-file",
-        input: { storeId: "store-1", knowledgeBaseId: "knowledge-1", selection: "native-dialog" },
-      },
-      {
-        type: "knowledge.import-directory",
         input: { storeId: "store-1", knowledgeBaseId: "knowledge-1", selection: "native-dialog" },
       },
       {
@@ -648,100 +583,6 @@ describe("desktop native profile capabilities", () => {
       code: "invalid-input",
     });
     expect(invoke).not.toHaveBeenCalled();
-  });
-});
-
-describe("desktop recent workspace capabilities", () => {
-  it("lists, opens, removes, and clears only path-free recent workspace commands", async () => {
-    const state = createFixtureReviewState();
-    const id = "123e4567-e89b-12d3-a456-426614174000";
-    const commands: string[] = [];
-    const port = createBridgeReviewPort(
-      createNativeCapabilityPort({
-        capabilities: [
-          "review.load",
-          "workspace.recent-list",
-          "workspace.recent-open",
-          "workspace.recent-remove",
-          "workspace.recent-clear",
-        ],
-        invoke: async (command) => {
-          commands.push(command.type);
-          if (command.type === "workspace.recent-list") {
-            return {
-              ok: true,
-              value: {
-                workspaces: [{ id, name: "Recent", lastOpenedAt: "2026-10-03T10:00:00.000Z" }],
-              },
-            };
-          }
-          if (command.type === "workspace.recent-open") {
-            expect(command.input).toEqual({ id });
-            return { ok: true, value: { workspace: { id: state.workspaceId, name: "Recent" } } };
-          }
-          if (command.type === "review.load") return { ok: true, value: state };
-          if (command.type === "workspace.recent-remove") {
-            expect(command.input).toEqual({ id });
-            return { ok: true, value: { removed: true } };
-          }
-          if (command.type === "workspace.recent-clear")
-            return { ok: true, value: { cleared: true } };
-          throw new Error("Unexpected command");
-        },
-      }),
-    );
-
-    await expect(port.listRecentWorkspaces?.()).resolves.toEqual([
-      { id, name: "Recent", lastOpenedAt: "2026-10-03T10:00:00.000Z" },
-    ]);
-    await expect(port.openRecentWorkspace?.(id)).resolves.toEqual(state);
-    await expect(port.removeRecentWorkspace?.(id)).resolves.toBeUndefined();
-    await expect(port.clearRecentWorkspaces?.()).resolves.toBeUndefined();
-    expect(commands).toEqual([
-      "workspace.recent-list",
-      "workspace.recent-open",
-      "review.load",
-      "workspace.recent-remove",
-      "workspace.recent-clear",
-    ]);
-    expect(port.listRecentWorkspaces).toBeDefined();
-  });
-
-  it("exposes renaming only when the host advertises workspace.rename", async () => {
-    const withRename = createBridgeReviewPort(
-      createNativeCapabilityPort({
-        capabilities: ["review.load", "workspace.rename"],
-        invoke: async (command) => {
-          expect(command).toEqual({
-            type: "workspace.rename",
-            input: { workspaceId: "workspace-1", name: "Northwind — Staff Engineer" },
-          });
-          return { ok: true, value: { name: "Northwind — Staff Engineer" } };
-        },
-      }),
-    );
-    await expect(
-      withRename.renameWorkspace?.("workspace-1", "Northwind — Staff Engineer"),
-    ).resolves.toBe("Northwind — Staff Engineer");
-    const without = createBridgeReviewPort(
-      createNativeCapabilityPort({
-        capabilities: ["review.load"],
-        invoke: async () => ({ ok: true, value: {} }),
-      }),
-    );
-    expect(without.renameWorkspace).toBeUndefined();
-  });
-
-  it("does not expose recent workspace actions when the host does not advertise them", () => {
-    const port = createBridgeReviewPort(
-      createNativeCapabilityPort({
-        capabilities: ["review.load"],
-        invoke: async () => ({ ok: true, value: {} }),
-      }),
-    );
-    expect(port.listRecentWorkspaces).toBeUndefined();
-    expect(port.openRecentWorkspace).toBeUndefined();
-    expect(port.clearRecentWorkspaces).toBeUndefined();
   });
 });
 

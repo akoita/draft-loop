@@ -150,7 +150,7 @@ The full guide is the agent-toolkit `document-software` skill
   capability port they reach their host through. It runs in a browser: it
   never imports Electron, Node built-ins, provider SDKs or server packages.
 - `packages/review-state` projects a run into the shared screens' review state
-  on the host side, for both the desktop host and the hosted API. It fills
+  on the server side, for the hosted API. It fills
   `packages/ui`'s view models but never goes into a browser bundle.
 - `apps/cli` is an adapter over package APIs, not a second domain layer.
 - `apps/api` is the hosted service's HTTP adapter over the same application

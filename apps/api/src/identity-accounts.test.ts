@@ -206,7 +206,7 @@ describe("an invited person's sign-in (#3082)", () => {
     expect(sent.pathname).toBe(`/admin/realms/draft-loop/users/${subject}/execute-actions-email`);
     expect(Object.fromEntries(sent.searchParams)).toEqual({
       client_id: "draft-loop-web",
-      redirect_uri: screenUrl,
+      redirect_uri: `${screenUrl}#welcome`,
       lifespan: String(passwordLinkLifespanSeconds),
     });
     expect(calls[3]).toMatchObject({ method: "PUT", body: '["UPDATE_PASSWORD"]' });

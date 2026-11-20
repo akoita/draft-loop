@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { AccountMenu } from "./account-menu.js";
+import { AccountMenu, accountInitial } from "./account-menu.js";
 
 const coach = {
   kind: "member" as const,
@@ -82,5 +82,31 @@ describe("account menu (#2861)", () => {
     expect(
       renderToStaticMarkup(<AccountMenu me={coach} onePerson={false} onSignOut={() => {}} />),
     ).not.toContain("Sign-in security");
+  });
+
+  it("folds into a round button on a phone, with the shell's actions inside the menu", () => {
+    const html = renderToStaticMarkup(
+      <AccountMenu
+        me={coach}
+        onePerson={true}
+        compact={true}
+        shellActions={<span className="service-status">Service is up</span>}
+        onSignOut={() => {}}
+      />,
+    );
+
+    expect(html).toContain('class="account-menu account-menu-compact"');
+    expect(html).toContain('<span class="account-avatar" aria-hidden="true">A</span>');
+    expect(html).toContain('<span class="sr-only">Account menu: ada@alder.example.test</span>');
+    expect(html).not.toContain('class="account-name"');
+    expect(html).toMatch(
+      /account-menu-body[\s\S]*account-menu-who">ada@alder\.example\.test[\s\S]*account-menu-shell-actions[\s\S]*Service is up[\s\S]*Sign out/u,
+    );
+  });
+
+  it("names the round button by the first letter of the email", () => {
+    expect(accountInitial(coach)).toBe("A");
+    expect(accountInitial({ ...coach, email: " zoé@example.test" })).toBe("Z");
+    expect(accountInitial({ kind: "owner" })).toBe("•");
   });
 });

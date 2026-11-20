@@ -149,6 +149,32 @@ describe("signing up with a beta invite", () => {
     expect(assignPlan).toHaveBeenCalledWith(expect.objectContaining({ planId: "beta" }));
   });
 
+  it("uses the open invite of the verified email when no code is given", async () => {
+    const server = await api();
+    const response = await server.inject({
+      method: "POST",
+      url: "/v1/sign-up",
+      headers: { authorization: `Bearer ${await token("new-person")}` },
+      payload: { accepted_terms: legalVersion },
+    });
+
+    expect(response.statusCode).toBe(201);
+    const [input] = redeem.mock.calls[0] ?? [];
+    expect(input).toMatchObject({ verifiedEmail: "ada@example.test" });
+    expect(input).not.toHaveProperty("code");
+
+    claimed = undefined;
+    redeem.mockResolvedValueOnce({ redeemed: false, refusal: "invite_unknown" });
+    const refused = await server.inject({
+      method: "POST",
+      url: "/v1/sign-up",
+      headers: { authorization: `Bearer ${await token("other-person")}` },
+      payload: { accepted_terms: legalVersion },
+    });
+    expect(refused.statusCode).toBe(404);
+    expect(refused.json().error.message).toBe("No open invite names this sign-in's email address.");
+  });
+
   it.each([
     ["absent", null],
     ["outdated", "2020-01-01"],
@@ -196,6 +222,20 @@ describe("signing up with a beta invite", () => {
     expect(response.body.error.params).toEqual(
       refusal === "invite_email_mismatch" ? { email: "ada@example.test" } : undefined,
     );
+  });
+
+  it("logs once when a sign-up takes the last seat (#3208)", async () => {
+    const server = await api();
+    const seatLines = () => logLines.filter((line) => line.event === "beta_seat_cap_reached");
+
+    expect((await signUp(server, `Bearer ${await token("first-person")}`)).status).toBe(201);
+    expect(seatLines()).toEqual([]);
+
+    claimed = undefined;
+    vi.mocked(invites.redeemedCount).mockImplementationOnce(async () => 25);
+    expect((await signUp(server, `Bearer ${await token("last-person")}`)).status).toBe(201);
+    expect(seatLines()).toMatchObject([{ cap: 25, seatsUsed: 25 }]);
+    expect(JSON.stringify(seatLines())).not.toContain("example.test");
   });
 
   it("waits after five refused attempts by one sign-in", async () => {

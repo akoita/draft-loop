@@ -8,6 +8,11 @@ import type {
 } from "@draft-loop/application";
 import type { PreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import { type RunSnapshot, reviewFindingId } from "@draft-loop/orchestrator";
+import {
+  createMemoryFactSuggestionStore,
+  type FactSuggestionStore,
+} from "@draft-loop/storage/fact-suggestions";
+import { fixtureFactSuggestion } from "@draft-loop/storage/fact-suggestions-conformance";
 import { createCapabilityPort } from "@draft-loop/ui/bridge";
 import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -202,6 +207,7 @@ let app: FastifyInstance;
 async function build(
   methods: Partial<ApplicationService>,
   preferenceSuggestions?: PreferenceSuggestions,
+  factSuggestions?: FactSuggestionStore,
 ): Promise<void> {
   app = await buildApi({
     ownerToken,
@@ -213,6 +219,7 @@ async function build(
       monthUsage: async () => [],
       knowledgeIntake,
       ...(preferenceSuggestions === undefined ? {} : { preferenceSuggestions }),
+      ...(factSuggestions === undefined ? {} : { factSuggestions }),
     },
   });
 }
@@ -492,6 +499,32 @@ describe("review state", () => {
     });
     expect(response.body).not.toContain("never shown");
     await expect(throughPort(state)).resolves.toMatchObject({ ok: true });
+  });
+
+  it("counts the profile suggestions an approved run's edits filed (#3168)", async () => {
+    const store = createMemoryFactSuggestionStore();
+    const filed = (id: string, runId: string, value: string) => ({
+      ...fixtureFactSuggestion(id, value),
+      origin: { kind: "review-edit" as const, runId, blockId: "block-1" },
+    });
+    await store.insert("workspace-1", filed("fsg_fixture0001", "run-1", "Led a team of 8"));
+    await store.insert("workspace-1", filed("fsg_fixture0002", "run-other", "Led a team of 9"));
+    await build(
+      {
+        status: async () => ({ ...snapshot, state: "approved", approval: "approved" }),
+        readRunReview: async () => review,
+        readRunRequirements: async () => [],
+      },
+      undefined,
+      store,
+    );
+
+    const response = await app.inject({ method: "GET", url, headers: { authorization } });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().profileSuggestions).toEqual({ pending: 1 });
+    expect(JSON.stringify(response.json())).not.toContain("team of 8");
+    expect(await throughPort(response.json())).toMatchObject({ ok: true });
   });
 
   it("names an exported run's newest download instead of a path on this machine", async () => {

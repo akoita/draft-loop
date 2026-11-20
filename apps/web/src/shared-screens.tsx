@@ -3,7 +3,7 @@ import { createCapabilityPort } from "@draft-loop/ui/bridge";
 import { createBridgeReviewPort } from "@draft-loop/ui/native";
 import { startViewForFragment } from "@draft-loop/ui/shared-link";
 import { t } from "@lingui/core/macro";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 
 import type { ApiClient, ApiRequestError } from "./api-client.js";
 import { describeStartError } from "./credits-model.js";
@@ -15,6 +15,8 @@ export interface SharedScreensProps {
   readonly client: ApiClient;
   /** The candidate record's workspace the screens open on. */
   readonly workspaceId: string;
+  /** The record's name, shown as the workspace's title; the API's own label when unset. */
+  readonly workspaceName?: string;
   /** The web's own header actions, drawn where the desktop has Close workspace. */
   readonly hostActions?: ReactNode;
 }
@@ -24,11 +26,19 @@ export interface SharedScreensProps {
  * requirement review, through the HTTP bridge. A refusal with its own code, such as a plan limit
  * or quarantined material, is explained above them in the shell's words.
  */
-export function SharedScreens({ client, workspaceId, hostActions }: SharedScreensProps) {
+export function SharedScreens({
+  client,
+  workspaceId,
+  workspaceName,
+  hostActions,
+}: SharedScreensProps) {
   const [shown, setShown] = useState<ShownRefusal | undefined>(undefined);
   const refusal = shown?.error;
   // A shared link names its page in the fragment, read once when the screens open (#2149).
   const [startView] = useState(() => startViewForFragment(window.location.hash));
+  // Read on each load, so a new name never rebuilds the port and reopens the screens.
+  const name = useRef(workspaceName);
+  name.current = workspaceName;
   const port = useMemo(
     () =>
       createBridgeReviewPort(
@@ -36,6 +46,7 @@ export function SharedScreens({ client, workspaceId, hostActions }: SharedScreen
           createHttpBridge({
             client,
             workspaceId,
+            workspaceName: () => name.current,
             onRefusal: (error, command) => setShown({ error, command }),
             // A retry of the refused command that now succeeds, such as an upload once the
             // storage consent is recorded, resolves the refusal, so its notice goes away.

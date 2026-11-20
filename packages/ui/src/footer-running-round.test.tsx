@@ -5,18 +5,18 @@ import {
   footerRunningRound,
   sentRevisionDirection,
 } from "./footer-running-round.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
 const fixture = createFixtureReviewState();
-const reviewed: DesktopReviewState = {
+const reviewed: ReviewScreenState = {
   ...fixture,
   state: "awaiting-approval",
   round: 1,
   findings: [],
   execution: { ...fixture.execution, status: "idle", step: null },
 };
-const revising: DesktopReviewState = {
+const revising: ReviewScreenState = {
   ...reviewed,
   state: "revising",
   round: 2,
@@ -34,7 +34,7 @@ const revising: DesktopReviewState = {
 const noop = () => undefined;
 
 function input(
-  state: DesktopReviewState,
+  state: ReviewScreenState,
   overrides: Partial<FooterRunningRoundInput> = {},
 ): FooterRunningRoundInput {
   return {

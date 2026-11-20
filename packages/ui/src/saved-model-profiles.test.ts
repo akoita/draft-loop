@@ -8,7 +8,7 @@ import {
   type SavedModelProfilesState,
   savedModelProfilesNotice,
 } from "./model-profile-picker-state.js";
-import { DesktopBridgeError } from "./native.js";
+import { HostBridgeError } from "./native.js";
 import {
   appliedSelectionFromSaved,
   clearSavedModelProfiles,
@@ -172,7 +172,7 @@ describe("desktop saved model profiles", () => {
     );
     expect(
       modelProfileApplyErrorMessage(
-        new DesktopBridgeError("conflict", "A run is still executing in this workspace."),
+        new HostBridgeError("conflict", "A run is still executing in this workspace."),
       ),
     ).toBe("The profile pair could not be applied: A run is still executing in this workspace.");
   });
