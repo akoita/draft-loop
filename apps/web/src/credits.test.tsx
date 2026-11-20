@@ -12,6 +12,7 @@ describe("credit balance chip", () => {
     expect(html).toContain("38 of 50 credits left</span>");
     expect(html).toContain("The period ends on 24 Nov 2026.");
     expect(html).not.toContain("credit-chip-warning");
+    expect(html).toContain('<span class="credit-chip-short" aria-hidden="true">38 / 50</span>');
   });
 
   it("turns amber at 80% used", () => {

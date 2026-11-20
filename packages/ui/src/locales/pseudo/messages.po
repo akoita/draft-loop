@@ -1091,6 +1091,10 @@ msgstr ""
 msgid "Account"
 msgstr ""
 
+#: apps/web/src/account-menu.tsx
+msgid "Account menu: {label}"
+msgstr ""
+
 #: apps/web/src/account-page.tsx
 msgid "Account settings"
 msgstr ""

@@ -320,6 +320,164 @@ label:where(:not(.shared-screens *)) {
   box-shadow: 0 8px 24px rgba(15, 20, 26, 0.16);
 }
 
+/* Phones (#3199 follow-up): the account bar folds into one round button pinned at the top right,
+   and its menu opens across the window with the service status, language and Help inside. The
+   button sits over the end of the screens' sticky bar, which leaves room for it. */
+.account-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--teal);
+  color: var(--teal-ink);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.account-menu-who {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.account-menu-shell-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 640px) {
+  .record-rail.account-rail:has(.account-menu-compact) {
+    position: fixed;
+    top: 0.375rem;
+    right: 0.5rem;
+    z-index: 40;
+    margin: 0;
+    padding: 0;
+  }
+
+  .account-rail:has(.account-menu-compact) > .account-bar {
+    margin: 0;
+  }
+
+  .account-menu-compact > summary {
+    padding: 0.125rem;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(15, 20, 26, 0.18);
+  }
+
+  .account-menu-compact > summary::after {
+    content: none;
+  }
+
+  .account-menu-compact .account-menu-body {
+    position: fixed;
+    top: 3.25rem;
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+    max-height: calc(100dvh - 4rem);
+    overflow-y: auto;
+  }
+
+  /* Room for the round button at the end of the screens' first row. */
+  .shell:has(.account-menu-compact) .side-rail,
+  .shell:has(.account-menu-compact) .home-location {
+    padding-right: 3.25rem;
+  }
+}
+
+/* The credits pill's short form, such as "0 / 3", shown on phones only. */
+.credit-chip-short {
+  display: none;
+}
+
+/* Phones: the page's top row takes one line, "← Home · Applications" with the settings icon and
+   the short credits pill at its end. The career flow keeps only its current step; Home leads to
+   the others. */
+@media (max-width: 640px) {
+  .shared-screens .page-toolbar,
+  .shared-screens .page-toolbar-lead,
+  .shared-screens .page-toolbar-actions,
+  .shared-screens .page-toolbar .career-flow {
+    flex-wrap: nowrap;
+  }
+
+  .shared-screens .page-toolbar-lead {
+    flex: 1 1 auto;
+    gap: var(--space-2);
+  }
+
+  .shared-screens .page-toolbar-actions {
+    flex: none;
+  }
+
+  .shared-screens .page-toolbar-lead .home-back {
+    padding: 0;
+    border-color: transparent;
+    background: none;
+    box-shadow: none;
+    color: var(--text-2);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .shared-screens .page-toolbar .career-flow {
+    min-width: 0;
+  }
+
+  .shared-screens .page-toolbar .career-flow-step:not([aria-current="step"]),
+  .shared-screens .page-toolbar .career-flow-arrow {
+    display: none;
+  }
+
+  .shared-screens .page-toolbar .career-flow-step[aria-current="step"] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .shared-screens .page-toolbar-lead .home-back + .career-flow::before {
+    content: "·";
+    color: var(--text-4);
+  }
+
+  /* Settings keeps its text as its name for screen readers and shows only its icon. */
+  .shared-screens .page-toolbar-actions > .button:has(> svg:first-child) {
+    min-width: 44px;
+    padding: 0;
+    gap: 0;
+    font-size: 0;
+  }
+
+  .shared-screens .page-toolbar-actions > .button:has(> svg:first-child) svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .shell .credit-chip {
+    min-width: 0;
+  }
+
+  .credit-chip-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .credit-chip-short {
+    display: inline;
+  }
+}
+
 /* A destructive action as one quiet line; its warning and confirm open in a dialog. */
 button.danger-link:where(:not(.shared-screens *)) {
   justify-self: start;

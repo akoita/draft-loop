@@ -6,6 +6,7 @@ import { AccountPage } from "./account-page.js";
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { describeStartError } from "./credits-model.js";
 import { useNewFeedbackCount } from "./operator-count.js";
+import { usePhoneLayout } from "./phone-layout.js";
 import { DeleteRecord, DownloadEverything, RecordActions } from "./record-actions.js";
 import { canExportAndDelete, withoutRecord } from "./record-actions-model.js";
 import {
@@ -98,6 +99,7 @@ export function Records({
   /** New records whose name waits for the record to exist, by id. */
   const unsavedNames = useRef(new Map<string, string>());
   const newNotes = useNewFeedbackCount(client, state.kind === "ready" ? state.me : undefined);
+  const phone = usePhoneLayout();
 
   useEffect(() => {
     let current = true;
@@ -156,11 +158,12 @@ export function Records({
     [client],
   );
 
-  const topBar = (account: ReactNode) => (
+  // On a phone the shell's actions fold into the account menu, so one button stays on screen.
+  const topBar = (account: ReactNode, folded = false) => (
     <div className="record-rail account-rail">
       <div className="page-actions account-bar">
         {account}
-        {shellActions}
+        {folded ? null : shellActions}
         {account === null && onSignOut !== undefined ? (
           <SignOutButton onSignOut={onSignOut} />
         ) : null}
@@ -251,6 +254,8 @@ export function Records({
         onSignOut === undefined ? null : (
           <AccountMenu
             me={state.me}
+            compact={phone}
+            {...(phone ? { shellActions } : {})}
             onePerson={onePerson}
             yourData={yourData}
             onAccount={hasAccountPage ? () => setOnAccountPage(true) : undefined}
@@ -260,6 +265,7 @@ export function Records({
             newNotes={newNotes}
           />
         ),
+        phone && onSignOut !== undefined,
       )}
       {accountPage}
       <div className="records-screens" hidden={accountPage !== null}>

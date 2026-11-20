@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import {
   balanceChip,
+  balanceChipShort,
   balanceLine,
   creditCount,
   describeStartError,
@@ -58,6 +59,14 @@ describe("credit balance", () => {
     const bought = { ...syntheticCredits, allowance: 8, remaining: 9, grantsRemaining: 1 };
     expect(balanceChip(bought)).toBe("9 credits left");
     expect(balanceLine(bought)).toContain("9 credits left.");
+  });
+
+  it("shortens the chip for a phone's header", () => {
+    expect(balanceChipShort(syntheticCredits)).toBe("38 / 50");
+    expect(balanceChipShort({ ...syntheticCredits, allowance: 8, remaining: 9 })).toBe("9");
+    expect(
+      balanceChipShort({ ...syntheticCredits, unlimited: true, allowance: null, remaining: null }),
+    ).toBe("∞");
   });
 
   it("says plainly that an unlimited plan has no limit", () => {
