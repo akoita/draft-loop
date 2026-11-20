@@ -780,6 +780,29 @@ describe("the shared screens' commands over HTTP", () => {
     ]);
   });
 
+  it("titles the record on screen by the name the shell gives it, read on each load (#3197)", async () => {
+    const projected = { workspaceId: "default-record", runId: "pending", state: "collecting" };
+    const { client } = scriptedClient({
+      "GET /v1/workspaces/{workspaceId}/review-state": () => projected,
+    });
+    let name = "My job search";
+    const bridge = createHttpBridge({
+      client,
+      workspaceId: "default-record",
+      workspaceName: () => name,
+    });
+
+    const first = await bridge.invoke({ type: "review.load", input: {} });
+    name = "Product roles 2026";
+    const renamed = await bridge.invoke({ type: "review.load", input: {} });
+
+    expect(first).toEqual({ ok: true, value: { ...projected, workspaceName: "My job search" } });
+    expect(renamed).toEqual({
+      ok: true,
+      value: { ...projected, workspaceName: "Product roles 2026" },
+    });
+  });
+
   it("starts a review from the application's reviewed brief, then loads its new run", async () => {
     const reviewed: ApiSchemas["Application"] = {
       ...ledgerApplication,
