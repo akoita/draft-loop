@@ -492,6 +492,17 @@ button.danger-link:where(:not(.shared-screens *)):hover {
   text-decoration: underline;
 }
 
+/* A secondary choice as a quiet text link, so the screen's main button stands alone. */
+button.link:where(:not(.shared-screens *)) {
+  justify-self: start;
+  background: transparent;
+  border-color: transparent;
+  color: var(--teal);
+  padding-inline: 0;
+  text-align: start;
+  text-decoration: underline;
+}
+
 .danger-dialog .inline-form {
   display: grid;
   gap: 0.5rem;
