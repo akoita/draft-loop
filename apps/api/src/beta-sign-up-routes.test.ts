@@ -149,6 +149,32 @@ describe("signing up with a beta invite", () => {
     expect(assignPlan).toHaveBeenCalledWith(expect.objectContaining({ planId: "beta" }));
   });
 
+  it("uses the open invite of the verified email when no code is given", async () => {
+    const server = await api();
+    const response = await server.inject({
+      method: "POST",
+      url: "/v1/sign-up",
+      headers: { authorization: `Bearer ${await token("new-person")}` },
+      payload: { accepted_terms: legalVersion },
+    });
+
+    expect(response.statusCode).toBe(201);
+    const [input] = redeem.mock.calls[0] ?? [];
+    expect(input).toMatchObject({ verifiedEmail: "ada@example.test" });
+    expect(input).not.toHaveProperty("code");
+
+    claimed = undefined;
+    redeem.mockResolvedValueOnce({ redeemed: false, refusal: "invite_unknown" });
+    const refused = await server.inject({
+      method: "POST",
+      url: "/v1/sign-up",
+      headers: { authorization: `Bearer ${await token("other-person")}` },
+      payload: { accepted_terms: legalVersion },
+    });
+    expect(refused.statusCode).toBe(404);
+    expect(refused.json().error.message).toBe("No open invite names this sign-in's email address.");
+  });
+
   it.each([
     ["absent", null],
     ["outdated", "2020-01-01"],

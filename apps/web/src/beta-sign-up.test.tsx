@@ -48,10 +48,20 @@ describe("beta sign-up refusals", () => {
     const call = vi.fn(async () => ({}) as never);
 
     await redeemInvite({ call }, "  ABCD-EFGH ");
+    await redeemInvite({ call });
 
-    expect(call).toHaveBeenCalledWith("POST /v1/sign-up", {
+    expect(call).toHaveBeenNthCalledWith(1, "POST /v1/sign-up", {
       body: { code: "ABCD-EFGH", accepted_terms: acceptedTermsVersion },
     });
+    expect(call).toHaveBeenNthCalledWith(2, "POST /v1/sign-up", {
+      body: { accepted_terms: acceptedTermsVersion },
+    });
+  });
+
+  it("says no invite names the signed-in address when sign-up went without a code", () => {
+    expect(signUpRefusal(refused(404, "invite_unknown"), true)?.message).toContain(
+      "no invite for the email address you signed in with",
+    );
   });
 });
 
@@ -63,14 +73,25 @@ describe("beta sign-up screen", () => {
     onSignOut: () => {},
   };
 
-  it("asks for the code and keeps the button off until one is typed", () => {
+  it("asks only for the terms by default, with the code one press away", () => {
     const html = renderToStaticMarkup(
-      <BetaSignUpView code="" accepted={false} busy={false} {...handlers} />,
+      <BetaSignUpView code="" accepted busy={false} onAskCode={() => {}} {...handlers} />,
+    );
+
+    expect(html).not.toContain("Invite code");
+    expect(html).toMatch(/<button type="submit">Create my account/u);
+    expect(html).toContain("I have an invite code");
+    expect(html).toContain("Sign out");
+  });
+
+  it("asks for the code when told to and keeps the button off until one is typed", () => {
+    const html = renderToStaticMarkup(
+      <BetaSignUpView code="" askCode accepted busy={false} {...handlers} />,
     );
 
     expect(html).toContain("Invite code");
     expect(html).toMatch(/<button type="submit" disabled="">Create my account/u);
-    expect(html).toContain("Sign out");
+    expect(html).not.toContain("I have an invite code");
   });
 
   it("shows a refusal as an alert", () => {
@@ -90,7 +111,7 @@ describe("beta sign-up screen", () => {
 
   it("keeps the button off until the terms are accepted, and says where material goes", () => {
     const unticked = renderToStaticMarkup(
-      <BetaSignUpView code="ABCD" accepted={false} busy={false} {...handlers} />,
+      <BetaSignUpView code="ABCD" askCode accepted={false} busy={false} {...handlers} />,
     );
     expect(unticked).toMatch(/<button type="submit" disabled="">Create my account/u);
     expect(unticked).toContain("outside the European Union");

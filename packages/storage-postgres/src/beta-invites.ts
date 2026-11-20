@@ -58,7 +58,11 @@ export type RedeemBetaInviteResult =
   | { readonly redeemed: false; readonly refusal: BetaInviteRefusal };
 
 export interface RedeemBetaInviteInput {
-  readonly code: string;
+  /**
+   * The invite's code. Without one, the newest open invite for the verified email is redeemed:
+   * an invite whose person set their password from the invite email signs up without typing it.
+   */
+  readonly code?: string;
   /** The sign-in's verified email; the invite must name it. */
   readonly verifiedEmail: string;
   /**
@@ -222,10 +226,18 @@ export function createBetaInvites(client: SqlSession): BetaInvites {
       const at = clock(input.now);
       return client.transaction(async (executor): Promise<RedeemBetaInviteResult> => {
         await executor.query("SELECT pg_advisory_xact_lock($1)", [betaInviteLockKey]);
-        const [invite] = await executor.query(
-          `SELECT ${inviteColumns} FROM beta_invites WHERE code_hash = $1 FOR UPDATE`,
-          [codeHash(input.code)],
-        );
+        const [invite] =
+          input.code === undefined
+            ? await executor.query(
+                `SELECT ${inviteColumns} FROM beta_invites
+                  WHERE email = $1 AND revoked_at IS NULL AND redeemed_at IS NULL
+                  ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,
+                [email],
+              )
+            : await executor.query(
+                `SELECT ${inviteColumns} FROM beta_invites WHERE code_hash = $1 FOR UPDATE`,
+                [codeHash(input.code)],
+              );
         if (invite === undefined) return { redeemed: false, refusal: "invite_unknown" };
         if (invite.revoked_at !== null) return { redeemed: false, refusal: "invite_revoked" };
         if (invite.redeemed_at !== null) return { redeemed: false, refusal: "invite_used" };

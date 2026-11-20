@@ -3376,7 +3376,7 @@ export interface ApiOperations {
   };
   "POST /v1/sign-up": {
     readonly body: {
-      readonly code: string;
+      readonly code?: string;
       readonly accepted_terms?: string;
     };
     readonly response: ApiSchemas["SignedUp"];

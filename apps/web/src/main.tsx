@@ -12,6 +12,7 @@ import {
   keepInviteCode,
   keptInviteCode,
   waitlistConfirmTokenFromHash,
+  welcomeFromHash,
 } from "./invite-link.js";
 import { NewReleaseWatch } from "./new-release.js";
 import { signInSecurityUrl } from "./oidc-model.js";
@@ -73,8 +74,9 @@ function Screens({ children }: { readonly children: ReactNode }) {
 // waitlist confirmation's token once, and tidy the address.
 const linkedInvite = inviteCodeFromHash(location.hash);
 const waitlistConfirmToken = waitlistConfirmTokenFromHash(location.hash);
+const welcome = welcomeFromHash(location.hash);
 if (linkedInvite !== undefined) keepInviteCode(globalThis.sessionStorage, linkedInvite);
-if (linkedInvite !== undefined || waitlistConfirmToken !== undefined) {
+if (linkedInvite !== undefined || waitlistConfirmToken !== undefined || welcome) {
   history.replaceState(null, "", `${location.pathname}${location.search}`);
 }
 const inviteCode = keptInviteCode(globalThis.sessionStorage);
@@ -117,6 +119,7 @@ function screenFor(config: ApiSchemas["AuthConfig"]) {
       navigation={navigation}
       signInSecurity={signInSecurityUrl(config.issuer)}
       waitlist={config.waitlist === true}
+      welcome={welcome}
       {...(inviteCode === undefined ? {} : { inviteCode })}
       onInviteUsed={() => forgetInviteCode(globalThis.sessionStorage)}
       {...(waitlistConfirmToken === undefined ? {} : { waitlistConfirmToken })}

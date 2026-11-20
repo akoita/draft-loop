@@ -3819,7 +3819,7 @@
           },
           "emailed": {
             "type": "boolean",
-            "description": "True when the invite's person was emailed a sign-up link with the code; false when mail is off or the send failed, so the operator sends the code."
+            "description": "True when the invite's person was emailed: the identity provider's invite to choose a password where the API prepared their sign-in, else a sign-up link with the code. False when mail is off or the send failed, so the operator sends the code."
           }
         },
         "required": [
@@ -14119,7 +14119,7 @@
           },
           "emailed": {
             "type": "boolean",
-            "description": "True when the invite's person was emailed a sign-up link with the code; false when mail is off or the send failed, so the operator sends the code."
+            "description": "True when the invite's person was emailed: the identity provider's invite to choose a password where the API prepared their sign-in, else a sign-up link with the code. False when mail is off or the send failed, so the operator sends the code."
           }
         },
         "required": [
@@ -34771,7 +34771,7 @@
     "/v1/sign-up": {
       "post": {
         "summary": "Create your account from a beta invite code",
-        "description": "Takes a verified sign-in that has no account yet and the current terms version it accepts (`accepted_terms`; 400 terms_not_accepted, with the current `version`, when absent or outdated). The code must be open and name the sign-in's verified email, and the beta must have room: 404 invite_unknown, 403 invite_revoked or invite_email_mismatch, 409 invite_used, beta_full or already_member, 429 rate_limited after repeated refusals. The new organisation gets the Beta plan, and the caller is its owner.",
+        "description": "Takes a verified sign-in that has no account yet and the current terms version it accepts (`accepted_terms`; 400 terms_not_accepted, with the current `version`, when absent or outdated). With a `code`, that invite must be open and name the sign-in's verified email; without one, the newest open invite for that email is used. The beta must have room: 404 invite_unknown, 403 invite_revoked or invite_email_mismatch, 409 invite_used, beta_full or already_member, 429 rate_limited after repeated refusals. The new organisation gets the Beta plan, and the caller is its owner.",
         "requestBody": {
           "required": true,
           "content": {
@@ -34780,6 +34780,7 @@
                 "type": "object",
                 "properties": {
                   "code": {
+                    "description": "The invite code. Leave it out to use the open invite for the sign-in's verified email: the provider verified that address, and the invite names it.",
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 64
@@ -34790,9 +34791,6 @@
                     "maxLength": 32
                   }
                 },
-                "required": [
-                  "code"
-                ],
                 "additionalProperties": false
               }
             }
