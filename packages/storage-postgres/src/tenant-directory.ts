@@ -20,6 +20,7 @@ import {
 import { type BetaInvites, createBetaInvites } from "./beta-invites.js";
 import { type BetaWaitlist, createBetaWaitlist } from "./beta-waitlist.js";
 import { createPostgresFeedback } from "./feedback-notes.js";
+import { createLiveVoiceUsage, type LiveVoiceUsage } from "./live-voice-usage.js";
 import { createPostgresMemberSettings } from "./member-settings.js";
 import { createOrganisationActivity, type OrganisationActivity } from "./organisation-activity.js";
 import type { PostgresSchemaOptions } from "./postgres-storage.js";
@@ -40,6 +41,7 @@ export interface PostgresTenantDirectory extends TenantDirectory {
   readonly organisationActivity: OrganisationActivity;
   /** The support assistant's daily questions and spend, shared by every API instance. */
   readonly supportUsage: SupportUsage;
+  readonly liveVoiceUsage: LiveVoiceUsage;
   readonly close: () => Promise<void>;
 }
 
@@ -314,6 +316,7 @@ export async function createPostgresTenantDirectory(
     feedback: createPostgresFeedback(client),
     organisationActivity: createOrganisationActivity(client),
     supportUsage: createSupportUsage(client),
+    liveVoiceUsage: createLiveVoiceUsage(client),
     close: () => client.close(),
   };
 }

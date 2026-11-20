@@ -85,6 +85,8 @@ export function careerInterviewLiveRefusal(code: string, message: string, listen
       return t`Talking live sends your voice to ${listener} to turn it into words and to speak the questions. Allow it below, or keep writing your answers.`;
     case "live_limit_reached":
       return t`This live conversation reached its time limit. Start it again to go on.`;
+    case "live_daily_limit_reached":
+      return t`You used today's live voice time. Keep writing your answers, or talk live again tomorrow.`;
     case "live_failed":
       return t`The live conversation stopped. Try again, or keep writing your answers.`;
     default:
