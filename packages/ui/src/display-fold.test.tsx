@@ -45,7 +45,6 @@ const onboarded: GettingStartedInputs = {
     displayName: "Documents",
     sourceCount: 1,
     blockedCount: 0,
-    semanticLine: null,
   },
   legacyEvidenceSourceCount: 0,
   profile: { kind: "reviewed", version: 1 },
