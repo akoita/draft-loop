@@ -252,7 +252,7 @@ describe.runIf(connectionString !== undefined)("Postgres beta waitlist", () => {
         // Nothing was stored: the link's token confirms nothing, and no entry waits.
         await expect(
           betaWaitlist.confirm({ tokenHash: hashA, now: later(3), validMs: 48 * 3_600_000 }),
-        ).resolves.toBe(false);
+        ).resolves.toBe("unknown");
         await expect(betaWaitlist.deleteJoinedBefore(later(60))).resolves.toBe(0);
       });
     });
