@@ -18,6 +18,7 @@ import { identityAdminClientFromEnv, keycloakAccounts } from "./identity-account
 import { createInviteMailer, withInvitedAccount } from "./invite-mail.js";
 import { readLegalPublisher } from "./legal-pages.js";
 import { liveSpeechFrom, readLiveSpeechConfig } from "./live-speech-config.js";
+import { readLiveMinutesPerDay } from "./live-voice-allowance.js";
 import { readLocalModels } from "./local-models-config.js";
 import { cloudLoggingOptions, errorFields } from "./logging.js";
 import { readModelCallSwitch } from "./model-call-switch.js";
@@ -55,6 +56,7 @@ const modelCallSwitch = readModelCallSwitch(process.env, {
     ),
 });
 const liveSpeech = liveSpeechFrom(readLiveSpeechConfig(process.env));
+const liveMinutesPerDay = readLiveMinutesPerDay(process.env);
 const coverLetterWriter = readCoverLetterWriter(process.env);
 const payments = paymentsFrom(readPaymentsConfig(process.env));
 const storageConfig = readHostedStorageConfig(process.env, config.auth.mode);
@@ -183,6 +185,7 @@ const app = await buildApi({
         ...(betaAccountCap > 0 ? { betaWaitlist: directory.betaWaitlist } : {}),
         organisationActivity: directory.organisationActivity,
         supportUsage: directory.supportUsage,
+        liveVoiceUsage: directory.liveVoiceUsage,
       }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
   ...(legalPublisher === undefined ? {} : { legalPublisher }),
@@ -205,7 +208,7 @@ const app = await buildApi({
       }),
   ...(config.speechModelRoot === undefined ? {} : { speechModelRoot: config.speechModelRoot }),
   ...(localModels.length === 0 ? {} : { localModels }),
-  ...(liveSpeech === undefined ? {} : { liveSpeech }),
+  ...(liveSpeech === undefined ? {} : { liveSpeech, liveMinutesPerDay }),
   ...(payments === undefined
     ? {}
     : { payments: payments.checkout, paymentEvents: payments.events }),

@@ -77,6 +77,11 @@ export type {
   ManagedCandidateKnowledgeSourceVersionInput,
   ManagedCandidateKnowledgeSourceVersionLocation,
 } from "./knowledge-run-records.js";
+export {
+  createLiveVoiceUsage,
+  type LiveVoiceUsage,
+  LiveVoiceUsageError,
+} from "./live-voice-usage.js";
 export { migratePostgres, type PostgresMigration, postgresMigrations } from "./migrations.js";
 export {
   createModelCallMeter,

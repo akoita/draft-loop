@@ -85,6 +85,11 @@ import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-ac
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerKnowledgeSourceFileRoutes } from "./knowledge-source-file-routes.js";
 import { type LegalPublisher, registerLegalPages } from "./legal-pages.js";
+import {
+  createMemoryLiveVoiceUsage,
+  defaultLiveMinutesPerDay,
+  type LiveVoiceUsage,
+} from "./live-voice-allowance.js";
 import type { MaterialReviews } from "./material-reviews.js";
 import { agentTokenIssuer, memberAgentTokens, requestAgentTokens } from "./member-agent-tokens.js";
 import { registerMemberSettingsRoutes } from "./member-settings-routes.js";
@@ -297,6 +302,10 @@ export interface ApiOptions {
   readonly localModels?: readonly string[];
   /** Speech for the live career interview (#2361); unset, the live route is not served. */
   readonly liveSpeech?: LiveInterviewSpeech;
+  /** Each member's live voice use shared by every instance; without it, instance memory. */
+  readonly liveVoiceUsage?: LiveVoiceUsage;
+  /** Each member's daily live voice minutes; 30 when unset. */
+  readonly liveMinutesPerDay?: number;
   /** The payment provider that sells credit packs (#2708); without one nothing is sold. */
   readonly payments?: PaymentCheckoutPort;
   /** The payment provider's signed events (#2709); with a tenant's purchases, they grant credits. */
@@ -860,7 +869,15 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
               },
             }),
         ...(screening === undefined ? {} : { screening }),
-        ...(options.liveSpeech === undefined ? {} : { live: options.liveSpeech }),
+        ...(options.liveSpeech === undefined
+          ? {}
+          : {
+              live: options.liveSpeech,
+              liveAllowance: {
+                usage: options.liveVoiceUsage ?? createMemoryLiveVoiceUsage(),
+                minutesPerDay: options.liveMinutesPerDay ?? defaultLiveMinutesPerDay,
+              },
+            }),
       });
     }
     if (application.careerInterview !== undefined) {

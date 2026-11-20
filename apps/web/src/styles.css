@@ -214,18 +214,22 @@ label:where(:not(.shared-screens *)) {
       flex-direction: column;
       height: 100dvh;
       padding-bottom: 0;
-      overflow: hidden;
+      /* Clipped, not hidden: focus or scrolling into view can never scroll the bars away. */
+      overflow: clip;
     }
 
+    /* Sign-in mode wraps the screens in the records' box, which adds no box of its own. */
     .shell:has(> .shell-screens:not([hidden]) .app-frame) > *,
-    .shell:has(> .shell-screens:not([hidden]) .app-frame) > .shell-screens > * {
+    .shell:has(> .shell-screens:not([hidden]) .app-frame) > .shell-screens > *,
+    .shell:has(> .shell-screens:not([hidden]) .app-frame) > .shell-screens > .records-screens > * {
       flex: none;
     }
 
-    /* Repeats the shell's :has() so it outranks the flex: none rule above. */
+    /* Repeats the shell's :has() so it outranks the flex: none rules above. In sign-in mode too,
+       the screens get only the room under the account bar (#3197). */
     .shell:has(> .shell-screens:not([hidden]) .app-frame)
       > .shell-screens
-      > .shared-screens:has(.app-frame) {
+      .shared-screens:has(.app-frame) {
       flex: 1 1 auto;
       min-height: 0;
       container-type: size;

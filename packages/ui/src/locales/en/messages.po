@@ -11348,6 +11348,10 @@ msgstr "You have unsaved changes. Save them before marking the brief reviewed."
 msgid "You said"
 msgstr "You said"
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "You used today's live voice time. Keep writing your answers, or talk live again tomorrow."
+msgstr "You used today's live voice time. Keep writing your answers, or talk live again tomorrow."
+
 #: packages/ui/src/help-ask.tsx
 msgid "You're asking faster than I can keep up. Wait a minute, then ask again."
 msgstr "You're asking faster than I can keep up. Wait a minute, then ask again."

@@ -47,6 +47,18 @@ export function recordLabel(recordId: string, names: ReadonlyMap<string, string>
   return names.get(recordId) ?? recordId;
 }
 
+/**
+ * What the screens call a record in their title: its name, else on a one-person plan the name
+ * the app gives a job search, since that person never chose an id such as `default-record`.
+ */
+export function recordTitle(
+  recordId: string,
+  names: ReadonlyMap<string, string>,
+  onePerson: boolean,
+): string {
+  return names.get(recordId) ?? (onePerson ? firstJobSearchName() : recordId);
+}
+
 /** A typed name as it is stored: runs of white space become one space, and the ends are cut. */
 export function tidyRecordName(typed: string): string {
   return typed.replace(/\s+/gu, " ").trim();

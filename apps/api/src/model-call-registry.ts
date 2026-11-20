@@ -98,8 +98,9 @@ export const modelCallPaths: ReadonlyArray<ModelCallPath> = [
       { method: "GET", url: `${workspace}/career-interview/sessions/:sessionId/live` },
     ],
     whilePaused: "refused",
-    limit: "The plan's model calls per day (model-call-gate.ts).",
-    costCap: `The day's call count times ${outputTokens}; live voice also ends at its session length.`,
+    limit:
+      "The plan's model calls per day (model-call-gate.ts); live voice also has each member's daily minutes (live-voice-allowance.ts).",
+    costCap: `The day's call count times ${outputTokens}; live voice ends at its session length or the member's daily minutes, DRAFT_LOOP_LIVE_MINUTES_PER_DAY.`,
     killSwitch: "DRAFT_LOOP_SCREENING without model (the interviewer), DRAFT_LOOP_LIVE_SPEECH off.",
     reaches: [
       "apps/api/src/career-interview-routes.ts",
