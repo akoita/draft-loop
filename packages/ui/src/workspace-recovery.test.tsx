@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { DesktopBridgeError } from "./native.js";
+import { HostBridgeError } from "./native.js";
 import {
   isWorkspaceContextCurrent,
   isWorkspaceContextLost,
@@ -12,7 +12,7 @@ describe("workspace recovery", () => {
   it("recognizes only a trusted not-found error for the active workspace", () => {
     expect(
       isWorkspaceContextLost(
-        new DesktopBridgeError("not-found", "The workspace was not found."),
+        new HostBridgeError("not-found", "The workspace was not found."),
         "workspace-1",
         1,
         "workspace-1",
@@ -21,7 +21,7 @@ describe("workspace recovery", () => {
     ).toBe(true);
     expect(
       isWorkspaceContextLost(
-        new DesktopBridgeError("not-found", "The workspace was not found."),
+        new HostBridgeError("not-found", "The workspace was not found."),
         "workspace-1",
         1,
         "workspace-2",
@@ -30,7 +30,7 @@ describe("workspace recovery", () => {
     ).toBe(false);
     expect(
       isWorkspaceContextLost(
-        new DesktopBridgeError("operation-failed", "The operation failed."),
+        new HostBridgeError("operation-failed", "The operation failed."),
         "workspace-1",
         1,
         "workspace-1",
@@ -42,7 +42,7 @@ describe("workspace recovery", () => {
     );
     expect(
       isWorkspaceContextLost(
-        new DesktopBridgeError("not-found", "The workspace was not found."),
+        new HostBridgeError("not-found", "The workspace was not found."),
         null,
         1,
         null,

@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { ApprovalReadiness } from "./approval-readiness.js";
 import type { CoverageAssessmentView, ReviewCoverageView } from "./coverage-contract.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import { findingQueueCounts, ReviewWorkspace } from "./review.js";
 import { type FooterBlockerKind, footerBlocker } from "./review-footer.js";
 import {
@@ -24,7 +24,7 @@ const fixture = createFixtureReviewState();
 const knownBlock = fixture.artifact.sections[0]?.blocks[0];
 if (knownBlock === undefined) throw new Error("fixture has no block");
 // One round below the limit, so a revision is still available.
-const reviewed: DesktopReviewState = {
+const reviewed: ReviewScreenState = {
   ...fixture,
   state: "awaiting-approval",
   round: 1,
@@ -63,7 +63,7 @@ const coverage: ReviewCoverageView = {
 };
 
 function next(
-  state: DesktopReviewState,
+  state: ReviewScreenState,
   readiness: ApprovalReadiness | null = null,
   verdict: Parameters<typeof footerBlocker>[2] = null,
 ): { kind: FooterBlockerKind; line: string } {
@@ -97,7 +97,7 @@ describe("nextStepLine", () => {
   });
 
   it("names what the reviewer is waiting on", () => {
-    const running: DesktopReviewState = {
+    const running: ReviewScreenState = {
       ...reviewed,
       state: "reviewing",
       execution: { ...reviewed.execution, status: "running" },
@@ -171,7 +171,7 @@ describe("nextStepTarget", () => {
   it("links only the steps that happen in the queue or at the gate", () => {
     const pending = { ...blockingFinding, decision: "pending" as const };
     const accepted = { ...blockingFinding, decision: "accepted" as const };
-    const cases: readonly [DesktopReviewState, ApprovalReadiness | null, string | null][] = [
+    const cases: readonly [ReviewScreenState, ApprovalReadiness | null, string | null][] = [
       [{ ...reviewed, findings: [pending] }, null, "findings"],
       [{ ...reviewed, findings: [accepted] }, null, "findings"],
       [reviewed, relevanceBlocked, "approval-gate"],
@@ -316,7 +316,7 @@ describe("review work tabs", () => {
 });
 
 describe("work tabs in the review workspace", () => {
-  function render(state: DesktopReviewState): string {
+  function render(state: ReviewScreenState): string {
     return renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
   }
 

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { NativeBridge } from "./bridge.js";
 import { bridgeError } from "./bridge.js";
 import { createFixtureReviewState } from "./model.js";
-import { createDesktopReviewPort } from "./native.js";
+import { createReviewScreenPort } from "./native.js";
 import { isElectronRendererRuntime, nativeConnectionUnavailableMessage } from "./native-startup.js";
 
 describe("desktop renderer startup", () => {
@@ -11,7 +11,7 @@ describe("desktop renderer startup", () => {
       ok: false as const,
       error: bridgeError("operation-failed", "review.load"),
     }));
-    const port = createDesktopReviewPort({
+    const port = createReviewScreenPort({
       nativeBridge: {
         capabilities: ["review.load", "review.dispatch"],
         invoke,
@@ -24,7 +24,7 @@ describe("desktop renderer startup", () => {
   });
 
   it("fails closed when Electron has no native bridge", async () => {
-    const port = createDesktopReviewPort({ nativeBridge: undefined, electronRuntime: true });
+    const port = createReviewScreenPort({ nativeBridge: undefined, electronRuntime: true });
 
     await expect(port.load()).rejects.toThrow(nativeConnectionUnavailableMessage());
     await expect(port.dispatch(createFixtureReviewState(), { type: "start" })).rejects.toThrow(
@@ -37,7 +37,7 @@ describe("desktop renderer startup", () => {
     ["incomplete review bridge", { capabilities: ["review.load"], invoke: vi.fn() }],
   ])("fails closed for an %s without invoking it", async (_label, nativeBridge) => {
     const invoke = vi.fn();
-    const port = createDesktopReviewPort({
+    const port = createReviewScreenPort({
       nativeBridge: { ...nativeBridge, invoke },
       electronRuntime: true,
     });
@@ -47,7 +47,7 @@ describe("desktop renderer startup", () => {
   });
 
   it("keeps the deterministic fixture for ordinary browser preview", async () => {
-    const port = createDesktopReviewPort({ nativeBridge: undefined, electronRuntime: false });
+    const port = createReviewScreenPort({ nativeBridge: undefined, electronRuntime: false });
 
     const state = await port.load();
     expect(state.setup.fixtureMode).toBe(true);

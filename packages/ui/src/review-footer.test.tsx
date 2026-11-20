@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { approvalBlockerId } from "./approval-gate-focus.js";
 import type { ApprovalReadiness, ApprovalReadinessBlocker } from "./approval-readiness.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import {
   compactReadinessBlocker,
@@ -16,7 +16,7 @@ import { sendVerdict } from "./send-verdict.js";
 
 const fixture = createFixtureReviewState();
 // The fixture sits at its round limit; one round earlier a revision is still available.
-const reviewed: DesktopReviewState = {
+const reviewed: ReviewScreenState = {
   ...fixture,
   state: "awaiting-approval",
   round: 1,
@@ -47,7 +47,7 @@ describe("footerBlocker", () => {
   });
 
   it("names the export path once the draft is exported", () => {
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...reviewed,
       state: "exported",
       approval: "approved",
@@ -61,7 +61,7 @@ describe("footerBlocker", () => {
   });
 
   it("warns when an exported draft's export file can't be found", () => {
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...reviewed,
       state: "exported",
       approval: "approved",
@@ -75,7 +75,7 @@ describe("footerBlocker", () => {
   });
 
   it("says an approved draft is ready to export, and says when it was approved past the checks", () => {
-    const state: DesktopReviewState = { ...reviewed, state: "approved", approval: "approved" };
+    const state: ReviewScreenState = { ...reviewed, state: "approved", approval: "approved" };
     expect(footerBlocker(state, null, null)).toMatchObject({
       kind: "approved",
       text: "Approved · ready to export",
@@ -146,7 +146,7 @@ describe("footerBlocker", () => {
   });
 
   it("says in plain words that the loop stopped on agreement or paused on a persisting finding", () => {
-    const withReason = (stopReason: string, findings: DesktopReviewState["findings"]) => ({
+    const withReason = (stopReason: string, findings: ReviewScreenState["findings"]) => ({
       ...reviewed,
       findings,
       evaluation: { ...reviewed.evaluation, stopReason },
@@ -477,7 +477,7 @@ describe("the review footer in the workspace", () => {
   });
 
   it("states final CV checks in the footer and offers the override there", () => {
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...reviewed,
       approvalReadiness: relevanceBlocked,
     };
@@ -487,7 +487,7 @@ describe("the review footer in the workspace", () => {
   });
 
   it("sits below the side panel's scroll area, never over its tabs (#1253)", () => {
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...reviewed,
       approvalReadiness: relevanceBlocked,
       coverage: {
@@ -537,7 +537,7 @@ describe("revisionUnavailableReason", () => {
   });
 
   it("folds the greyed-out directions field away once the review has ended", () => {
-    const stopped: DesktopReviewState = { ...reviewed, state: "stopped" };
+    const stopped: ReviewScreenState = { ...reviewed, state: "stopped" };
     const html = renderToStaticMarkup(
       <ReviewWorkspace state={stopped} onAction={() => undefined} />,
     );
@@ -547,7 +547,7 @@ describe("revisionUnavailableReason", () => {
   });
 
   it("leaves only export in the footer once the draft is approved", () => {
-    const approved: DesktopReviewState = { ...reviewed, state: "approved", approval: "approved" };
+    const approved: ReviewScreenState = { ...reviewed, state: "approved", approval: "approved" };
     const html = renderToStaticMarkup(
       <ReviewWorkspace state={approved} onAction={() => undefined} />,
     );

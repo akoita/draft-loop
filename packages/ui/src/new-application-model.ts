@@ -5,7 +5,7 @@ import { t } from "@lingui/core/macro";
  * Profile step lists the reviewed profiles. Every state is testable without a DOM.
  */
 import type { CandidateProfileSelection } from "./model.js";
-import type { DesktopProfileCapabilities } from "./native.js";
+import type { HostProfileCapabilities } from "./native.js";
 import { parseReviewedCanonicalCandidateProfileCatalogResult } from "./profile-catalog.js";
 
 // -- The new application's name and job ------------------------------------------------------
@@ -185,7 +185,7 @@ export const noReviewedProfileMessage = () =>
  */
 export async function loadReviewedProfileChoices(
   capabilities: Pick<
-    DesktopProfileCapabilities,
+    HostProfileCapabilities,
     "listReviewedCanonicalCandidateProfiles" | "listCanonicalCandidateProfileVersions"
   >,
   workspaceId: string,

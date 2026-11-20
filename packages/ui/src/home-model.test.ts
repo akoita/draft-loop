@@ -23,7 +23,7 @@ import {
   profileView,
   workspaceEntryView,
 } from "./home-model.js";
-import type { DesktopProfileCapabilities } from "./native.js";
+import type { HostProfileCapabilities } from "./native.js";
 
 function application(overrides: Partial<ApplicationSummaryView> = {}): ApplicationSummaryView {
   return {
@@ -106,8 +106,8 @@ describe("career profile status", () => {
 
   const capabilities = (
     summaries: unknown,
-    read?: DesktopProfileCapabilities["getCanonicalCandidateProfile"],
-  ): DesktopProfileCapabilities => ({
+    read?: HostProfileCapabilities["getCanonicalCandidateProfile"],
+  ): HostProfileCapabilities => ({
     listCanonicalCandidateProfileSummaries: async () => {
       if (summaries instanceof Error) throw summaries;
       return summaries as never;

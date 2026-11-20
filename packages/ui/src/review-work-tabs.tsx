@@ -18,7 +18,7 @@ import { countedNouns } from "./counted-nouns.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
 import { coverageKindsSummary, coverageKindTallies } from "./coverage-kinds.js";
 import {
-  type DesktopReviewState,
+  type ReviewScreenState,
   reviewFindingSummary,
   roundLimitRecoveryRequired,
 } from "./model.js";
@@ -55,7 +55,7 @@ function shortReadinessBlocker(blocker: ApprovalReadinessBlocker): string {
  * `readiness` names the failing final check when the footer reports one.
  */
 export function nextStepLine(
-  state: DesktopReviewState,
+  state: ReviewScreenState,
   blocker: FooterBlocker,
   readiness: ApprovalReadiness | null = null,
 ): string {

@@ -97,7 +97,7 @@ import {
 import { HostHomeEvidence } from "./host-panels.js";
 import { useInlineRename } from "./inline-rename.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
-import type { DesktopApplicationCapabilities, DesktopProfileCapabilities } from "./native.js";
+import type { HostApplicationCapabilities, HostProfileCapabilities } from "./native.js";
 import { NewApplicationDialog } from "./new-application-form.js";
 import {
   ProfileSuggestionsNote,
@@ -999,12 +999,12 @@ export interface HomeScreenProps {
   readonly workspaceId: string;
   readonly workspaceTitle: ReactNode;
   readonly workspaceNavigation: ReactNode;
-  readonly profileCapabilities: DesktopProfileCapabilities;
+  readonly profileCapabilities: HostProfileCapabilities;
   readonly evidenceCapabilities: CareerEvidenceCapabilities;
   /** Bumped when the knowledge selection or contents change, so the summary reads again. */
   readonly evidenceRevision: number;
   readonly legacyEvidenceSourceCount: number;
-  readonly applicationCapabilities: DesktopApplicationCapabilities;
+  readonly applicationCapabilities: HostApplicationCapabilities;
   readonly errorMessage: string | null;
   /** Disables the actions that change applications; navigation stays available. */
   readonly disabled: boolean;

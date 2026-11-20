@@ -18,7 +18,9 @@ On every server: self-hosted, hosted and the desktop client over it.
 
 1. After the first document is ready, the Career evidence card shows
    **Next: build your career profile**. Choose **Continue to Career profile**.
-2. Derive the profile. A worker reads the selected evidence and saves a new
+2. Derive the profile. Before a large update, the page says how many sources
+   it reads again and reuses, the expected model calls and a cost range.
+   A worker reads the selected evidence and saves a new
    draft version; you can cancel it while it runs. When it ends, the page
    says how many sources it reused and extracted, and what its model calls
    used: calls, tokens and an estimated cost.

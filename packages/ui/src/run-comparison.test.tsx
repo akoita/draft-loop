@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ApplicationRunRowView } from "./application-run-list.js";
 import type { NativeBridge } from "./bridge.js";
 import { bridgeCapabilities } from "./bridge-capabilities.js";
-import { createFixtureReviewState, type DesktopReviewState, type ReviewArtifact } from "./model.js";
+import { createFixtureReviewState, type ReviewArtifact, type ReviewScreenState } from "./model.js";
 import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
 import { ReviewWorkspace } from "./review.js";
 import { RunComparisonView } from "./run-comparison.js";
@@ -39,7 +39,7 @@ const runs: readonly ApplicationRunRowView[] = [
   row("run-first", { authorModel: "", criticModel: "" }),
 ];
 
-const openState: DesktopReviewState = { ...fixture, applicationRuns: runs };
+const openState: ReviewScreenState = { ...fixture, applicationRuns: runs };
 
 /** The other run's draft: the open run's draft with its first line rewritten. */
 function otherArtifact(): ReviewArtifact {
@@ -251,7 +251,7 @@ describe("the review while comparing", () => {
   });
 
   it("keeps the earlier-run notice when comparing from an earlier run", () => {
-    const earlierOpen: DesktopReviewState = {
+    const earlierOpen: ReviewScreenState = {
       ...openState,
       earlierRun: { latestRunId: "run-latest" },
     };

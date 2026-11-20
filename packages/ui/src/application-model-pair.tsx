@@ -3,7 +3,7 @@ import { t } from "@lingui/core/macro";
 import { useState } from "react";
 import type { ApplicationModelProfilesView } from "./application-contract.js";
 import type { ModelProfileSupportResult } from "./bridge.js";
-import type { DesktopReviewState, ProviderTransmissionIdentity } from "./model.js";
+import type { ProviderTransmissionIdentity, ReviewScreenState } from "./model.js";
 import { ModelPresetCards } from "./model-preset-cards.js";
 import {
   modelProfileEntryForReference,
@@ -59,7 +59,7 @@ function sideFor(
  * so the workspace's sides then come from the workspace's applied profiles.
  */
 export function workspacePairSides(
-  state: DesktopReviewState,
+  state: ReviewScreenState,
   applicationPair: ApplicationModelProfilesView | null,
   workspaceProfiles: ModelProfileReferences | null,
 ): ModelPairSides {
@@ -74,10 +74,10 @@ export function workspacePairSides(
 
 /** The state as the workspace's settings see it, without an application's own pair. */
 export function workspaceScopedState(
-  state: DesktopReviewState,
+  state: ReviewScreenState,
   applicationPair: ApplicationModelProfilesView | null,
   workspaceProfiles: ModelProfileReferences | null,
-): DesktopReviewState {
+): ReviewScreenState {
   if (applicationPair === null) return state;
   const sides = workspacePairSides(state, applicationPair, workspaceProfiles);
   return {

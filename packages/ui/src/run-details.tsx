@@ -20,12 +20,13 @@ import { plural, t } from "@lingui/core/macro";
 
 import { type JSX, type ReactNode, type RefObject, useEffect, useId, useRef } from "react";
 import { countedNouns } from "./counted-nouns.js";
+import { DisplayFold } from "./display-fold.js";
 import { formatDateTime } from "./locale-format.js";
 import {
   type CriticFallbackView,
-  type DesktopReviewState,
   type IndependentReviewView,
   type ReviewEvent,
+  type ReviewScreenState,
   type RunWritingPolicyProjection,
   roundLimitRecoveryRequired,
 } from "./model.js";
@@ -75,7 +76,7 @@ export interface RecordedRunModels {
  * stand-in for what this run used.
  */
 export function recordedRunModels(
-  state: Pick<DesktopReviewState, "runId" | "applicationRuns">,
+  state: Pick<ReviewScreenState, "runId" | "applicationRuns">,
 ): RecordedRunModels | null {
   const row = state.applicationRuns?.find((run) => run.runId === state.runId);
   if (row === undefined || (row.authorModel === "" && row.criticModel === "")) return null;
@@ -95,7 +96,7 @@ function recordedModelLabel(modelId: string, name: (id: string) => string = (id)
 }
 
 type RunDetailsSummaryInput = Pick<
-  DesktopReviewState,
+  ReviewScreenState,
   "runId" | "applicationRuns" | "state" | "setup" | "evidenceMode" | "writingPolicy"
 >;
 
@@ -136,10 +137,7 @@ export function runDetailsSummary(state: RunDetailsSummaryInput): string {
  * Whether the "Next:" line names starting a new review, so it opens the drawer that holds
  * **Start a new review**. It mirrors the branches of `nextStepLine` that name that step.
  */
-export function nextStepOpensRunDetails(
-  state: DesktopReviewState,
-  blocker: FooterBlocker,
-): boolean {
+export function nextStepOpensRunDetails(state: ReviewScreenState, blocker: FooterBlocker): boolean {
   if (blocker.kind !== "no-artifact" && blocker.kind !== "waiting") return false;
   return (
     canStartNewReview(state) &&
@@ -293,7 +291,7 @@ export function CriticFallbackNote({
 }
 
 /** The trust and policy facts: identities with lineage, data and writing policy, evidence. */
-function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.Element {
+function RunTrustFacts({ state }: { readonly state: ReviewScreenState }): JSX.Element {
   const evidenceMode = runEvidenceModeDisplay(state.evidenceMode);
   const authorInput = runAuthorInputDisplay(state.authorInput);
   const applicationPlan = runApplicationPlanDisplay(state.applicationPlan);
@@ -404,14 +402,14 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
           <strong className="numeric">{authorInput.value}</strong>
           <span>{authorInput.detail}</span>
           {authorInput.gapSummary !== undefined && (
-            <details className="author-input-gap">
+            <DisplayFold className="author-input-gap">
               <summary>{authorInput.gapSummary}</summary>
               <ul>
                 {authorInput.unmatchedRequirements.map((text) => (
                   <li key={text}>{text}</li>
                 ))}
               </ul>
-            </details>
+            </DisplayFold>
           )}
           {authorInput.direction !== undefined && (
             <p className="author-input-direction">
@@ -475,14 +473,14 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
             </div>
           )}
           {applicationPlan.reviewPoints.length > 0 && (
-            <details className="application-plan-review">
+            <DisplayFold className="application-plan-review">
               <summary>{t`What the critic asked to change`}</summary>
               <ul>
                 {applicationPlan.reviewPoints.map((point) => (
                   <li key={point}>{point}</li>
                 ))}
               </ul>
-            </details>
+            </DisplayFold>
           )}
         </div>
       )}
@@ -547,7 +545,7 @@ export function RunDetailsDrawer({
   readonly onClose: () => void;
   /** The header button; focus returns to it when the drawer closes. */
   readonly returnFocusRef: RefObject<HTMLElement | null>;
-  readonly state: DesktopReviewState;
+  readonly state: ReviewScreenState;
   readonly describeState: (state: ReviewEvent["state"]) => string;
   /** Null for a read-only earlier run, which never starts another review. */
   readonly start: RunDetailsStart | null;

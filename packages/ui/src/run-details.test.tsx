@@ -5,7 +5,7 @@ import type { ApplicationRunRowView } from "./application-run-list.js";
 import { activateScreenLocale } from "./i18n.js";
 import {
   createFixtureReviewState,
-  type DesktopReviewState,
+  type ReviewScreenState,
   type WritingPolicyVersionMetadata,
 } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
@@ -50,13 +50,13 @@ const applicationRuns: readonly ApplicationRunRowView[] = [
 ];
 
 /** The pair configured for new runs, which differs from every run's recorded models. */
-const configuredMistral: DesktopReviewState["providerExposure"] = {
+const configuredMistral: ReviewScreenState["providerExposure"] = {
   ...fixture.providerExposure,
   author: { company: "Mistral", model: "mistral-large-4" },
   critic: { company: "OpenAI", model: "gpt-6-luna" },
 };
 
-const fullSource: DesktopReviewState = {
+const fullSource: ReviewScreenState = {
   ...fixture,
   providerExposure: configuredMistral,
   applicationRuns,
@@ -69,9 +69,9 @@ const fullSource: DesktopReviewState = {
   writingPolicy: { effective: policy, lineage: { kind: "workspace" } },
 };
 
-const stopped: DesktopReviewState = { ...fixture, state: "stopped", reviewComplete: false };
+const stopped: ReviewScreenState = { ...fixture, state: "stopped", reviewComplete: false };
 
-const running: DesktopReviewState = {
+const running: ReviewScreenState = {
   ...fixture,
   state: "reviewing",
   reviewComplete: false,
@@ -86,7 +86,7 @@ const running: DesktopReviewState = {
   },
 };
 
-function render(state: DesktopReviewState): string {
+function render(state: ReviewScreenState): string {
   return renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
 }
 
@@ -133,7 +133,7 @@ describe("runDetailsSummary", () => {
   });
 
   it("says retrieval was used when full source fell back", () => {
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fullSource,
       evidenceMode: {
         requestedMode: "full-source",
@@ -149,7 +149,7 @@ describe("runDetailsSummary", () => {
   });
 
   it("counts sources before the evidence is indexed and names a policy override", () => {
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fixture,
       setup: { ...fixture.setup, retrievalStatus: "not-indexed", evidenceSourceCount: 3 },
       writingPolicy: {
@@ -170,21 +170,21 @@ describe("runDetailsSummary", () => {
 });
 
 describe("the run's recorded models, not the pair configured for new runs", () => {
-  const earlier: DesktopReviewState = {
+  const earlier: ReviewScreenState = {
     ...fullSource,
     runId: "run-earlier",
     earlierRun: { latestRunId: fixture.runId },
     evidenceMode: null,
     writingPolicy: null,
   };
-  const unrecorded: DesktopReviewState = {
+  const unrecorded: ReviewScreenState = {
     ...fullSource,
     applicationRuns: applicationRuns.map((run) =>
       run.runId === fixture.runId ? { ...run, authorModel: "", criticModel: "" } : run,
     ),
   };
 
-  function trustFacts(state: DesktopReviewState): string {
+  function trustFacts(state: ReviewScreenState): string {
     const html = render(state);
     const start = html.indexOf('aria-label="trust and policy summary"');
     if (start < 0) throw new Error("Expected the trust facts.");
@@ -222,7 +222,7 @@ describe("the run's recorded models, not the pair configured for new runs", () =
   });
 
   it("adds no new-runs line when the configured pair is the one the run recorded", () => {
-    const same: DesktopReviewState = {
+    const same: ReviewScreenState = {
       ...fullSource,
       providerExposure: {
         ...configuredMistral,
@@ -234,7 +234,7 @@ describe("the run's recorded models, not the pair configured for new runs", () =
   });
 
   it("keeps the shared-lineage warning on the run's recorded lineages", () => {
-    const shared: DesktopReviewState = {
+    const shared: ReviewScreenState = {
       ...earlier,
       providerExposure: {
         ...configuredMistral,
@@ -281,7 +281,7 @@ describe("Run details in the review header", () => {
 });
 
 describe("RunDetailsDrawer", () => {
-  function renderDrawer(state: DesktopReviewState, open = true): string {
+  function renderDrawer(state: ReviewScreenState, open = true): string {
     return renderToStaticMarkup(
       <RunDetailsDrawer
         id="run-details"
@@ -351,7 +351,7 @@ describe("RunDetailsDrawer", () => {
   });
 
   it("states the stop reason in plain words once the loop stopped or paused on findings", () => {
-    const withReason = (stopReason: string): DesktopReviewState => ({
+    const withReason = (stopReason: string): ReviewScreenState => ({
       ...fixture,
       state: "awaiting-approval",
       evaluation: { ...fixture.evaluation, stopReason },
@@ -445,7 +445,7 @@ describe("what stays outside the drawer", () => {
   });
 
   it("keeps a shared-lineage warning in the side panel, not behind the drawer", () => {
-    const shared: DesktopReviewState = {
+    const shared: ReviewScreenState = {
       ...fixture,
       providerExposure: {
         ...fixture.providerExposure,

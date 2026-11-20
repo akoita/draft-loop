@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { DesktopBridgeError } from "./native.js";
+import { HostBridgeError } from "./native.js";
 
 /** The host's refusal of `review.load` when no workspace is open yet. */
 const noWorkspaceRefusalMessage = () => t`Open a workspace first.`;
@@ -10,7 +10,7 @@ const noWorkspaceRefusalMessage = () => t`Open a workspace first.`;
  */
 export function isNoWorkspaceRefusal(reason: unknown): boolean {
   return (
-    reason instanceof DesktopBridgeError &&
+    reason instanceof HostBridgeError &&
     reason.code === "not-found" &&
     reason.message === noWorkspaceRefusalMessage()
   );

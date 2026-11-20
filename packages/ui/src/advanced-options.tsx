@@ -1,7 +1,7 @@
 import { t } from "@lingui/core/macro";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
-import { useShowEverything } from "./display-preference.js";
+import { useDisplayFold } from "./display-fold.js";
 
 export interface AdvancedOptionsProps {
   /**
@@ -24,16 +24,8 @@ export interface AdvancedOptionsProps {
  * goes inside.
  */
 export function AdvancedOptions({ open, onToggle, note = null, children }: AdvancedOptionsProps) {
-  // Show everything (#2789) starts every uncontrolled section open; the person can still fold it.
-  const everything = useShowEverything();
-  const [freeOpen, setFreeOpen] = useState(everything);
-  // Switching the Display setting applies at once, also to sections already on screen.
-  const shownMode = useRef(everything);
-  useEffect(() => {
-    if (shownMode.current === everything) return;
-    shownMode.current = everything;
-    setFreeOpen(everything);
-  }, [everything]);
+  // Show everything (#2789) starts every uncontrolled section open, and a switch applies at once.
+  const [freeOpen, setFreeOpen] = useDisplayFold();
   const shownOpen = open ?? freeOpen;
   return (
     <details

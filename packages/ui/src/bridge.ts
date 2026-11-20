@@ -137,7 +137,6 @@ import {
 import { normalizeFindingRequirement } from "./finding-requirement.js";
 import type {
   CriticFallbackView,
-  DesktopReviewState,
   IndependentReviewView,
   OpportunityBriefSelection,
   PendingWritingPolicyOverride,
@@ -145,6 +144,7 @@ import type {
   ProviderFailureView,
   ReviewAction,
   ReviewFinding,
+  ReviewScreenState,
   RunWritingPolicyProjection,
   UsageLimitView,
   WritingPolicyIdentity,
@@ -171,6 +171,12 @@ import {
   type ReviewedCanonicalCandidateProfileCatalogInput,
   type ReviewedCanonicalCandidateProfileCatalogResult,
 } from "./profile-catalog.js";
+import {
+  normalizeProfileDerivationEstimateResult,
+  type ProfileDerivationEstimateInput,
+  type ProfileDerivationEstimateResult,
+  validateProfileDerivationEstimateInput,
+} from "./profile-derivation-estimate-contract.js";
 import {
   normalizeProfileDerivationUsage,
   type ProfileDerivationUsage,
@@ -278,6 +284,10 @@ export type {
   ReviewedCanonicalCandidateProfileCatalogResult,
   SavedCanonicalCandidateProfileSummary,
 } from "./profile-catalog.js";
+export type {
+  ProfileDerivationEstimateInput,
+  ProfileDerivationEstimateResult,
+} from "./profile-derivation-estimate-contract.js";
 export type {
   ProfileFreshnessInput,
   ProfileFreshnessResult,
@@ -1507,7 +1517,7 @@ const workspaceReadinessKeys = [
   "ready",
   "nextSteps",
 ] as const;
-const desktopReviewStateKeys = [
+const reviewScreenStateKeys = [
   "workspaceId",
   "workspaceName",
   "runId",
@@ -1631,7 +1641,7 @@ function normalizeReviewFindings(value: unknown): readonly unknown[] {
   });
 }
 
-export type ReviewStateResult = DesktopReviewState;
+export type ReviewStateResult = ReviewScreenState;
 
 /** Whether the file was saved, and the name the person gave it; no folder crosses back. */
 export interface MarkdownFileSaveResult {
@@ -2610,6 +2620,7 @@ export interface BridgeCommandInputMap {
   "profile.get": CanonicalCandidateProfileGetInput;
   "profile.list": CanonicalCandidateProfileListInput;
   "profile.freshness": ProfileFreshnessInput;
+  "profile.estimate": ProfileDerivationEstimateInput;
   "profile.edit": CanonicalCandidateProfileEditInput;
   "profile.review": CanonicalCandidateProfileReviewInput;
   "profile.catalog": ReviewedCanonicalCandidateProfileCatalogInput;
@@ -2704,6 +2715,7 @@ export interface BridgeCommandOutputMap {
   "profile.get": CanonicalCandidateProfileRecordResult;
   "profile.list": CanonicalCandidateProfileListResult;
   "profile.freshness": ProfileFreshnessResult;
+  "profile.estimate": ProfileDerivationEstimateResult;
   "profile.edit": CanonicalCandidateProfileRecordResult;
   "profile.review": CanonicalCandidateProfileRecordResult;
   "profile.catalog": ReviewedCanonicalCandidateProfileCatalogResult;
@@ -4953,6 +4965,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "profile.freshness",
         input: validateProfileFreshnessInput(command.input),
       };
+    case "profile.estimate":
+      return {
+        type: "profile.estimate",
+        input: validateProfileDerivationEstimateInput(command.input),
+      };
     case "profile.edit":
       return {
         type: "profile.edit",
@@ -5878,7 +5895,7 @@ function normalizeReviewProfileSuggestions(
 
 function normalizeReviewState(value: unknown): ReviewStateResult {
   if (!isRecord(value)) return invalidInput();
-  if (!hasOnlyKeys(value, desktopReviewStateKeys)) return invalidInput();
+  if (!hasOnlyKeys(value, reviewScreenStateKeys)) return invalidInput();
   if (
     typeof value.workspaceId !== "string" ||
     typeof value.runId !== "string" ||
@@ -6143,7 +6160,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ...(providerRoutes === undefined ? {} : { providerRoutes }),
     ...(earlierRun === undefined ? {} : { earlierRun }),
     ...(profileSuggestions === undefined ? {} : { profileSuggestions }),
-  } as unknown as DesktopReviewState;
+  } as unknown as ReviewScreenState;
 }
 
 function normalizeMarkdownFileSaveResult(value: unknown): MarkdownFileSaveResult {
@@ -6847,6 +6864,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeCanonicalCandidateProfileListResult(value);
     case "profile.freshness":
       return normalizeProfileFreshnessResult(value) ?? invalidInput();
+    case "profile.estimate":
+      return normalizeProfileDerivationEstimateResult(value) ?? invalidInput();
     case "profile.catalog":
       return parseReviewedCanonicalCandidateProfileCatalogResult(value, command.input.workspaceId);
     case "knowledge.readiness":

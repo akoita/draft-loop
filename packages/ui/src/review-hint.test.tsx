@@ -26,9 +26,11 @@ describe("the review screen's guided hint", () => {
     expect(guided(empty)).not.toContain(hint);
   });
 
-  it("ends once the draft is approved", () => {
+  it("turns to the export once the draft is approved", () => {
     const fixture = createFixtureReviewState();
-    expect(guided({ ...fixture, approval: "approved" as const })).not.toContain(hint);
+    const approved = guided({ ...fixture, approval: "approved" as const });
+    expect(approved).not.toContain(hint);
+    expect(approved).toContain("This CV is approved. Pick a template, then export it");
   });
 
   it("waits while the review is still running", () => {

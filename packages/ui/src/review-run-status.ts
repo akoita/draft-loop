@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import type { DesktopReviewState } from "./model.js";
+import type { ReviewScreenState } from "./model.js";
 
 /** The next-action line above the draft: a short label and what it means for the person. */
 export interface ReviewStatusLine {
@@ -8,16 +8,16 @@ export interface ReviewStatusLine {
 }
 
 type RunStatusInput = Pick<
-  DesktopReviewState,
+  ReviewScreenState,
   "state" | "execution" | "round" | "artifact" | "setup" | "reviewComplete"
 > &
-  Partial<Pick<DesktopReviewState, "providerFailure">>;
+  Partial<Pick<ReviewScreenState, "providerFailure">>;
 
 /**
  * Whether the author–critic loop is working right now. While it is, a missing critique is
  * expected, not a failure, and the person has nothing to do until the run pauses.
  */
-export function reviewInProgress(state: Pick<DesktopReviewState, "state" | "execution">): boolean {
+export function reviewInProgress(state: Pick<ReviewScreenState, "state" | "execution">): boolean {
   if (state.execution.status === "interrupted") return false;
   return (
     state.execution.status === "running" ||
@@ -32,13 +32,13 @@ export function reviewInProgress(state: Pick<DesktopReviewState, "state" | "exec
  * person, so the draft stays locked and the screen says the review is still going.
  */
 export function hostRetrying(
-  state: Pick<DesktopReviewState, "state"> & Partial<Pick<DesktopReviewState, "providerFailure">>,
+  state: Pick<ReviewScreenState, "state"> & Partial<Pick<ReviewScreenState, "providerFailure">>,
 ): boolean {
   return state.state === "provider-error" && state.providerFailure?.automaticRetry === true;
 }
 
 /** Whether the person has approved this run, so it is done rather than in progress. */
-export function reviewFinished(state: Pick<DesktopReviewState, "state">): boolean {
+export function reviewFinished(state: Pick<ReviewScreenState, "state">): boolean {
   return state.state === "approved" || state.state === "exported";
 }
 
@@ -46,12 +46,12 @@ export function reviewFinished(state: Pick<DesktopReviewState, "state">): boolea
  * Whether this run has ended, so the person can start another review of the same application.
  * Starting one adds a new run; this run, its approval and its export stay as they are.
  */
-export function canStartNewReview(state: Pick<DesktopReviewState, "state">): boolean {
+export function canStartNewReview(state: Pick<ReviewScreenState, "state">): boolean {
   return state.state === "stopped" || state.state === "budget-exhausted" || reviewFinished(state);
 }
 
 /** The run panel's title for a finished run. */
-export function finishedRunTitle(state: Pick<DesktopReviewState, "state">): string {
+export function finishedRunTitle(state: Pick<ReviewScreenState, "state">): string {
   return state.state === "exported" ? t`Done · approved and exported` : t`Done · approved`;
 }
 
@@ -123,7 +123,7 @@ export function uncritiquedStatus(state: RunStatusInput): ReviewStatusLine {
  * The evidence-retrieval readout for an index that setup has not inspected. Runs index the
  * candidate's evidence when they start, so this is a note about timing, not a missing input.
  */
-export function notIndexedRetrievalText(state: Pick<DesktopReviewState, "state">): string {
+export function notIndexedRetrievalText(state: Pick<ReviewScreenState, "state">): string {
   return state.state === "collecting"
     ? t`Evidence will be indexed when the review starts`
     : t`Your career evidence is indexed and searched as the review runs`;

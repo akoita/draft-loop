@@ -16,6 +16,7 @@ import {
   recordIds,
   recordLabel,
   recordNames,
+  recordTitle,
   sharesAccess,
   tidyRecordName,
   unassignMemberRequest,
@@ -101,6 +102,15 @@ describe("candidate records", () => {
     expect([...names]).toEqual([["record-b", "Fictional search"]]);
     expect(recordLabel("record-b", names)).toBe("Fictional search");
     expect(recordLabel("record-a", names)).toBe("record-a");
+  });
+
+  it("titles an unnamed one-person job search in words, never by its id (#3197)", () => {
+    const names = new Map([["record-b", "Fictional search"]]);
+
+    expect(recordTitle("record-b", names, true)).toBe("Fictional search");
+    expect(recordTitle("default-record", names, true)).toBe("My job search");
+    // A coach's unnamed candidate keeps its id, which tells the candidates apart.
+    expect(recordTitle("record-a", names, false)).toBe("record-a");
   });
 
   it("takes a plain name of up to 80 characters for a new record", () => {

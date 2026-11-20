@@ -28,15 +28,15 @@ import {
 import type { ModelCompany } from "./bridge.js";
 import {
   createFixtureReviewState,
-  type DesktopReviewState,
   type IndependentReviewView,
   type ReviewAction,
+  type ReviewScreenState,
   reduceReviewState,
   reviewFindingSummary,
   roundLimitRecoveryRequired,
   unresolvedBlockingFindings,
 } from "./model.js";
-import { DesktopBridgeError } from "./native.js";
+import { HostBridgeError } from "./native.js";
 import {
   bulkFindingDecisionTargets,
   canExportReview,
@@ -408,7 +408,7 @@ describe("desktop trust-centered review", () => {
 
   it("shows persisted rubric readiness blockers and keeps approval disabled after accepted warnings", () => {
     const fixture = createFixtureReviewState();
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fixture,
       state: "awaiting-approval",
       findings: fixture.findings
@@ -447,7 +447,7 @@ describe("desktop trust-centered review", () => {
 
   it("offers no final-check override while blocking findings remain", () => {
     const fixture = createFixtureReviewState();
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fixture,
       state: "awaiting-approval",
       approvalReadiness: {
@@ -464,7 +464,7 @@ describe("desktop trust-centered review", () => {
 
   it("shows an approval made past final CV checks as overridden", () => {
     const fixture = createFixtureReviewState();
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fixture,
       state: "approved",
       approval: "approved",
@@ -489,7 +489,7 @@ describe("desktop trust-centered review", () => {
 
   it("ignores readiness projected for an older artifact version", () => {
     const fixture = createFixtureReviewState();
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fixture,
       state: "awaiting-approval",
       findings: fixture.findings
@@ -755,7 +755,7 @@ describe("desktop trust-centered review", () => {
 
   it("serializes bulk finding decisions through the existing durable action", async () => {
     const initial = createFixtureReviewState();
-    const receivedStates: DesktopReviewState[] = [];
+    const receivedStates: ReviewScreenState[] = [];
     const receivedActions: ReviewAction[] = [];
 
     const result = await dispatchFindingDecisions(
@@ -1854,7 +1854,7 @@ describe("desktop workspace setup", () => {
 
     expect(
       workspaceSetupFailureMessage(
-        new DesktopBridgeError("invalid-input", "The desktop command input is invalid."),
+        new HostBridgeError("invalid-input", "The desktop command input is invalid."),
         local,
       ),
     ).toBe(
@@ -1862,13 +1862,13 @@ describe("desktop workspace setup", () => {
     );
     expect(
       workspaceSetupFailureMessage(
-        new DesktopBridgeError("operation-failed", "The desktop operation could not be completed."),
+        new HostBridgeError("operation-failed", "The desktop operation could not be completed."),
         local,
       ),
     ).toBe("The desktop operation could not be completed.");
     expect(
       workspaceSetupFailureMessage(
-        new DesktopBridgeError("invalid-input", "The desktop command input is invalid."),
+        new HostBridgeError("invalid-input", "The desktop command input is invalid."),
         named,
       ),
     ).toBe("The desktop command input is invalid.");

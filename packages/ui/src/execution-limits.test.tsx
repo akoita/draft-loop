@@ -4,8 +4,8 @@ import { createCapabilityPort, type NativeBridge } from "./bridge.js";
 import { executionLimitText, formatLimitDuration } from "./execution-limits.js";
 import {
   createFixtureReviewState,
-  type DesktopReviewState,
   type ReviewExecutionView,
+  type ReviewScreenState,
 } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
@@ -20,7 +20,7 @@ const authorOnSession: ReviewExecutionView = {
   timeoutRemainingMs: null,
 };
 
-function stateWith(execution: ReviewExecutionView): DesktopReviewState {
+function stateWith(execution: ReviewExecutionView): ReviewScreenState {
   return { ...createFixtureReviewState(), state: "drafting", execution };
 }
 

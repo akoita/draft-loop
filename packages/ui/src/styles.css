@@ -6134,6 +6134,13 @@ input[type="text"].workspace-title-input {
   color: var(--amber);
 }
 
+/* What a large update would send and cost (#3183): information, not a warning. */
+.profile-derivation-estimate {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
 .profile-subsection {
   display: grid;
   gap: var(--space-3);
