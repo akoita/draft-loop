@@ -50,14 +50,15 @@ export interface BetaWaitlist {
     readonly maxSends: number;
   }) => Promise<"send" | "skip">;
   /**
-   * Confirms the entry whose token hash matches and whose link is younger than `validMs`; true
-   * also for a link opened twice.
+   * Confirms the entry whose token hash matches and whose link is younger than `validMs`.
+   * Resolves `confirmed` the first time, `again` for a link opened twice, and `unknown` for an
+   * unknown or expired link, so operators hear of each sign-up once.
    */
   readonly confirm: (input: {
     readonly tokenHash: string;
     readonly now: Date;
     readonly validMs: number;
-  }) => Promise<boolean>;
+  }) => Promise<WaitlistConfirmOutcome>;
   /**
    * One page of entries still waiting, oldest first (the order people asked in): 50 when no limit
    * is given. An email holding an open or redeemed invite is left out.
@@ -80,6 +81,8 @@ export interface BetaWaitlist {
 }
 
 export type WaitlistLocale = "en" | "fr";
+
+export type WaitlistConfirmOutcome = "confirmed" | "again" | "unknown";
 
 function iso(value: unknown): string {
   return (value instanceof Date ? value : new Date(String(value))).toISOString();
@@ -168,13 +171,22 @@ export function createBetaWaitlist(client: SqlSession): BetaWaitlist {
     },
 
     confirm: async ({ tokenHash, now, validMs }) => {
-      if (!tokenHashPattern.test(tokenHash)) return false;
-      const rows = await client.query(
-        `UPDATE beta_waitlist SET confirmed_at = COALESCE(confirmed_at, $2)
-          WHERE confirm_token_hash = $1 AND confirm_sent_at >= $3 RETURNING id`,
-        [tokenHash, clock(now), new Date(now.getTime() - validMs).toISOString()],
+      if (!tokenHashPattern.test(tokenHash)) return "unknown";
+      const since = new Date(now.getTime() - validMs).toISOString();
+      // Only the click that sets confirmed_at counts as the first; a concurrent second click
+      // waits on the row lock, then finds it set.
+      const first = await client.query(
+        `UPDATE beta_waitlist SET confirmed_at = $2
+          WHERE confirm_token_hash = $1 AND confirm_sent_at >= $3 AND confirmed_at IS NULL
+          RETURNING id`,
+        [tokenHash, clock(now), since],
       );
-      return rows.length > 0;
+      if (first.length > 0) return "confirmed";
+      const known = await client.query(
+        `SELECT id FROM beta_waitlist WHERE confirm_token_hash = $1 AND confirm_sent_at >= $2`,
+        [tokenHash, since],
+      );
+      return known.length > 0 ? "again" : "unknown";
     },
 
     list: async (page) =>

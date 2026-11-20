@@ -163,14 +163,14 @@ describe.runIf(connectionString !== undefined)("Postgres beta waitlist", () => {
 
       await expect(
         betaWaitlist.confirm({ tokenHash: hashB, now: later(1), validMs: 48 * 3_600_000 }),
-      ).resolves.toBe(false);
+      ).resolves.toBe("unknown");
       await expect(
         betaWaitlist.confirm({ tokenHash: hashA, now: later(1), validMs: 48 * 3_600_000 }),
-      ).resolves.toBe(true);
+      ).resolves.toBe("confirmed");
       // A second click on the same link still says it worked.
       await expect(
         betaWaitlist.confirm({ tokenHash: hashA, now: later(2), validMs: 48 * 3_600_000 }),
-      ).resolves.toBe(true);
+      ).resolves.toBe("again");
       expect((await betaWaitlist.list()).map((entry) => entry.email)).toEqual(["ada@example.test"]);
     });
   });
@@ -186,7 +186,7 @@ describe.runIf(connectionString !== undefined)("Postgres beta waitlist", () => {
       });
       await expect(
         betaWaitlist.confirm({ tokenHash: hashA, now: later(49 * 60), validMs: 48 * 3_600_000 }),
-      ).resolves.toBe(false);
+      ).resolves.toBe("unknown");
       await expect(betaWaitlist.deleteUnconfirmedBefore(later(48 * 60))).resolves.toBe(1);
       await expect(betaWaitlist.list()).resolves.toEqual([]);
     });
@@ -205,14 +205,14 @@ describe.runIf(connectionString !== undefined)("Postgres beta waitlist", () => {
       // The newest link is the one that works.
       await expect(
         betaWaitlist.confirm({ tokenHash: hashA, now: later(34), validMs: 48 * 3_600_000 }),
-      ).resolves.toBe(false);
+      ).resolves.toBe("unknown");
       await expect(
         betaWaitlist.confirm({
           tokenHash: "c".repeat(64),
           now: later(34),
           validMs: 48 * 3_600_000,
         }),
-      ).resolves.toBe(true);
+      ).resolves.toBe("confirmed");
 
       // An entry from before confirmation existed counts as confirmed and gets no email.
       await betaWaitlist.join({ email: "bob@example.test", consentVersion, now });
@@ -252,7 +252,7 @@ describe.runIf(connectionString !== undefined)("Postgres beta waitlist", () => {
         // Nothing was stored: the link's token confirms nothing, and no entry waits.
         await expect(
           betaWaitlist.confirm({ tokenHash: hashA, now: later(3), validMs: 48 * 3_600_000 }),
-        ).resolves.toBe(false);
+        ).resolves.toBe("unknown");
         await expect(betaWaitlist.deleteJoinedBefore(later(60))).resolves.toBe(0);
       });
     });
@@ -329,7 +329,7 @@ describe.runIf(connectionString !== undefined)("Postgres beta waitlist", () => {
       // The first link still confirms: a later join did not replace it.
       await expect(
         betaWaitlist.confirm({ tokenHash: hashA, now: later(31), validMs: 48 * 3_600_000 }),
-      ).resolves.toBe(true);
+      ).resolves.toBe("again");
     });
   });
 });

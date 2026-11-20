@@ -73,9 +73,10 @@ function fakeWaitlist(placed: readonly string[] = []) {
     ),
     confirm: vi.fn<BetaWaitlist["confirm"]>(async ({ tokenHash }) => {
       const key = pending.get(tokenHash);
-      if (key === undefined) return false;
+      if (key === undefined) return "unknown";
+      if (listed.has(key)) return "again";
       listed.add(key);
-      return true;
+      return "confirmed";
     }),
     deleteUnconfirmedBefore: vi.fn(async () => 0),
   };
@@ -243,6 +244,14 @@ describe("the beta waitlist (#2566)", () => {
     const confirmed = await confirm(token);
     expect(confirmed.statusCode).toBe(200);
     expect(confirmed.json()).toEqual({ confirmed: true });
+    // A second click still works, but only the first is logged as new for operator alerts.
+    expect((await confirm(token)).statusCode).toBe(200);
+    const confirms = lines.filter((line) => line.event === "waitlist_confirm");
+    expect(confirms.map(({ confirmed, first }) => ({ confirmed, first }))).toEqual([
+      { confirmed: false, first: false },
+      { confirmed: true, first: true },
+      { confirmed: true, first: false },
+    ]);
   });
 
   it("sends no second link to a confirmed address, and answers the same", async () => {

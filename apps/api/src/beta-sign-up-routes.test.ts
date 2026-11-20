@@ -224,6 +224,20 @@ describe("signing up with a beta invite", () => {
     );
   });
 
+  it("logs once when a sign-up takes the last seat (#3208)", async () => {
+    const server = await api();
+    const seatLines = () => logLines.filter((line) => line.event === "beta_seat_cap_reached");
+
+    expect((await signUp(server, `Bearer ${await token("first-person")}`)).status).toBe(201);
+    expect(seatLines()).toEqual([]);
+
+    claimed = undefined;
+    vi.mocked(invites.redeemedCount).mockImplementationOnce(async () => 25);
+    expect((await signUp(server, `Bearer ${await token("last-person")}`)).status).toBe(201);
+    expect(seatLines()).toMatchObject([{ cap: 25, seatsUsed: 25 }]);
+    expect(JSON.stringify(seatLines())).not.toContain("example.test");
+  });
+
   it("waits after five refused attempts by one sign-in", async () => {
     redeem.mockResolvedValue({ redeemed: false, refusal: "invite_unknown" });
     const server = await api();
