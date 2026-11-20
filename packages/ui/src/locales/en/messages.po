@@ -6976,6 +6976,10 @@ msgstr "Read trace"
 msgid "Read your exported CVs and saved cover letters and interview questions"
 msgstr "Read your exported CVs and saved cover letters and interview questions"
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Read your reviewed career profile, except facts you marked never to say, and suggest updates that wait for your decision"
+msgstr "Read your reviewed career profile, except facts you marked never to say, and suggest updates that wait for your decision"
+
 #: packages/ui/src/career-evidence.ts
 msgid "Readiness could not be checked."
 msgstr "Readiness could not be checked."
@@ -8873,6 +8877,10 @@ msgstr "Storing material"
 #: packages/ui/src/profile.tsx
 msgid "subject"
 msgstr "subject"
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Suggest profile updates"
+msgstr "Suggest profile updates"
 
 #: apps/web/src/interview-guide.tsx
 msgid "suggested"

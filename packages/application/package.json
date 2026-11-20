@@ -63,6 +63,10 @@
       "types": "./src/review-edit-suggestions.ts",
       "import": "./src/review-edit-suggestions.ts"
     },
+    "./agent-profile-suggestions": {
+      "types": "./src/agent-profile-suggestions.ts",
+      "import": "./src/agent-profile-suggestions.ts"
+    },
     "./work-journal-source": {
       "types": "./src/work-journal-source.ts",
       "import": "./src/work-journal-source.ts"
