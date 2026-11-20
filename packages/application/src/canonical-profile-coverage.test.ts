@@ -2,7 +2,10 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { canonicalCandidateProfileFactCategories } from "@draft-loop/domain";
+import {
+  canonicalCandidateProfileFactCategories,
+  optionalCanonicalCandidateProfileFactCategories,
+} from "@draft-loop/domain";
 import type { AnthropicClient } from "@draft-loop/providers";
 import { describe, expect, it } from "vitest";
 
@@ -196,8 +199,14 @@ describe("canonical candidate profile extraction coverage", () => {
       expect(role?.subjectId).toBe(date?.subjectId);
 
       const presentCategories = new Set(result.facts.map((fact) => fact.category));
+      // An optional category, such as pay or a reason for leaving, is never an omission (#2722).
       const omittedCategories = canonicalCandidateProfileFactCategories.filter(
-        (category) => !presentCategories.has(category),
+        (category) =>
+          !presentCategories.has(category) &&
+          !optionalCanonicalCandidateProfileFactCategories.has(category),
+      );
+      expect(result.issues.some((issue) => issue.message.includes("No employment-detail"))).toBe(
+        false,
       );
       expect(omittedCategories.length).toBeGreaterThan(0);
       for (const category of omittedCategories) {

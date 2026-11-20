@@ -10,6 +10,7 @@ import {
   maximumCanonicalCandidateProfileIssueSourceReferenceCount,
   maximumCanonicalCandidateProfileProvenanceCount,
   maximumCanonicalCandidateProfileValueLength,
+  optionalCanonicalCandidateProfileFactCategories,
 } from "@draft-loop/domain";
 import {
   type CandidateEvidenceKind,
@@ -410,7 +411,9 @@ function detectedIssues(
 
   const presentCategories = new Set(facts.map((fact) => fact.category));
   for (const category of canonicalCandidateProfileFactCategories) {
-    if (!presentCategories.has(category)) issues.push(buildIssue("omission", [], [], category));
+    if (presentCategories.has(category)) continue;
+    if (optionalCanonicalCandidateProfileFactCategories.has(category)) continue;
+    issues.push(buildIssue("omission", [], [], category));
   }
   return issues;
 }

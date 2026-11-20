@@ -26,6 +26,18 @@ describe("fact usage level", () => {
     expect(resolveFactUsage(emptyFactUsageSettings, salary)).toBe("cv");
   });
 
+  it("starts pay and reasons for leaving as interview-only until the person changes it (#2722)", () => {
+    const pay = { category: "employment-detail", field: "salary", value: "Paid 60k" } as const;
+    expect(resolveFactUsage(emptyFactUsageSettings, pay)).toBe("interview-only");
+    expect(filterFactsForUsage([pay, skill], emptyFactUsageSettings, "cv")).toEqual([skill]);
+    const section = withFactUsage(
+      emptyFactUsageSettings,
+      { kind: "section", category: "employment-detail" },
+      "cv",
+    );
+    expect(resolveFactUsage(section, pay)).toBe("cv");
+  });
+
   it("lets a fact's own level win over its section's", () => {
     let settings = withFactUsage(
       emptyFactUsageSettings,

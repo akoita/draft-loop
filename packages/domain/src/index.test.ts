@@ -171,6 +171,7 @@ function validCanonicalCandidateProfileInput(): CanonicalCandidateProfileInput {
     "role",
     "employer",
     "date",
+    "employment-detail",
     "achievement",
     "project",
     "skill",
@@ -1219,7 +1220,7 @@ describe("CanonicalCandidateProfile", () => {
     expect(profile.facts.map((fact) => fact.category).sort()).toEqual(
       [...canonicalCandidateProfileFactCategories].sort(),
     );
-    expect(profile.facts).toHaveLength(12);
+    expect(profile.facts).toHaveLength(13);
     expect(profile.facts.find((fact) => fact.category === "role")?.subjectId).toBe("career-1");
     expect(profile.facts[0]?.provenance[0]).toEqual({
       storeId: "store-z",

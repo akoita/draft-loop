@@ -545,7 +545,7 @@ export interface ApiSchemas {
       readonly baseVersionId: string;
       readonly change: {
         readonly kind: "add";
-        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
         readonly subjectId?: string;
         readonly field: string;
         readonly value: string;
@@ -585,7 +585,7 @@ export interface ApiSchemas {
       };
       readonly appliedChange?: {
         readonly kind: "add";
-        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
         readonly subjectId?: string;
         readonly field: string;
         readonly value: string;
@@ -1910,7 +1910,7 @@ export interface ApiOperations {
     };
     readonly body: {
       readonly kind: "section";
-      readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+      readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
       readonly level: "cv" | "interview-only" | "never-say" | null;
     } | {
       readonly kind: "fact";
@@ -1942,7 +1942,7 @@ export interface ApiOperations {
         readonly id: string;
         readonly edit?: {
           readonly kind: "add";
-          readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+          readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
           readonly subjectId?: string;
           readonly field: string;
           readonly value: string;
@@ -2261,7 +2261,7 @@ export interface ApiOperations {
       readonly patch: {
         readonly facts?: readonly ({
           readonly id: string;
-          readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+          readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
           readonly subjectId?: string;
           readonly field: string;
           readonly value: string;

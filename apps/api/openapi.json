@@ -4827,6 +4827,7 @@
                         "role",
                         "employer",
                         "date",
+                        "employment-detail",
                         "achievement",
                         "project",
                         "skill",
@@ -5954,6 +5955,7 @@
                             "role",
                             "employer",
                             "date",
+                            "employment-detail",
                             "achievement",
                             "project",
                             "skill",
@@ -6066,7 +6068,7 @@
                     },
                     "factKey": {
                       "type": "string",
-                      "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+                      "pattern": "^fu1-(?:identity|contact|role|employer|date|employment-detail|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
                     }
                   },
                   "required": [
@@ -6198,6 +6200,7 @@
                             "role",
                             "employer",
                             "date",
+                            "employment-detail",
                             "achievement",
                             "project",
                             "skill",
@@ -6386,6 +6389,7 @@
                 "role",
                 "employer",
                 "date",
+                "employment-detail",
                 "achievement",
                 "project",
                 "skill",
@@ -6409,7 +6413,7 @@
             "type": "object",
             "propertyNames": {
               "type": "string",
-              "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+              "pattern": "^fu1-(?:identity|contact|role|employer|date|employment-detail|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
             },
             "additionalProperties": {
               "type": "string",
@@ -15618,6 +15622,7 @@
                             "role",
                             "employer",
                             "date",
+                            "employment-detail",
                             "achievement",
                             "project",
                             "skill",
@@ -15730,7 +15735,7 @@
                     },
                     "factKey": {
                       "type": "string",
-                      "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+                      "pattern": "^fu1-(?:identity|contact|role|employer|date|employment-detail|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
                     }
                   },
                   "required": [
@@ -15862,6 +15867,7 @@
                             "role",
                             "employer",
                             "date",
+                            "employment-detail",
                             "achievement",
                             "project",
                             "skill",
@@ -16053,6 +16059,7 @@
                 "role",
                 "employer",
                 "date",
+                "employment-detail",
                 "achievement",
                 "project",
                 "skill",
@@ -16076,7 +16083,7 @@
             "type": "object",
             "propertyNames": {
               "type": "string",
-              "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+              "pattern": "^fu1-(?:identity|contact|role|employer|date|employment-detail|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
             },
             "additionalProperties": {
               "type": "string",
@@ -21943,6 +21950,7 @@
                           "role",
                           "employer",
                           "date",
+                          "employment-detail",
                           "achievement",
                           "project",
                           "skill",
@@ -21986,7 +21994,7 @@
                       },
                       "key": {
                         "type": "string",
-                        "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+                        "pattern": "^fu1-(?:identity|contact|role|employer|date|employment-detail|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
                       },
                       "level": {
                         "anyOf": [
@@ -22226,6 +22234,7 @@
                                     "role",
                                     "employer",
                                     "date",
+                                    "employment-detail",
                                     "achievement",
                                     "project",
                                     "skill",
@@ -24859,6 +24868,7 @@
                                 "role",
                                 "employer",
                                 "date",
+                                "employment-detail",
                                 "achievement",
                                 "project",
                                 "skill",

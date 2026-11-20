@@ -26,7 +26,9 @@ On every server: self-hosted, hosted and the desktop client over it.
    used: calls, tokens and an estimated cost.
 3. Edit facts, then set each fact's or section's **usage**: on your CV, only
    in interview answers, or never. A fact with no level takes its section's,
-   and otherwise may be used on a CV.
+   and otherwise may be used on a CV. Pay and reasons for leaving go in the
+   **Employment detail** section, which starts as interview-only: interview
+   guides may use them, CVs never do unless you change the level.
 4. Resolve or acknowledge open issues, then mark the draft reviewed. The page
    says when the profile is behind the evidence.
 

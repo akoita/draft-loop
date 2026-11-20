@@ -326,6 +326,7 @@ const profileSections: readonly (readonly [string, string])[] = [
   ["employer", "Employers"],
   ["role", "Roles"],
   ["date", "Dates"],
+  ["employment-detail", "Pay and reasons for leaving"],
   ["project", "Projects"],
   ["achievement", "Achievements"],
   ["skill", "Skills"],

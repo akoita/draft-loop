@@ -23,6 +23,14 @@ export type FactUsageLevel = (typeof factUsageLevels)[number];
 /** The level a fact has when neither it nor its section has one. */
 export const defaultFactUsageLevel: FactUsageLevel = "cv";
 
+/**
+ * Sections whose facts start below `cv` (#2722): pay and reasons for leaving help an interview
+ * answer but never belong on a CV unless the person sets the section or the fact to `cv`.
+ */
+export const defaultSectionFactUsage: Readonly<
+  Partial<Record<CanonicalCandidateProfileFactCategory, FactUsageLevel>>
+> = Object.freeze({ "employment-detail": "interview-only" });
+
 /** The outputs that draw on career facts. */
 export const factUsagePurposes = ["cv", "interview"] as const;
 
@@ -93,13 +101,16 @@ export function isFactUsageLevel(value: unknown): value is FactUsageLevel {
   return typeof value === "string" && (factUsageLevels as readonly string[]).includes(value);
 }
 
-/** The fact's level: its own, else its section's, else `cv`. */
+/** The fact's level: its own, else its section's, else the section's default, else `cv`. */
 export function resolveFactUsage(
   settings: FactUsageSettings,
   fact: FactUsageSubject,
 ): FactUsageLevel {
   return (
-    settings.facts[factUsageKey(fact)] ?? settings.sections[fact.category] ?? defaultFactUsageLevel
+    settings.facts[factUsageKey(fact)] ??
+    settings.sections[fact.category] ??
+    defaultSectionFactUsage[fact.category] ??
+    defaultFactUsageLevel
   );
 }
 
