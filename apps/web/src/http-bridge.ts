@@ -127,6 +127,11 @@ export interface HttpBridgeOptions {
    * the owner's workspace when unset.
    */
   readonly workspaceId?: string;
+  /**
+   * The name the screens show for `workspaceId`, read on each load so a rename shows at once. The
+   * API names a record by its id, which a person never chose (#3197).
+   */
+  readonly workspaceName?: () => string | undefined;
   /** Opens a file picker for a career evidence upload; the browser's own file input when unset. */
   readonly pickFile?: PickFile;
   /** Saves an exported document; the browser's download when unset. */
@@ -265,7 +270,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const answerRequirementEvidence = createRunRequirementEvidenceAnswers(client);
   const reviewAction = createReviewActions(client, idempotencyKey, options.download ?? saveFile);
 
-  /** The run as the server projects it, with the owner token's fixed workspace named in words. */
+  /** The run as the server projects it, with the workspace named in words, never by its id. */
   const reviewState = async (
     workspaceId: string,
     query: { readonly applicationId?: string; readonly runId?: string },
@@ -274,9 +279,13 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
       path: { workspaceId },
       query,
     });
-    return workspaceId === ownerWorkspaceId
-      ? { ...state, workspaceName: ownerWorkspaceName() }
-      : state;
+    const name =
+      workspaceId === ownerWorkspaceId
+        ? ownerWorkspaceName()
+        : workspaceId === options.workspaceId
+          ? options.workspaceName?.()
+          : undefined;
+    return name === undefined ? state : { ...state, workspaceName: name };
   };
   const applications = async (workspaceId: string) =>
     (await client.call("GET /v1/workspaces/{workspaceId}/applications", { path: { workspaceId } }))

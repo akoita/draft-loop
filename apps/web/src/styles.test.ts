@@ -43,9 +43,20 @@ describe("the web stylesheet beside the shared screens", () => {
     // window showed only the top bar on prod 0.26.18. The grow rule repeats the same :has().
     const shell = ".shell:has(> .shell-screens:not([hidden]) .app-frame)";
     const flat = styles.replace(/\s+/gu, " ");
-    expect(flat).toContain(`${shell} > .shell-screens > * {`);
+    expect(flat).toContain(`${shell} > .shell-screens > *,`);
     expect(flat).toContain(
-      `${shell} > .shell-screens > .shared-screens:has(.app-frame) { flex: 1 1 auto;`,
+      `${shell} > .shell-screens .shared-screens:has(.app-frame) { flex: 1 1 auto;`,
     );
+  });
+
+  it("keeps sign-in mode's account bar on screen however the screens scroll", () => {
+    // Sign-in mode puts the screens inside `.records-screens`, which the child-only grow rule
+    // missed: the frame took a whole window under the account bar, so scrolling a button into
+    // view scrolled the hidden-overflow shell and the bar vanished until a reload on prod (#3197).
+    const shell = ".shell:has(> .shell-screens:not([hidden]) .app-frame)";
+    const flat = styles.replace(/\s+/gu, " ");
+    expect(flat).toContain(`${shell} > .shell-screens > .records-screens > * {`);
+    expect(flat).not.toContain(`${shell} > .shell-screens > .shared-screens:has(.app-frame)`);
+    expect(rule(styles.replace(/\n {4}/gu, "\n"), shell)).toContain("overflow: clip;");
   });
 });

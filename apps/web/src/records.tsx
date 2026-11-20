@@ -24,6 +24,7 @@ import {
   recordLabel,
   recordNameMaxLength,
   recordNames,
+  recordTitle,
   sharesAccess,
   tidyRecordName,
   unassignMemberRequest,
@@ -63,12 +64,14 @@ export interface RecordsProps {
   /**
    * The screens for the chosen record; they call `onSaved` once they create or read the record.
    * `automaticSetup` is true on a one-person plan: a new record is created with the defaults,
-   * with no setup screen, since that person has nothing to name or choose.
+   * with no setup screen, since that person has nothing to name or choose. `recordName` is what
+   * the screens call the record.
    */
   readonly children: (
     recordId: string,
     onSaved: (recordId: string) => void,
     automaticSetup: boolean,
+    recordName: string,
   ) => ReactNode;
 }
 
@@ -310,7 +313,7 @@ export function Records({
         )}
         {chosen === undefined ? null : (
           <ReleaseAccess.Provider value={canReleaseScreening(state.me)}>
-            {children(chosen, onSaved, onePerson)}
+            {children(chosen, onSaved, onePerson, recordTitle(chosen, state.names, onePerson))}
           </ReleaseAccess.Provider>
         )}
       </div>
