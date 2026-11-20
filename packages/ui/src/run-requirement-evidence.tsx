@@ -7,6 +7,7 @@
 import { plural, t } from "@lingui/core/macro";
 import { type JSX, useEffect, useState } from "react";
 import { AdvancedOptions } from "./advanced-options.js";
+import { DisplayFold } from "./display-fold.js";
 import type {
   RequirementEvidenceCandidateView,
   RequirementEvidenceGrade,
@@ -106,7 +107,7 @@ export function RequirementEvidenceList({
   const total = display.rows.length;
   const supported = display.supportedCount;
   return (
-    <details className="run-steps requirement-evidence">
+    <DisplayFold className="run-steps requirement-evidence">
       <summary>
         <span className="run-steps-title">{t`Evidence for each requirement`}</span>{" "}
         <span className="run-steps-summary">
@@ -150,7 +151,7 @@ export function RequirementEvidenceList({
           ))}
         </ol>
       </AdvancedOptions>
-    </details>
+    </DisplayFold>
   );
 }
 

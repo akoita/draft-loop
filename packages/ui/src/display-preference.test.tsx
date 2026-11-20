@@ -68,13 +68,11 @@ describe("the Display setting in Settings", () => {
 
   it("says where the current way of working shows", () => {
     expect(withMode("guided", <DisplaySetting />)).toContain(
-      "the Getting started list on Home, and a one-line hint",
+      "the Getting started list or a one-line hint on Home",
     );
-    expect(withMode(null, <DisplaySetting />)).toContain(
-      "every Advanced options section is folded",
-    );
+    expect(withMode(null, <DisplaySetting />)).toContain("every folded section is closed");
     expect(withMode("everything", <DisplaySetting />)).toContain(
-      "every Advanced options section is open, on this screen too",
+      "every folded section is open, on this screen too",
     );
   });
 

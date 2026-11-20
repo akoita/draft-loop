@@ -72,7 +72,7 @@ export function displayChoices(wording: "settings" | "first-run" = "settings"): 
       : {
           mode: "everything",
           label: t`Show everything`,
-          effect: t`Every Advanced options section starts open, so nothing is a click away.`,
+          effect: t`Every folded section starts open, so nothing is a click away.`,
         },
   ];
 }
@@ -150,11 +150,11 @@ export function displaySettingChoices(): readonly {
 export function displayModeWhere(mode: DisplayMode): string {
   switch (mode) {
     case "guided":
-      return t`Where you see it: the Getting started list on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review.`;
+      return t`Where you see it: the Getting started list or a one-line hint on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review.`;
     case "standard":
-      return t`Where you see it: every Advanced options section is folded, and Home offers the step-by-step guide until you decline it.`;
+      return t`Where you see it: every folded section is closed, and Home offers the step-by-step guide until you decline it.`;
     case "everything":
-      return t`Where you see it: every Advanced options section is open, on this screen too, and so is the Prepare panel under each draft.`;
+      return t`Where you see it: every folded section is open, on this screen too: Advanced options, the Prepare panel, and on the review the approval Details, Traceability and what is sent.`;
   }
 }
 

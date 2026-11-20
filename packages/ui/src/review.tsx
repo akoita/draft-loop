@@ -24,6 +24,7 @@ import { AutopilotToggle } from "./autopilot-toggle.js";
 import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { countedNouns } from "./counted-nouns.js";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
+import { DisplayFold, useDisplayFold } from "./display-fold.js";
 import { savingEditsBlocker, useDraftEditBuffer } from "./draft-edit-buffer.js";
 import { BlockRedline, type DraftBlockPair, pairDraftSections } from "./draft-redline.js";
 import { DraftWidthHandle, draftWidthStyle, useDraftWidth } from "./draft-width.js";
@@ -1305,12 +1306,12 @@ export function ReviewWorkspace({
   const draftWidth = useDraftWidth();
   const { collapsed: collapsedPanels, toggle: togglePanel } = useCollapsedReviewPanels();
   // The footer's Details hold the checklist; a refused approval opens them.
-  const [gateDetailsOpen, setGateDetailsOpen] = useState(false);
+  const [gateDetailsOpen, setGateDetailsOpen] = useDisplayFold();
   // The gate lives in the side panel, so revealing it opens a folded panel too.
   const expandGate = useCallback(() => {
     setGateDetailsOpen(true);
     setSidePanelCollapsed(false);
-  }, [setSidePanelCollapsed]);
+  }, [setSidePanelCollapsed, setGateDetailsOpen]);
   // A refused approval or export explains itself in the footer, so a folded panel opens to show it.
   useEffect(() => {
     if (approvalExportErrorVisible) setSidePanelCollapsed(false);
@@ -2512,10 +2513,10 @@ export function ReviewWorkspace({
                 {preflight.budget.maxRounds} {t`rounds. Your complete evidence is never sent.`}
               </p>
             ) : null}
-            <details className="setup-details">
+            <DisplayFold className="setup-details">
               <summary>{t`See exactly what is sent`}</summary>
               {details}
-            </details>
+            </DisplayFold>
           </>
         ) : (
           details
@@ -3164,9 +3165,9 @@ export function ReviewWorkspace({
             tabIndex={-1}
             ref={reviewColumnRef}
           >
-            {/* The hint asks for decisions: it waits for a draft and a paused review, and ends at approval. */}
-            {hasArtifact && !reviewWorking && state.approval !== "approved" ? (
-              <ScreenHint screen="review" />
+            {/* The hint waits for a draft and a paused review: decisions first, then the export. */}
+            {hasArtifact && !reviewWorking ? (
+              <ScreenHint screen={state.approval === "approved" ? "approved" : "review"} />
             ) : null}
             <div className="doc-toolbar">
               <div className="section-heading">
@@ -3391,7 +3392,7 @@ export function ReviewWorkspace({
             {/* Traceability is an inspection, not a third copy of the draft: it stays one
                 disclosure away, closed until a reviewer asks where wording came from. */}
             <section className="claims-panel" aria-label={t`claim to source inspection`}>
-              <details className="claims-disclosure" ref={traceabilityRef}>
+              <DisplayFold className="claims-disclosure" ref={traceabilityRef}>
                 <summary className="claims-disclosure-summary" ref={traceabilitySummaryRef}>
                   <span className="claims-disclosure-title">
                     <span className="eyebrow">{t`Traceability`}</span>
@@ -3466,7 +3467,7 @@ export function ReviewWorkspace({
                     );
                   })}
                 </div>
-              </details>
+              </DisplayFold>
             </section>
           </section>
           {afterReview}

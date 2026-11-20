@@ -6,7 +6,7 @@ import { plural, t } from "@lingui/core/macro";
  */
 import { useEffect, useState } from "react";
 
-import type { DesktopProfileCapabilities } from "./native.js";
+import type { HostProfileCapabilities } from "./native.js";
 import type { ProfileDerivationEstimateResult } from "./profile-derivation-estimate-contract.js";
 
 /** Above this, an update reads a large source: the planner splits it into several calls. */
@@ -51,7 +51,7 @@ export function profileDerivationEstimateText(estimate: ProfileDerivationEstimat
  * the update.
  */
 export function useProfileDerivationEstimate(
-  capabilities: Pick<DesktopProfileCapabilities, "estimateCanonicalCandidateProfileDerivation">,
+  capabilities: Pick<HostProfileCapabilities, "estimateCanonicalCandidateProfileDerivation">,
   profileId: string | null,
   fullExtraction: boolean,
   refreshKey: unknown,

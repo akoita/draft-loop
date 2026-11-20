@@ -2,10 +2,18 @@ import { t } from "@lingui/core/macro";
 
 import { useDisplayPreference } from "./display-preference.js";
 
-export type HintedScreen = "evidence" | "profile" | "new-application" | "review";
+export type HintedScreen =
+  | "home"
+  | "evidence"
+  | "profile"
+  | "new-application"
+  | "review"
+  | "approved";
 
 function hintText(screen: HintedScreen): string {
   switch (screen) {
+    case "home":
+      return t`Open an application to review or download its CV, or select New application for your next job.`;
     case "evidence":
       return t`Add your CV or other documents here. When they are in, go to Career profile.`;
     case "profile":
@@ -14,6 +22,8 @@ function hintText(screen: HintedScreen): string {
       return t`Give the job a name, paste its description or link, then select Create application.`;
     case "review":
       return t`Read the draft and each finding. Accept or reject each one, then select Approve artifact.`;
+    case "approved":
+      return t`This CV is approved. Pick a template, then export it to download your CV.`;
   }
 }
 

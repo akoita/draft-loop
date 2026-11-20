@@ -8,10 +8,12 @@ screen shows at once.
 | --------------- | --------------------------------------------------------------------------------------------- |
 | Simple          | The default. Each card shows the basic path; technical choices sit under **Advanced options**. |
 | Guided          | The simple view plus a **Getting started** list on Home that walks you to your first CV. |
-| Show everything | Every **Advanced options** section and the Prepare panel start open. You can still fold one.  |
+| Show everything | Every folded section starts open. You can still fold one.                                     |
 
 Show everything adds nothing new to a screen. It only removes the click that
-opens each folded section.
+opens each folded section: every **Advanced options**, the Prepare panel, and
+on the CV review the approval **Details**, **Traceability**, **See exactly
+what is sent**, and the run's steps and evidence for each requirement.
 
 ## The first question
 
@@ -37,10 +39,12 @@ the work is done:
 The current step has one button that opens the right screen. **Hide the
 guide** folds the list to one line, and **Show the guide** brings it back.
 After your first download, the list becomes one line that says every step is
-done, with a **New application** button for the next job.
+done, with a **New application** button for the next job. Once you hide the
+guide, Home keeps one hint line that says what to do next.
 
 Guided also puts one line at the top of Career evidence, Career profile, New
-application and the CV review. It says what to do on that screen.
+application and the CV review. It says what to do on that screen. Once a CV
+is approved, the review's line says to pick a template and export it.
 
 On the simple view, Home offers the guide once in one line: **Show me the
 steps** turns Guided on, **No thanks** hides the offer.

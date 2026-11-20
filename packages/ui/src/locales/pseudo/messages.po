@@ -3495,16 +3495,16 @@ msgstr ""
 msgid "Estimated public API cost"
 msgstr ""
 
-#: packages/ui/src/display-preference.tsx
-msgid "Every Advanced options section starts open, so nothing is a click away."
-msgstr ""
-
 #: packages/ui/src/home.tsx
 msgid "Every application is archived. Start a new application, or restore one below."
 msgstr ""
 
 #: packages/ui/src/profile-status.ts
 msgid "Every fact was removed from this draft. Restore at least one before saving."
+msgstr ""
+
+#: packages/ui/src/display-preference.tsx
+msgid "Every folded section starts open, so nothing is a click away."
 msgstr ""
 
 #: apps/web/src/records.tsx
@@ -6218,6 +6218,10 @@ msgstr ""
 
 #: packages/ui/src/native.ts
 msgid "Open an application before choosing one of its runs."
+msgstr ""
+
+#: packages/ui/src/screen-hint.tsx
+msgid "Open an application to review or download its CV, or select New application for your next job."
 msgstr ""
 
 #: packages/ui/src/home-model.ts
@@ -10108,6 +10112,10 @@ msgstr ""
 msgid "This conversation could not be found. Start a new one."
 msgstr ""
 
+#: packages/ui/src/screen-hint.tsx
+msgid "This CV is approved. Pick a template, then export it to download your CV."
+msgstr ""
+
 #: apps/web/src/record-actions.tsx
 msgid "This deletes every document, job application, draft, profile and work journal note stored here, for good. The account stays, so you can start again. It cannot be undone. Download everything first if you need a copy."
 msgstr ""
@@ -11064,15 +11072,15 @@ msgid "Where the agreement is kept"
 msgstr ""
 
 #: packages/ui/src/display-preference.tsx
-msgid "Where you see it: every Advanced options section is folded, and Home offers the step-by-step guide until you decline it."
+msgid "Where you see it: every folded section is closed, and Home offers the step-by-step guide until you decline it."
 msgstr ""
 
 #: packages/ui/src/display-preference.tsx
-msgid "Where you see it: every Advanced options section is open, on this screen too, and so is the Prepare panel under each draft."
+msgid "Where you see it: every folded section is open, on this screen too: Advanced options, the Prepare panel, and on the review the approval Details, Traceability and what is sent."
 msgstr ""
 
 #: packages/ui/src/display-preference.tsx
-msgid "Where you see it: the Getting started list on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review."
+msgid "Where you see it: the Getting started list or a one-line hint on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review."
 msgstr ""
 
 #: packages/ui/src/knowledge.tsx

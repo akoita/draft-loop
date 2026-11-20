@@ -3495,10 +3495,6 @@ msgstr "Essential"
 msgid "Estimated public API cost"
 msgstr "Estimated public API cost"
 
-#: packages/ui/src/display-preference.tsx
-msgid "Every Advanced options section starts open, so nothing is a click away."
-msgstr "Every Advanced options section starts open, so nothing is a click away."
-
 #: packages/ui/src/home.tsx
 msgid "Every application is archived. Start a new application, or restore one below."
 msgstr "Every application is archived. Start a new application, or restore one below."
@@ -3506,6 +3502,10 @@ msgstr "Every application is archived. Start a new application, or restore one b
 #: packages/ui/src/profile-status.ts
 msgid "Every fact was removed from this draft. Restore at least one before saving."
 msgstr "Every fact was removed from this draft. Restore at least one before saving."
+
+#: packages/ui/src/display-preference.tsx
+msgid "Every folded section starts open, so nothing is a click away."
+msgstr "Every folded section starts open, so nothing is a click away."
 
 #: apps/web/src/records.tsx
 msgid "Everyone in your team can already open it."
@@ -6220,6 +6220,10 @@ msgstr "Open a workspace first."
 #: packages/ui/src/native.ts
 msgid "Open an application before choosing one of its runs."
 msgstr "Open an application before choosing one of its runs."
+
+#: packages/ui/src/screen-hint.tsx
+msgid "Open an application to review or download its CV, or select New application for your next job."
+msgstr "Open an application to review or download its CV, or select New application for your next job."
 
 #: packages/ui/src/home-model.ts
 msgid "Open career evidence to choose or repair it."
@@ -10109,6 +10113,10 @@ msgstr "This claim is not linked to the candidate materials supplied to DraftLoo
 msgid "This conversation could not be found. Start a new one."
 msgstr "This conversation could not be found. Start a new one."
 
+#: packages/ui/src/screen-hint.tsx
+msgid "This CV is approved. Pick a template, then export it to download your CV."
+msgstr "This CV is approved. Pick a template, then export it to download your CV."
+
 #: apps/web/src/record-actions.tsx
 msgid "This deletes every document, job application, draft, profile and work journal note stored here, for good. The account stays, so you can start again. It cannot be undone. Download everything first if you need a copy."
 msgstr "This deletes every document, job application, draft, profile and work journal note stored here, for good. The account stays, so you can start again. It cannot be undone. Download everything first if you need a copy."
@@ -11065,16 +11073,16 @@ msgid "Where the agreement is kept"
 msgstr "Where the agreement is kept"
 
 #: packages/ui/src/display-preference.tsx
-msgid "Where you see it: every Advanced options section is folded, and Home offers the step-by-step guide until you decline it."
-msgstr "Where you see it: every Advanced options section is folded, and Home offers the step-by-step guide until you decline it."
+msgid "Where you see it: every folded section is closed, and Home offers the step-by-step guide until you decline it."
+msgstr "Where you see it: every folded section is closed, and Home offers the step-by-step guide until you decline it."
 
 #: packages/ui/src/display-preference.tsx
-msgid "Where you see it: every Advanced options section is open, on this screen too, and so is the Prepare panel under each draft."
-msgstr "Where you see it: every Advanced options section is open, on this screen too, and so is the Prepare panel under each draft."
+msgid "Where you see it: every folded section is open, on this screen too: Advanced options, the Prepare panel, and on the review the approval Details, Traceability and what is sent."
+msgstr "Where you see it: every folded section is open, on this screen too: Advanced options, the Prepare panel, and on the review the approval Details, Traceability and what is sent."
 
 #: packages/ui/src/display-preference.tsx
-msgid "Where you see it: the Getting started list on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review."
-msgstr "Where you see it: the Getting started list on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review."
+msgid "Where you see it: the Getting started list or a one-line hint on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review."
+msgstr "Where you see it: the Getting started list or a one-line hint on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review."
 
 #: packages/ui/src/knowledge.tsx
 msgid "Where your evidence is kept. Most people need only one; choosing a different base replaces the one this workspace uses."
