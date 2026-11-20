@@ -13,7 +13,7 @@ export interface ApiSchemas {
       readonly factId?: string;
       readonly change: {
         readonly kind: "add";
-        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
         readonly subjectId?: string;
         readonly field: string;
         readonly value: string;
@@ -43,7 +43,7 @@ export interface ApiSchemas {
     readonly reviewedAt?: string;
     readonly facts: readonly ({
       readonly id: string;
-      readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+      readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
       readonly subjectId?: string;
       readonly field: string;
       readonly value: string;
@@ -1983,7 +1983,7 @@ export interface ApiOperations {
       readonly factId?: string;
       readonly change: {
         readonly kind: "add";
-        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "employment-detail" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
         readonly subjectId?: string;
         readonly field: string;
         readonly value: string;
