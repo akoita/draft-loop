@@ -1091,6 +1091,10 @@ msgstr "Accepted. Your profile now holds the change."
 msgid "Account"
 msgstr "Account"
 
+#: apps/web/src/account-menu.tsx
+msgid "Account menu: {label}"
+msgstr "Account menu: {label}"
+
 #: apps/web/src/account-page.tsx
 msgid "Account settings"
 msgstr "Account settings"
