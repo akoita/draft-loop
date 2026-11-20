@@ -34,9 +34,15 @@ export function RunStageTrack({
     | "criticFallback"
     | "runId"
     | "applicationRuns"
+    | "findings"
+    | "providerTransmissionPreflight"
   >;
 }): JSX.Element {
-  const track = runStageTrack({ ...state, models: recordedRunModels(state) });
+  const track = runStageTrack({
+    ...state,
+    models: recordedRunModels(state),
+    maxRounds: state.providerTransmissionPreflight.budget.maxRounds,
+  });
   const now = nowSentence(track);
   const folded = track.rounds.slice(0, track.foldedRounds);
   const open = track.rounds.slice(track.foldedRounds);
@@ -104,6 +110,7 @@ export function RunStageTrack({
               </span>
             </span>
           </li>
+          {track.revisionOnRequest ? <RevisionOnRequest /> : null}
         </ol>
       </div>
       <details className="stage-track-narrow">
@@ -165,11 +172,37 @@ export function RunStageTrack({
                 <span className="stage-step-label">{t`Approve`}</span>
                 <StatusText status={track.gate} />
               </li>
+              {track.revisionOnRequest ? (
+                <li className="stage-step-optional">
+                  <ActorBadge actor="author" />
+                  <span className="stage-step-label">{t`Revise`}</span>
+                  <span className="stage-step-model">{t`if you request it`}</span>
+                </li>
+              ) : null}
             </ul>
           </li>
         </ol>
       </details>
     </div>
+  );
+}
+
+/**
+ * The author's possible next step, drawn faded after the gate: open findings reach the author only
+ * if the person requests a revision, which starts a new round.
+ */
+function RevisionOnRequest(): JSX.Element {
+  return (
+    <li className="stage-round stage-round-optional">
+      <span className="stage-round-label">{t`Next round`}</span>
+      <span className="stage-steps">
+        <span className="stage-step stage-step-author stage-step-optional">
+          <ActorBadge actor="author" />
+          <span className="stage-step-label">{t`Revise`}</span>
+          <span className="stage-step-model">{t`if you request it`}</span>
+        </span>
+      </span>
+    </li>
   );
 }
 

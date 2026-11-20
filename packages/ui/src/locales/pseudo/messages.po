@@ -4455,6 +4455,10 @@ msgstr ""
 msgid "If you read one thing"
 msgstr ""
 
+#: packages/ui/src/run-stage-track.tsx
+msgid "if you request it"
+msgstr ""
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Illustrative public API token-cost scenario"
 msgstr ""
@@ -5527,6 +5531,10 @@ msgstr ""
 
 #: packages/ui/src/run-stage-track.tsx
 msgid "next"
+msgstr ""
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "Next round"
 msgstr ""
 
 #: packages/ui/src/model-profile-picker.tsx

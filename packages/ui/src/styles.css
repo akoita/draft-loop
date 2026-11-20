@@ -1287,6 +1287,25 @@ input[type="text"].workspace-title-input {
   outline-color: var(--amber);
 }
 
+/* The author's revision after the gate happens only on request, so it is drawn faded and dashed. */
+.stage-round-optional .stage-steps {
+  border-style: dashed;
+  background: transparent;
+}
+
+.stage-step.stage-step-optional {
+  background: transparent;
+  color: var(--text-3);
+}
+
+.stage-step-optional .stage-badge {
+  opacity: 0.55;
+}
+
+.stage-timeline .stage-step-optional {
+  color: var(--text-3);
+}
+
 /* Older rounds fold into one chip; open, they line up in place. */
 .stage-round-folded details {
   display: flex;

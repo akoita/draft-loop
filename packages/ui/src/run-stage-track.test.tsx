@@ -146,3 +146,50 @@ describe("RunStageTrack phone list with many rounds", () => {
     expect(html.match(/Rounds 1–10/g)).toHaveLength(2);
   });
 });
+
+describe("revision on request", () => {
+  const open = [{ decision: "pending" }, { decision: "rejected" }];
+  const atGate = (
+    overrides: Parameters<typeof runStageTrack>[0] extends infer I ? Partial<I> : never,
+  ) =>
+    runStageTrack({
+      ...fixture,
+      execution: idle,
+      state: "awaiting-approval",
+      round: 2,
+      models,
+      findings: open,
+      maxRounds: 3,
+      ...overrides,
+    });
+
+  it("shows the author's revision after the gate while findings stay open", () => {
+    expect(atGate({}).revisionOnRequest).toBe(true);
+  });
+
+  it("hides it at the round limit, with no open finding, or before the gate", () => {
+    expect(atGate({ maxRounds: 2 }).revisionOnRequest).toBe(false);
+    expect(atGate({ findings: [{ decision: "rejected" }] }).revisionOnRequest).toBe(false);
+    expect(atGate({ state: "reviewing" }).revisionOnRequest).toBe(false);
+  });
+
+  it("draws it faded after the gate", () => {
+    const html = renderToStaticMarkup(
+      <RunStageTrack
+        state={{
+          ...fixture,
+          state: "awaiting-approval",
+          round: 1,
+          execution: idle,
+          providerTransmissionPreflight: {
+            ...fixture.providerTransmissionPreflight,
+            budget: { ...fixture.providerTransmissionPreflight.budget, maxRounds: 3 },
+          },
+          findings: fixture.findings.map((finding) => ({ ...finding, decision: "pending" })),
+        }}
+      />,
+    );
+    expect(html).toContain("stage-round stage-round-optional");
+    expect(html).toContain("if you request it");
+  });
+});
