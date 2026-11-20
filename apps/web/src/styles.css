@@ -391,6 +391,93 @@ label:where(:not(.shared-screens *)) {
   }
 }
 
+/* The credits pill's short form, such as "0 / 3", shown on phones only. */
+.credit-chip-short {
+  display: none;
+}
+
+/* Phones: the page's top row takes one line, "← Home · Applications" with the settings icon and
+   the short credits pill at its end. The career flow keeps only its current step; Home leads to
+   the others. */
+@media (max-width: 640px) {
+  .shared-screens .page-toolbar,
+  .shared-screens .page-toolbar-lead,
+  .shared-screens .page-toolbar-actions,
+  .shared-screens .page-toolbar .career-flow {
+    flex-wrap: nowrap;
+  }
+
+  .shared-screens .page-toolbar-lead {
+    flex: 1 1 auto;
+    gap: var(--space-2);
+  }
+
+  .shared-screens .page-toolbar-actions {
+    flex: none;
+  }
+
+  .shared-screens .page-toolbar-lead .home-back {
+    padding: 0;
+    border-color: transparent;
+    background: none;
+    box-shadow: none;
+    color: var(--text-2);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .shared-screens .page-toolbar .career-flow {
+    min-width: 0;
+  }
+
+  .shared-screens .page-toolbar .career-flow-step:not([aria-current="step"]),
+  .shared-screens .page-toolbar .career-flow-arrow {
+    display: none;
+  }
+
+  .shared-screens .page-toolbar .career-flow-step[aria-current="step"] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .shared-screens .page-toolbar-lead .home-back + .career-flow::before {
+    content: "·";
+    color: var(--text-4);
+  }
+
+  /* Settings keeps its text as its name for screen readers and shows only its icon. */
+  .shared-screens .page-toolbar-actions > .button:has(> svg:first-child) {
+    min-width: 44px;
+    padding: 0;
+    gap: 0;
+    font-size: 0;
+  }
+
+  .shared-screens .page-toolbar-actions > .button:has(> svg:first-child) svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .shell .credit-chip {
+    min-width: 0;
+  }
+
+  .credit-chip-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .credit-chip-short {
+    display: inline;
+  }
+}
+
 /* A destructive action as one quiet line; its warning and confirm open in a dialog. */
 button.danger-link:where(:not(.shared-screens *)) {
   justify-self: start;
