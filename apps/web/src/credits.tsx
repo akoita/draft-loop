@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { type ApiClient, describeError } from "./api-client.js";
 import {
   balanceChip,
+  balanceChipShort,
   balanceLine,
   type CreditPackOffer,
   type CreditsState,
@@ -169,7 +170,10 @@ export function CreditBalancePanel({ state, locale }: CreditBalancePanelProps) {
       className={state.credits.warning ? "credit-chip credit-chip-warning" : "credit-chip"}
       title={balanceLine(state.credits, locale)}
     >
-      {balanceChip(state.credits)}
+      <span className="credit-chip-full">{balanceChip(state.credits)}</span>
+      <span className="credit-chip-short" aria-hidden="true">
+        {balanceChipShort(state.credits)}
+      </span>
     </span>
   );
 }
