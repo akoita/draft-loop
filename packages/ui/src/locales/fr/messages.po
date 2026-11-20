@@ -244,6 +244,11 @@ msgstr "{0, plural, one {# section correspondante} other {# sections corresponda
 msgid "{0, plural, one {# model call} other {# model calls}}"
 msgstr "{0, plural, one {# appel au modèle} other {# appels au modèle}}"
 
+#. placeholder {0}: estimate.calls
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{0, plural, one {# model call} other {about # model calls}}"
+msgstr "{0, plural, one {# appel au modèle} other {environ # appels au modèle}}"
+
 #. placeholder {0}: state.setup.selectedEvidenceChunkCount
 #. placeholder {1}: state.setup.selectedEvidenceSourceCount
 #: packages/ui/src/review.tsx
@@ -260,6 +265,11 @@ msgstr "{0, plural, one {# réalisation à l’appui} other {# réalisations à 
 msgid "{0, plural, one {# unresolved warning} other {# unresolved warnings}}"
 msgstr "{0, plural, one {# avertissement non résolu} other {# avertissements non résolus}}"
 
+#. placeholder {0}: estimate.reusedSourceCount
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{0, plural, one {and reuses #} other {and reuses #}}"
+msgstr "{0, plural, one {et en réutilise #} other {et en réutilise #}}"
+
 #. placeholder {0}: warnings.length
 #: packages/ui/src/review.tsx
 msgid "{0, plural, one {Approval is available with # unresolved non-blocking warning. It remains visible after approval.} other {Approval is available with # unresolved non-blocking warnings. They remain visible after approval.}}"
@@ -274,6 +284,11 @@ msgstr "{0, plural, one {Approuver crée la v{version} avec votre # modification
 #: packages/ui/src/review.tsx
 msgid "{0, plural, one {No lexical match; using # bounded fallback excerpt from career evidence} other {No lexical match; using # bounded fallback excerpts from career evidence}}"
 msgstr "{0, plural, one {Aucune correspondance lexicale ; # extrait de repli limité des éléments de parcours est utilisé} other {Aucune correspondance lexicale ; # extraits de repli limités des éléments de parcours sont utilisés}}"
+
+#. placeholder {0}: estimate.extractedSourceCount
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{0, plural, one {Reads # source again} other {Reads # sources again}}"
+msgstr "{0, plural, one {Relit # source} other {Relit # sources}}"
 
 #. placeholder {0}: entry.suggestedFromRunCount
 #: packages/ui/src/writing-policy-history.tsx
@@ -629,6 +644,18 @@ msgstr "{draftOpen} points restent ouverts. Prenez-en acte ou résolvez-les, pui
 msgid "{duration} s"
 msgstr "{duration} s"
 
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{extracted}{reused}: {calls}, {low} to {high}."
+msgstr "{extracted}{reused} : {calls}, de {low} à {high}."
+
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{extracted}{reused}: {calls}, about {low}."
+msgstr "{extracted}{reused} : {calls}, environ {low}."
+
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{extracted}{reused}: {calls}; the cost is unknown for this model."
+msgstr "{extracted}{reused} : {calls} ; le coût est inconnu pour ce modèle."
+
 #: apps/web/src/sources-model.ts
 msgid "{fileName} is larger than this service accepts."
 msgstr "{fileName} dépasse la taille acceptée par ce service."
@@ -799,6 +826,10 @@ msgstr "Appels prévus ({role})"
 #: packages/ui/src/app.tsx
 msgid "{shown}, and the model you chose."
 msgstr "{shown}, et le modèle que vous avez choisi."
+
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{sources} ({characters} characters)"
+msgstr "{sources} ({characters} caractères)"
 
 #: packages/ui/src/run-requirement-evidence.tsx
 msgid "{supported} of {total, plural, one {# requirement} other {# requirements}} with evidence"
