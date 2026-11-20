@@ -4,7 +4,7 @@ import type { ApplicationRunRowView } from "./application-run-list.js";
 import { createCapabilityPort, type NativeBridge } from "./bridge.js";
 import { bridgeCapabilities } from "./bridge-capabilities.js";
 import { earlierRunAllowsAction, normalizeEarlierRun } from "./earlier-run.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
 import { ReviewWorkspace } from "./review.js";
 
@@ -173,8 +173,8 @@ describe("opening a run through the review port", () => {
   });
 });
 
-function render(extra: Partial<DesktopReviewState>, onOpenRun?: (runId: string | null) => void) {
-  const state: DesktopReviewState = { ...createFixtureReviewState(), ...extra };
+function render(extra: Partial<ReviewScreenState>, onOpenRun?: (runId: string | null) => void) {
+  const state: ReviewScreenState = { ...createFixtureReviewState(), ...extra };
   return renderToStaticMarkup(
     <ReviewWorkspace
       state={state}
@@ -188,7 +188,7 @@ const decisionButton = /<button[^>]*>(?:Accept|Reject|Defer|Override)<\/button>/
 
 describe("an earlier run in the review", () => {
   const onOpenRun = () => undefined;
-  const viewingEarlier = (state: DesktopReviewState) => ({
+  const viewingEarlier = (state: ReviewScreenState) => ({
     runId: state.runId,
     applicationRuns: [{ ...latest }, { ...earlier, runId: state.runId }],
     earlierRun: { latestRunId: latest.runId },

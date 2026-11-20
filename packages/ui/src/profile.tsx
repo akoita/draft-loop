@@ -15,7 +15,7 @@ import type {
 import type { CareerEvidenceCapabilities } from "./career-evidence.js";
 import type { CandidateProfileSelection } from "./model.js";
 import { providerDisplayName } from "./model-profile-presentation.js";
-import type { DesktopProfileCapabilities } from "./native.js";
+import type { HostProfileCapabilities } from "./native.js";
 import {
   defaultProfileToAutoload,
   findReviewedCanonicalCandidateProfileChoice,
@@ -25,6 +25,10 @@ import {
   type SavedCanonicalCandidateProfileSummary,
   savedCanonicalCandidateProfileLabel,
 } from "./profile-catalog.js";
+import {
+  ProfileDerivationEstimateNote,
+  useProfileDerivationEstimate,
+} from "./profile-derivation-estimate.js";
 import {
   type ProfileDerivationUsage,
   profileDerivationUsageSummary,
@@ -93,7 +97,7 @@ const maximumProfileIdLength = maximumCanonicalCandidateProfileIdLength;
 
 export type CanonicalCandidateProfileCapabilities = Required<
   Omit<
-    DesktopProfileCapabilities,
+    HostProfileCapabilities,
     | "listReviewedCanonicalCandidateProfiles"
     | "listCanonicalCandidateProfileSummaries"
     | "getCanonicalCandidateProfileProgress"
@@ -101,7 +105,7 @@ export type CanonicalCandidateProfileCapabilities = Required<
   >
 > &
   Pick<
-    DesktopProfileCapabilities,
+    HostProfileCapabilities,
     | "listReviewedCanonicalCandidateProfiles"
     | "listCanonicalCandidateProfileSummaries"
     | "getCanonicalCandidateProfileProgress"
@@ -110,7 +114,7 @@ export type CanonicalCandidateProfileCapabilities = Required<
 
 export interface ProfileWorkspaceProps {
   readonly workspaceId: string;
-  readonly capabilities: DesktopProfileCapabilities;
+  readonly capabilities: HostProfileCapabilities;
   readonly selectedProfile: CandidateProfileSelection | null;
   readonly onSelectionChange: (selection: CandidateProfileSelection | null) => void;
   readonly onPendingChange?: (workspaceId: string, pending: boolean) => void;
@@ -129,7 +133,7 @@ export interface ProfileWorkspaceProps {
 
 /** The packaged host exposes the profile panel only when the whole API is present. */
 export function hasCanonicalCandidateProfileCapabilities(
-  capabilities: DesktopProfileCapabilities,
+  capabilities: HostProfileCapabilities,
 ): capabilities is CanonicalCandidateProfileCapabilities {
   return (
     capabilities.deriveCanonicalCandidateProfile !== undefined &&
@@ -889,6 +893,12 @@ export function ProfileWorkspace({
       ? defaultCareerProfileName
       : normalizedProfileId;
   const recordKey = record === null ? "" : `${record.profileId}@${record.version}`;
+  const derivationEstimate = useProfileDerivationEstimate(
+    capabilities,
+    isCanonicalCandidateProfileId(generationProfileId) ? generationProfileId : null,
+    fullExtraction,
+    recordKey,
+  );
   const freshness = useProfileFreshness(
     capabilities,
     workspaceId,
@@ -1357,21 +1367,24 @@ export function ProfileWorkspace({
   const primaryLabel = profilePrimaryActionLabel(status);
   const sendsFromTop = status.primaryAction === "generate" || status.primaryAction === "update";
   const generationAction = (mode: "generate" | "update") => (
-    <ProfileGenerationAction
-      outcome={currentOutcome}
-      mode={mode}
-      profileIdValid={isCanonicalCandidateProfileId(generationProfileId)}
-      providerTransmissionApproved={providerTransmissionApproved}
-      busy={busy}
-      generating={generationStartedAt !== null}
-      sourceCount={evidenceSourceCount}
-      providerName={
-        providerCompany === undefined ? undefined : providerDisplayName(providerCompany)
-      }
-      fixtureMode={fixtureMode}
-      onApprovalChange={setProviderTransmissionApproved}
-      onDerive={derive}
-    />
+    <>
+      {fixtureMode ? null : <ProfileDerivationEstimateNote estimate={derivationEstimate} />}
+      <ProfileGenerationAction
+        outcome={currentOutcome}
+        mode={mode}
+        profileIdValid={isCanonicalCandidateProfileId(generationProfileId)}
+        providerTransmissionApproved={providerTransmissionApproved}
+        busy={busy}
+        generating={generationStartedAt !== null}
+        sourceCount={evidenceSourceCount}
+        providerName={
+          providerCompany === undefined ? undefined : providerDisplayName(providerCompany)
+        }
+        fixtureMode={fixtureMode}
+        onApprovalChange={setProviderTransmissionApproved}
+        onDerive={derive}
+      />
+    </>
   );
   const openReview = (): void => {
     const target = document.getElementById(

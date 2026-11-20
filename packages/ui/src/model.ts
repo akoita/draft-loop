@@ -2,7 +2,6 @@ import type { ModelProfileReferences } from "@draft-loop/application/model-profi
 import type { ArtifactSection } from "@draft-loop/artifacts";
 import type { ApplicationRunRowView } from "./application-run-list.js";
 import type { ApprovalReadiness } from "./approval-readiness.js";
-import type { CredentialProvider, CredentialStatus } from "./bridge.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
 import type { EarlierRunView } from "./earlier-run.js";
 import type { ExportTemplate } from "./export-template.js";
@@ -328,7 +327,7 @@ export interface ReviewExecutionView {
   readonly failure?: string;
 }
 
-export interface DesktopReviewState {
+export interface ReviewScreenState {
   readonly workspaceId: string;
   /** The person's name for the workspace, or its folder name when none was set. */
   readonly workspaceName?: string;
@@ -460,38 +459,18 @@ export const exportFormatExtensions: Readonly<Record<ExportFormat, string>> = {
   pdf: "pdf",
 };
 
-export interface DesktopReviewPort {
-  readonly load: () => Promise<DesktopReviewState>;
-  readonly dispatch: (
-    state: DesktopReviewState,
-    action: ReviewAction,
-  ) => Promise<DesktopReviewState>;
-  readonly openWorkspace?: () => Promise<DesktopReviewState>;
-  readonly createWorkspace?: (name: string) => Promise<DesktopReviewState>;
-  /**
-   * False when the host neither opens nor creates workspaces, as on the hosted service, where the
-   * shell chooses the workspace: closing one would leave nothing to open.
-   */
-  readonly workspaceClosable?: boolean;
+export interface ReviewScreenPort {
+  readonly load: () => Promise<ReviewScreenState>;
+  readonly dispatch: (state: ReviewScreenState, action: ReviewAction) => Promise<ReviewScreenState>;
   /**
    * True when the host has no file to write an export to, as on the hosted service: an export is
    * downloaded by the browser instead of saved through a Save As dialog.
    */
   readonly exportsDownload?: boolean;
-  readonly createDemoWorkspace?: (name: string) => Promise<DesktopReviewState>;
-  readonly selectFiles?: (
-    target: "evidence" | "job-description" | "writing-policy" | "writing-policy-override",
-  ) => Promise<DesktopReviewState>;
   readonly addUrl?: (
     target: "evidence" | "job-description",
     url: string,
-  ) => Promise<DesktopReviewState>;
-  readonly getCredentialStatus?: (provider: CredentialProvider) => Promise<CredentialStatus>;
-  readonly setCredential?: (
-    provider: CredentialProvider,
-    apiKey: string,
-  ) => Promise<CredentialStatus>;
-  readonly removeCredential?: (provider: CredentialProvider) => Promise<CredentialStatus>;
+  ) => Promise<ReviewScreenState>;
 }
 
 export type ReviewValidationStatus = "blocked" | "warnings" | "clear";
@@ -517,7 +496,7 @@ export function isUnresolvedFinding(finding: ReviewFinding): boolean {
   );
 }
 
-export function reviewFindingSummary(state: DesktopReviewState): ReviewFindingSummary {
+export function reviewFindingSummary(state: ReviewScreenState): ReviewFindingSummary {
   const unresolved = state.findings.filter(isUnresolvedFinding);
   const blocking = unresolved.filter((finding) => finding.severity === "error");
   const warnings = unresolved.filter((finding) => finding.severity === "warning");
@@ -529,11 +508,11 @@ export function reviewFindingSummary(state: DesktopReviewState): ReviewFindingSu
   };
 }
 
-export function unresolvedBlockingFindings(state: DesktopReviewState): readonly ReviewFinding[] {
+export function unresolvedBlockingFindings(state: ReviewScreenState): readonly ReviewFinding[] {
   return reviewFindingSummary(state).blocking;
 }
 
-export function roundLimitRecoveryRequired(state: DesktopReviewState): boolean {
+export function roundLimitRecoveryRequired(state: ReviewScreenState): boolean {
   return (
     state.state === "awaiting-approval" &&
     !state.reviewComplete &&
@@ -542,9 +521,9 @@ export function roundLimitRecoveryRequired(state: DesktopReviewState): boolean {
 }
 
 export function reduceReviewState(
-  state: DesktopReviewState,
+  state: ReviewScreenState,
   action: ReviewAction,
-): DesktopReviewState {
+): ReviewScreenState {
   switch (action.type) {
     case "finding-decision":
       if (action.decision === "overridden" && (action.rationale ?? "").trim() === "") return state;
@@ -662,7 +641,7 @@ const evidence = (status: EvidenceStatus = "supports"): ReviewEvidence => ({
   status,
 });
 
-export function createFixtureReviewState(): DesktopReviewState {
+export function createFixtureReviewState(): ReviewScreenState {
   const previousArtifact: ReviewArtifact = {
     id: "artifact-1",
     version: 1,
@@ -862,24 +841,9 @@ export function createFixtureReviewState(): DesktopReviewState {
   };
 }
 
-export function createFixtureReviewPort(): DesktopReviewPort {
-  const credentials = new Map<CredentialProvider, string>();
+export function createFixtureReviewPort(): ReviewScreenPort {
   return {
     load: async () => createFixtureReviewState(),
     dispatch: async (state, action) => reduceReviewState(state, action),
-    getCredentialStatus: async (provider) => ({
-      provider,
-      configured: credentials.has(provider),
-      source: credentials.has(provider) ? "app" : "none",
-      protection: credentials.has(provider) ? "session-memory" : "none",
-    }),
-    setCredential: async (provider, apiKey) => {
-      credentials.set(provider, apiKey);
-      return { provider, configured: true, source: "app", protection: "session-memory" };
-    },
-    removeCredential: async (provider) => {
-      credentials.delete(provider);
-      return { provider, configured: false, source: "none", protection: "none" };
-    },
   };
 }

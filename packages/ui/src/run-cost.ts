@@ -1,5 +1,5 @@
 import { plural, t } from "@lingui/core/macro";
-import type { DesktopReviewState } from "./model.js";
+import type { ReviewScreenState } from "./model.js";
 
 export interface RunCostLabel {
   readonly text: string;
@@ -9,7 +9,7 @@ export interface RunCostLabel {
 
 export const costNotRecorded = () => t`Cost not recorded`;
 
-type RunCost = Pick<DesktopReviewState, "totalCostUsd" | "unpricedCallCount">;
+type RunCost = Pick<ReviewScreenState, "totalCostUsd" | "unpricedCallCount">;
 
 /**
  * The run's estimated cost as the person reads it. A call with no price adds nothing to the total,

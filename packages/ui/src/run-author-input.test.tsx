@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { createCapabilityPort, type NativeBridge } from "./bridge.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import {
   normalizeRunAuthorInput,
@@ -17,14 +17,14 @@ const sent: RunAuthorInputView = {
   unmatchedRequirements: [],
 };
 
-function stateWith(authorInput?: RunAuthorInputView | null): DesktopReviewState {
+function stateWith(authorInput?: RunAuthorInputView | null): ReviewScreenState {
   return {
     ...createFixtureReviewState(),
     ...(authorInput === undefined ? {} : { authorInput }),
   };
 }
 
-function render(state: DesktopReviewState): string {
+function render(state: ReviewScreenState): string {
   return renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
 }
 

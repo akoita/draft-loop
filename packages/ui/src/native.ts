@@ -18,14 +18,7 @@ import {
   type CanonicalCandidateProfileProgressResult,
   type CanonicalCandidateProfileRecordResult,
   type CapabilityPort,
-  type CredentialProvider,
-  type CredentialTestProvider,
-  type CredentialTestResult,
   createCapabilityPort,
-  type EmbeddingModelCancelResult,
-  type EmbeddingModelPlanResult,
-  type EmbeddingModelProgressResult,
-  type EmbeddingModelStatusResult,
   type KnowledgeCurrentResult,
   type KnowledgeDirectoryImportResult,
   type KnowledgeFileImportResult,
@@ -50,10 +43,9 @@ import {
   type OpportunityLatestResult,
   type OpportunityListResult,
   type OpportunityRecordResult,
+  type ProfileDerivationEstimateInput,
+  type ProfileDerivationEstimateResult,
   type ProfileFreshnessResult,
-  type ProviderAuthMode,
-  type ProviderAuthModeResult,
-  type ProviderAuthModeStatus,
   type ReviewedCanonicalCandidateProfileCatalogResult,
   type SavedCanonicalCandidateProfileSummary,
   type SavedModelProfilesResult,
@@ -62,8 +54,6 @@ import {
   type SourceEvidenceKindsResult,
   type WorkspaceCompactHistoryResult,
   type WorkspaceConfigureModelsInput,
-  type WorkspaceCreateInput,
-  type WorkspaceRetrievalModeResult,
   type WritingPolicyReadResult,
 } from "./bridge.js";
 import type {
@@ -80,23 +70,18 @@ import {
 } from "./fact-usage-capabilities.js";
 import {
   createFixtureReviewPort,
-  type DesktopReviewPort,
-  type DesktopReviewState,
   type ReviewAction,
+  type ReviewScreenPort,
+  type ReviewScreenState,
 } from "./model.js";
 import { createNativeStartupUnavailablePort, isElectronRendererRuntime } from "./native-startup.js";
 import type { NewApplicationJob } from "./new-application-model.js";
-import {
-  parseRecentWorkspacesListResult,
-  type RecentWorkspaceSummary,
-} from "./recent-workspaces.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 import {
   createRunRequirementEvidenceCapabilities,
   type RunRequirementEvidenceCapabilities,
 } from "./run-requirement-evidence-capabilities.js";
 import { createRunTraceCapabilities, type RunTraceCapabilities } from "./run-trace-capabilities.js";
-import type { EmbeddingModelTier, RetrievalMode } from "./semantic-retrieval-contract.js";
 
 export type { NativeBridge } from "./bridge.js";
 
@@ -121,22 +106,15 @@ export interface WorkspaceModelSelection {
 /**
  * The setup form's own view of a port: choosing models, and asking about them.
  *
- * `createWorkspace` is widened here rather than in `DesktopReviewPort` so that
- * a fixture port written against the narrower signature stays assignable; a
- * function that ignores the second argument satisfies one that offers it.
  * `listModels` and `previewIndependence` are present only when the host
  * actually offers the capability, so an absent one is a fact the form can
  * report rather than a call that fails later.
  */
 export interface WorkspaceSetupCapabilities {
-  readonly createWorkspace?: (
-    name: string,
-    selection?: WorkspaceModelSelection,
-  ) => Promise<DesktopReviewState>;
   readonly configureModels?: (
     workspaceId: string,
     selection: Omit<WorkspaceConfigureModelsInput, "workspaceId">,
-  ) => Promise<DesktopReviewState>;
+  ) => Promise<ReviewScreenState>;
   /**
    * Reads the policy text to edit; a workspace without a policy gets the starting template.
    * A checksum reads that exact version from the workspace's history instead.
@@ -146,10 +124,7 @@ export interface WorkspaceSetupCapabilities {
     checksum?: string,
   ) => Promise<WritingPolicyReadResult>;
   /** Saves policy text as a new activated version and returns the refreshed review state. */
-  readonly saveWritingPolicy?: (
-    workspaceId: string,
-    content: string,
-  ) => Promise<DesktopReviewState>;
+  readonly saveWritingPolicy?: (workspaceId: string, content: string) => Promise<ReviewScreenState>;
   readonly listModels?: (provider: ModelDiscoveryProvider) => Promise<ModelsListResult>;
   readonly previewIndependence?: (
     author: ModelCandidate,
@@ -173,7 +148,7 @@ export interface WorkspaceSetupCapabilities {
   ) => Promise<RunEvidenceModeView | null>;
 }
 
-export interface DesktopOpportunityCapabilities {
+export interface HostOpportunityCapabilities {
   readonly createOpportunity?: (
     input: Omit<OpportunityCreateInput, "workspaceId">,
   ) => Promise<OpportunityRecordResult>;
@@ -196,7 +171,7 @@ export interface DesktopOpportunityCapabilities {
   ) => Promise<OpportunityRecordResult>;
 }
 
-export interface DesktopProfileCapabilities {
+export interface HostProfileCapabilities {
   readonly deriveCanonicalCandidateProfile?: (
     input: Omit<CanonicalCandidateProfileDeriveInput, "workspaceId">,
   ) => Promise<CanonicalCandidateProfileRecordResult>;
@@ -234,13 +209,17 @@ export interface DesktopProfileCapabilities {
     workspaceId: string,
     profileId: string,
   ) => Promise<ProfileFreshnessResult>;
+  /** What an update would send and roughly cost, before it starts (#3183). */
+  readonly estimateCanonicalCandidateProfileDerivation?: (
+    input: Omit<ProfileDerivationEstimateInput, "workspaceId">,
+  ) => Promise<ProfileDerivationEstimateResult>;
   /** Where each fact may be used (#2259); absent on a host without usage levels. */
   readonly factUsage?: FactUsageCapabilities;
   /** Suggested profile updates (#3069); absent on a host without them. */
   readonly factSuggestions?: FactSuggestionCapabilities;
 }
 
-export interface DesktopKnowledgeCapabilities {
+export interface HostKnowledgeCapabilities {
   readonly createCandidateKnowledgeStore?: (
     input: Omit<KnowledgeStoreCreateInput, "selection">,
   ) => Promise<KnowledgeStoreResult>;
@@ -260,10 +239,6 @@ export interface DesktopKnowledgeCapabilities {
     knowledgeBaseId: string,
     pasted: { readonly title: string; readonly text: string },
   ) => Promise<KnowledgeFileImportResult>;
-  readonly importCandidateKnowledgeDirectory?: (
-    storeId: string,
-    knowledgeBaseId: string,
-  ) => Promise<KnowledgeDirectoryImportResult>;
   /** Fetches one public URL into the base; the call is the person's explicit approval. */
   readonly importCandidateKnowledgeUrl?: (
     storeId: string,
@@ -303,71 +278,20 @@ export interface DesktopKnowledgeCapabilities {
   ) => Promise<WorkspaceEvidenceMigrationResult>;
 }
 
-/**
- * The local embedding model and the workspace retrieval mode, through the same application
- * contracts as the CLI. Each member is present only when the host offers the capability, so an
- * absent one is a fact the panel can report rather than a call that fails later.
- */
-export interface DesktopSemanticRetrievalCapabilities {
-  readonly getEmbeddingModelStatus?: (
-    tier: EmbeddingModelTier,
-  ) => Promise<EmbeddingModelStatusResult>;
-  /** What an install would download, shown at the approval step; it downloads nothing. */
-  readonly planEmbeddingModelInstall?: (
-    tier: EmbeddingModelTier,
-  ) => Promise<EmbeddingModelPlanResult>;
-  /** Downloads the model; the call is the explicit approval, so it carries `approved: true`. */
-  readonly installEmbeddingModel?: (
-    tier: EmbeddingModelTier,
-  ) => Promise<EmbeddingModelStatusResult>;
-  /** Reports a pending install's byte progress; answerable while it runs. */
-  readonly getEmbeddingModelProgress?: (
-    tier: EmbeddingModelTier,
-  ) => Promise<EmbeddingModelProgressResult>;
-  /** Stops a pending install; nothing is kept. */
-  readonly cancelEmbeddingModelInstall?: (
-    tier: EmbeddingModelTier,
-  ) => Promise<EmbeddingModelCancelResult>;
-  readonly removeEmbeddingModel?: (tier: EmbeddingModelTier) => Promise<EmbeddingModelStatusResult>;
-  readonly getRetrievalMode?: (workspaceId: string) => Promise<WorkspaceRetrievalModeResult>;
-  readonly setRetrievalMode?: (
-    workspaceId: string,
-    mode: RetrievalMode,
-    modelTier: EmbeddingModelTier,
-  ) => Promise<WorkspaceRetrievalModeResult>;
-}
-
-export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
-  DesktopSemanticRetrievalCapabilities &
+export type HostSetupPort = ReviewScreenPort &
   WorkspaceSetupCapabilities &
-  DesktopOpportunityCapabilities &
-  DesktopProfileCapabilities &
-  DesktopKnowledgeCapabilities & {
-    readonly getProviderAuthModeStatus?: (
-      provider: "anthropic" | "openai",
-    ) => Promise<ProviderAuthModeStatus>;
-    readonly setProviderAuthMode?: (
-      provider: "anthropic" | "openai",
-      mode: ProviderAuthMode,
-    ) => Promise<ProviderAuthModeResult>;
-    /** Tests the saved API key with a model lookup; the key itself never comes back. */
-    readonly testCredential?: (provider: CredentialTestProvider) => Promise<CredentialTestResult>;
-    readonly listRecentWorkspaces?: () => Promise<readonly RecentWorkspaceSummary[]>;
-    readonly openRecentWorkspace?: (id: string) => Promise<DesktopReviewState>;
-    /** Forgets one recent workspace entry without touching its files. */
-    readonly removeRecentWorkspace?: (id: string) => Promise<void>;
-    readonly clearRecentWorkspaces?: () => Promise<void>;
-    /** Renames the open workspace and resolves with the stored name. */
-    readonly renameWorkspace?: (workspaceId: string, name: string) => Promise<string>;
+  HostOpportunityCapabilities &
+  HostProfileCapabilities &
+  HostKnowledgeCapabilities & {
     /**
      * Shrinks the workspace's run history behind a verified backup the host keeps beside it.
      * Resolves with the sizes and the backup's file name; refuses while a run is working.
      */
     readonly compactHistory?: (workspaceId: string) => Promise<WorkspaceCompactHistoryResult>;
-  } & DesktopApplicationCapabilities;
+  } & HostApplicationCapabilities;
 
 /** Job applications inside the open workspace (ADR 0010), present when the host offers them. */
-export interface DesktopApplicationCapabilities {
+export interface HostApplicationCapabilities {
   readonly listApplications?: (workspaceId: string) => Promise<readonly ApplicationSummaryView[]>;
   /**
    * False when the host cannot fetch a job page for the person: New application then takes pasted
@@ -434,12 +358,12 @@ export interface DesktopApplicationCapabilities {
    * with its review; `null` returns to the latest run. Scoping another application, opening a
    * workspace or starting a review returns to the latest run too.
    */
-  readonly openRun?: (runId: string | null) => Promise<DesktopReviewState>;
+  readonly openRun?: (runId: string | null) => Promise<ReviewScreenState>;
   /**
    * Reads one of the scoped application's runs for the run comparison. Unlike `openRun` it
    * leaves the review on the run it shows: later loads and changes still target that run.
    */
-  readonly loadRunForComparison?: (runId: string) => Promise<DesktopReviewState>;
+  readonly loadRunForComparison?: (runId: string) => Promise<ReviewScreenState>;
   /**
    * Uses one of the scoped application's runs for approval and export, with the person's
    * optional reason, then opens it; resolves with its review. Nothing about any run changes.
@@ -448,7 +372,7 @@ export interface DesktopApplicationCapabilities {
     workspaceId: string,
     runId: string,
     reason: string | null,
-  ) => Promise<DesktopReviewState>;
+  ) => Promise<ReviewScreenState>;
   /**
    * Saves Markdown the renderer prepared, such as a run comparison, where the person picks in a
    * save dialog. Resolves with whether it was saved and the file's name.
@@ -457,39 +381,6 @@ export interface DesktopApplicationCapabilities {
     suggestedName: string,
     content: string,
   ) => Promise<MarkdownFileSaveResult>;
-}
-
-/**
- * Fills `workspace.create` in from a form's strings.
- *
- * A field left blank means "keep the workspace default", so a blank is dropped
- * rather than sent as an empty string the boundary would refuse. Trimming
- * happens here because a person typing a model id into a form leaves spaces
- * behind and the boundary's `modelId` rule does not forgive them.
- */
-export function workspaceCreateInput(
-  name: string,
-  selection?: WorkspaceModelSelection,
-): WorkspaceCreateInput {
-  const named = (value: string | undefined): string | undefined => {
-    const trimmed = value?.trim() ?? "";
-    return trimmed === "" ? undefined : trimmed;
-  };
-  const authorModel = named(selection?.authorModel);
-  const criticModel = named(selection?.criticModel);
-  const localEndpoint = named(selection?.localEndpoint);
-  const rationale = named(selection?.independenceOverrideRationale);
-  return {
-    name: name.trim(),
-    mode: "real",
-    ...(selection?.authorCompany === undefined ? {} : { authorCompany: selection.authorCompany }),
-    ...(authorModel === undefined ? {} : { authorModel }),
-    ...(selection?.criticCompany === undefined ? {} : { criticCompany: selection.criticCompany }),
-    ...(criticModel === undefined ? {} : { criticModel }),
-    ...(localEndpoint === undefined ? {} : { localEndpoint }),
-    ...(rationale === undefined ? {} : { independenceOverrideRationale: rationale }),
-    ...(selection?.maxRounds === undefined ? {} : { maxRounds: selection.maxRounds }),
-  };
 }
 
 /**
@@ -515,22 +406,22 @@ export function createBrowserCapabilityPort(): CapabilityPort {
   return createCapabilityPort(createBrowserNativeBridge());
 }
 
-export class DesktopBridgeError extends Error {
+export class HostBridgeError extends Error {
   public readonly code: string;
 
   public constructor(code: string, message: string) {
     super(message);
-    this.name = "DesktopBridgeError";
+    this.name = "HostBridgeError";
     this.code = code;
   }
 }
 
 function unwrap<Value>(result: BridgeResult<Value>): Value {
   if (result.ok) return result.value;
-  throw new DesktopBridgeError(result.error.code, result.error.message);
+  throw new HostBridgeError(result.error.code, result.error.message);
 }
 
-export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopSetupPort {
+export function createBridgeReviewPort(capabilityPort: CapabilityPort): HostSetupPort {
   // The application the review is scoped to; every load and run start carries it.
   let applicationId: string | undefined;
   // An earlier run of that application opened from the run list; undefined shows the latest.
@@ -539,7 +430,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
     applicationId = selected;
     runId = undefined;
   };
-  const load = async (): Promise<DesktopReviewState> => {
+  const load = async (): Promise<ReviewScreenState> => {
     const result = await capabilityPort.execute({
       type: "review.load",
       input:
@@ -549,16 +440,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
     });
     return unwrap(result);
   };
-  const ensureRun = async (workspaceId: string): Promise<DesktopReviewState> => {
-    const status = unwrap(
-      await capabilityPort.execute({ type: "run.status", input: { workspaceId } }),
-    );
-    if (status.runId === null) {
-      unwrap(await capabilityPort.execute({ type: "run.start", input: { workspaceId } }));
-    }
-    return load();
-  };
-  const refresh = async (): Promise<DesktopReviewState> => load();
+  const refresh = async (): Promise<ReviewScreenState> => load();
   const applicationFolders = createApplicationFolderCapabilities(capabilityPort, unwrap);
   const factUsage = createFactUsageCapabilities(capabilityPort, unwrap);
   const factSuggestions = createFactSuggestionCapabilities(capabilityPort, unwrap);
@@ -566,42 +448,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
   const runRequirementEvidence = createRunRequirementEvidenceCapabilities(capabilityPort, unwrap);
   return {
     load,
-    ...(capabilityPort.hasCapability("workspace.open") ||
-    capabilityPort.hasCapability("workspace.create")
-      ? {}
-      : { workspaceClosable: false }),
     ...(capabilityPort.hasCapability("export.write") ? {} : { exportsDownload: true }),
-    ...(capabilityPort.hasCapability("workspace.open")
-      ? {
-          openWorkspace: async () => {
-            unwrap(
-              await capabilityPort.execute({
-                type: "workspace.open",
-                input: { selection: "native-dialog" },
-              }),
-            );
-            scopeTo(undefined);
-            return refresh();
-          },
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.create")
-      ? {
-          createWorkspace: async (
-            name: string,
-            selection?: Parameters<typeof workspaceCreateInput>[1],
-          ) => {
-            unwrap(
-              await capabilityPort.execute({
-                type: "workspace.create",
-                input: workspaceCreateInput(name, selection),
-              }),
-            );
-            scopeTo(undefined);
-            return refresh();
-          },
-        }
-      : {}),
     ...(capabilityPort.hasCapability("file.save-markdown")
       ? {
           saveMarkdownFile: async (suggestedName: string, content: string) =>
@@ -817,39 +664,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           },
         }
       : {}),
-    ...(capabilityPort.hasCapability("workspace.recent-list")
-      ? {
-          listRecentWorkspaces: async () =>
-            parseRecentWorkspacesListResult(
-              unwrap(await capabilityPort.execute({ type: "workspace.recent-list", input: {} })),
-            ).workspaces,
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.recent-open")
-      ? {
-          openRecentWorkspace: async (id: string) => {
-            unwrap(await capabilityPort.execute({ type: "workspace.recent-open", input: { id } }));
-            scopeTo(undefined);
-            return refresh();
-          },
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.recent-remove")
-      ? {
-          removeRecentWorkspace: async (id: string) => {
-            unwrap(
-              await capabilityPort.execute({ type: "workspace.recent-remove", input: { id } }),
-            );
-          },
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.recent-clear")
-      ? {
-          clearRecentWorkspaces: async () => {
-            unwrap(await capabilityPort.execute({ type: "workspace.recent-clear", input: {} }));
-          },
-        }
-      : {}),
     ...(capabilityPort.hasCapability("workspace.compact-history")
       ? {
           compactHistory: async (workspaceId: string) =>
@@ -859,56 +673,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
                 input: { workspaceId },
               }),
             ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.rename")
-      ? {
-          renameWorkspace: async (workspaceId: string, name: string) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "workspace.rename",
-                input: { workspaceId, name },
-              }),
-            ).name,
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.create")
-      ? {
-          createDemoWorkspace: async (name) => {
-            const result = unwrap(
-              await capabilityPort.execute({
-                type: "workspace.create",
-                input: { name, mode: "demo" },
-              }),
-            );
-            scopeTo(undefined);
-            return ensureRun(result.workspace.id);
-          },
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("file.select")
-      ? {
-          selectFiles: async (target) => {
-            const state = await load();
-            unwrap(
-              await capabilityPort.execute({
-                type: "file.select",
-                input: {
-                  workspaceId: state.workspaceId,
-                  target,
-                  ...(target === "job-description" ||
-                  target === "writing-policy" ||
-                  target === "writing-policy-override"
-                    ? { multiple: false }
-                    : {}),
-                  ...(target === "writing-policy" || target === "writing-policy-override"
-                    ? { extensions: [".md", ".markdown", ".txt", ".text"] as const }
-                    : {}),
-                },
-              }),
-            );
-            return refresh();
-          },
         }
       : {}),
     ...(capabilityPort.hasCapability("source.add-url")
@@ -925,7 +689,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           },
         }
       : {}),
-    dispatch: async (state: DesktopReviewState, action: ReviewAction) => {
+    dispatch: async (state: ReviewScreenState, action: ReviewAction) => {
       const result = await capabilityPort.execute({
         type: "review.dispatch",
         input: {
@@ -941,58 +705,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       return next;
     },
     // A host that keeps no provider keys, such as the hosted service, offers none of these.
-    ...(capabilityPort.hasCapability("credential.status")
-      ? {
-          getCredentialStatus: async (provider: CredentialProvider) =>
-            unwrap(
-              await capabilityPort.execute({ type: "credential.status", input: { provider } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("credential.set")
-      ? {
-          setCredential: async (provider: CredentialProvider, apiKey: string) =>
-            unwrap(
-              await capabilityPort.execute({ type: "credential.set", input: { provider, apiKey } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("credential.remove")
-      ? {
-          removeCredential: async (provider: CredentialProvider) =>
-            unwrap(
-              await capabilityPort.execute({ type: "credential.remove", input: { provider } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("credential.test")
-      ? {
-          testCredential: async (provider: CredentialTestProvider) =>
-            unwrap(await capabilityPort.execute({ type: "credential.test", input: { provider } })),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("provider-auth.status")
-      ? {
-          getProviderAuthModeStatus: async (provider: "anthropic" | "openai") =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "provider-auth.status",
-                input: { provider },
-              }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("provider-auth.set")
-      ? {
-          setProviderAuthMode: async (provider: "anthropic" | "openai", mode: ProviderAuthMode) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "provider-auth.set",
-                input: { provider, mode },
-              }),
-            ),
-        }
-      : {}),
     ...(capabilityPort.hasCapability("models.list")
       ? {
           listModels: async (provider: ModelDiscoveryProvider) =>
@@ -1050,71 +762,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             ),
         }
       : {}),
-    ...(capabilityPort.hasCapability("embedding-model.status")
-      ? {
-          getEmbeddingModelStatus: async (tier: EmbeddingModelTier) =>
-            unwrap(
-              await capabilityPort.execute({ type: "embedding-model.status", input: { tier } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("embedding-model.plan-install")
-      ? {
-          planEmbeddingModelInstall: async (tier: EmbeddingModelTier) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "embedding-model.plan-install",
-                input: { tier },
-              }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("embedding-model.install")
-      ? {
-          installEmbeddingModel: async (tier: EmbeddingModelTier) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "embedding-model.install",
-                input: { tier, approved: true },
-              }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("embedding-model.progress")
-      ? {
-          getEmbeddingModelProgress: async (tier: EmbeddingModelTier) =>
-            unwrap(
-              await capabilityPort.execute({ type: "embedding-model.progress", input: { tier } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("embedding-model.cancel")
-      ? {
-          cancelEmbeddingModelInstall: async (tier: EmbeddingModelTier) =>
-            unwrap(
-              await capabilityPort.execute({ type: "embedding-model.cancel", input: { tier } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("embedding-model.remove")
-      ? {
-          removeEmbeddingModel: async (tier: EmbeddingModelTier) =>
-            unwrap(
-              await capabilityPort.execute({ type: "embedding-model.remove", input: { tier } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.retrieval-mode.get")
-      ? {
-          getRetrievalMode: async (workspaceId: string) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "workspace.retrieval-mode.get",
-                input: { workspaceId },
-              }),
-            ),
-        }
-      : {}),
     ...(capabilityPort.hasCapability("models.saved-profiles.save")
       ? {
           saveModelProfiles: async (
@@ -1125,21 +772,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "models.saved-profiles.save",
                 input: { workspaceId, modelProfiles },
-              }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.retrieval-mode.set")
-      ? {
-          setRetrievalMode: async (
-            workspaceId: string,
-            mode: RetrievalMode,
-            modelTier: EmbeddingModelTier,
-          ) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "workspace.retrieval-mode.set",
-                input: { workspaceId, mode, modelTier },
               }),
             ),
         }
@@ -1215,17 +847,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "knowledge.import-text",
                 input: { storeId, knowledgeBaseId, title: pasted.title, text: pasted.text },
-              }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("knowledge.import-directory")
-      ? {
-          importCandidateKnowledgeDirectory: async (storeId: string, knowledgeBaseId: string) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "knowledge.import-directory",
-                input: { storeId, knowledgeBaseId, selection: "native-dialog" },
               }),
             ),
         }
@@ -1545,6 +1166,21 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             ),
         }
       : {}),
+    ...(capabilityPort.hasCapability("profile.estimate")
+      ? {
+          estimateCanonicalCandidateProfileDerivation: async (
+            input: Omit<ProfileDerivationEstimateInput, "workspaceId">,
+          ) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "profile.estimate",
+                input: { workspaceId: state.workspaceId, ...input },
+              }),
+            );
+          },
+        }
+      : {}),
     ...(capabilityPort.hasCapability("profile.catalog")
       ? {
           listReviewedCanonicalCandidateProfiles: async (workspaceId: string) =>
@@ -1594,7 +1230,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
   };
 }
 
-export interface DesktopReviewPortStartupOptions {
+export interface ReviewScreenPortStartupOptions {
   /** Override the preload bridge for tests and isolated renderer startup. */
   readonly nativeBridge?: unknown;
   /** Override runtime detection without granting additional bridge capability. */
@@ -1602,9 +1238,9 @@ export interface DesktopReviewPortStartupOptions {
 }
 
 /** Uses a host-backed review port when available; only browser mode gets the fixture. */
-export function createDesktopReviewPort(
-  options: DesktopReviewPortStartupOptions = {},
-): DesktopSetupPort {
+export function createReviewScreenPort(
+  options: ReviewScreenPortStartupOptions = {},
+): HostSetupPort {
   const nativeBridge =
     "nativeBridge" in options ? options.nativeBridge : getNativeBridgeCandidate();
   const electronRuntime = options.electronRuntime ?? isElectronRendererRuntime();

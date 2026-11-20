@@ -38,7 +38,6 @@ const selectedEvidence: CareerEvidenceStatus = {
   displayName: "Engineering",
   sourceCount: 5,
   blockedCount: 0,
-  semanticLine: null,
 };
 
 function render(overrides: Partial<HomeViewProps> = {}, canCreate = true): string {

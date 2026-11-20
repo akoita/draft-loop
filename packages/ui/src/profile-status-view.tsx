@@ -7,7 +7,7 @@ import { t } from "@lingui/core/macro";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { CanonicalCandidateProfileRecordResult } from "./bridge.js";
 import { type CareerEvidenceCapabilities, loadCareerEvidenceStatus } from "./career-evidence.js";
-import type { DesktopProfileCapabilities } from "./native.js";
+import type { HostProfileCapabilities } from "./native.js";
 import { loadProfileFreshness } from "./profile-freshness.js";
 import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
 import type { CanonicalCandidateProfileOutcome } from "./profile-outcome.js";
@@ -234,7 +234,7 @@ export function ProfileVersionHistory({
  * `profileId` is set, and again whenever `revision` changes; `undefined` while unknown.
  */
 export function useProfileFreshness(
-  capabilities: DesktopProfileCapabilities,
+  capabilities: HostProfileCapabilities,
   workspaceId: string,
   profileId: string | null,
   revision: string,

@@ -9,7 +9,7 @@ import { plural, t } from "@lingui/core/macro";
  */
 
 import type { HomeProfileStatus, HomeTone } from "./home-model.js";
-import type { DesktopProfileCapabilities } from "./native.js";
+import type { HostProfileCapabilities } from "./native.js";
 import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
 
 export interface ProfileFreshnessPresentation {
@@ -94,7 +94,7 @@ export function profileFreshnessPresentation(
 
 /** Asks the host whether the reviewed profile is current; `undefined` when it cannot say. */
 export async function loadProfileFreshness(
-  capabilities: DesktopProfileCapabilities,
+  capabilities: HostProfileCapabilities,
   workspaceId: string,
   profileId: string,
 ): Promise<ProfileFreshnessResult | undefined> {

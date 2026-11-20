@@ -13,7 +13,7 @@ import {
   careerEvidenceSourcesText,
 } from "./career-evidence.js";
 import { countedNouns } from "./counted-nouns.js";
-import type { DesktopProfileCapabilities } from "./native.js";
+import type { HostProfileCapabilities } from "./native.js";
 import { projectCanonicalCandidateProfileOutcome } from "./profile-outcome.js";
 
 /** What the workspace window shows: Home, a career page, or one application. */
@@ -161,7 +161,7 @@ export interface HomeProfileReading {
  * draft with the recorded cause, so the version itself is read to tell "failed" from "draft".
  */
 export async function readHomeProfile(
-  capabilities: DesktopProfileCapabilities,
+  capabilities: HostProfileCapabilities,
   workspaceId: string,
 ): Promise<HomeProfileReading> {
   const listSummaries = capabilities.listCanonicalCandidateProfileSummaries;
@@ -192,7 +192,7 @@ export async function readHomeProfile(
 }
 
 export async function loadHomeProfileStatus(
-  capabilities: DesktopProfileCapabilities,
+  capabilities: HostProfileCapabilities,
   workspaceId: string,
 ): Promise<HomeProfileStatus> {
   return (await readHomeProfile(capabilities, workspaceId)).status;

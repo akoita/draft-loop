@@ -25,6 +25,11 @@ import {
   candidateProfileCapacityLimitOf,
 } from "./candidate-profile-capacity-failure.js";
 import {
+  type CanonicalCandidateProfileDerivationEstimate,
+  type CanonicalProfileExtractionBudget,
+  estimateCanonicalProfileExtraction,
+} from "./candidate-profile-derivation-estimate.js";
+import {
   type CanonicalCandidateProfileExtractionMaterial,
   type CanonicalCandidateProfileExtractionPort,
   maximumCanonicalCandidateProfileExtractionSourceCharacters,
@@ -125,10 +130,22 @@ export interface CanonicalCandidateProfileDerivationResult
   readonly extractedSourceCount: number;
 }
 
+/** What an estimate reads: the derivation's selection and options, with nothing to approve. */
+export type EstimateCanonicalCandidateProfileDerivationCommand = Omit<
+  DeriveCanonicalCandidateProfileCommand,
+  "allowProviderData" | "signal" | "onProgress"
+>;
+
+type PreparedDerivationCommand = EstimateCanonicalCandidateProfileDerivationCommand;
+
 export interface CanonicalCandidateProfileDerivationService {
   readonly deriveCanonicalCandidateProfile: (
     command: DeriveCanonicalCandidateProfileCommand,
   ) => Promise<CanonicalCandidateProfileDerivationResult>;
+  /** What a derivation would send now, without calling a model (#3182). */
+  readonly estimateCanonicalCandidateProfileDerivation: (
+    command: EstimateCanonicalCandidateProfileDerivationCommand,
+  ) => Promise<CanonicalCandidateProfileDerivationEstimate>;
 }
 
 export interface CanonicalCandidateProfileDerivationDependencies {
@@ -139,6 +156,8 @@ export interface CanonicalCandidateProfileDerivationDependencies {
   readonly extractor: CanonicalCandidateProfileExtractionPort;
   /** The model and prompt behind `extractor`; recorded on every derived profile version. */
   readonly extractionIdentity?: CanonicalCandidateProfileExtractionIdentity;
+  /** The extraction model's output budget and price, for estimates. */
+  readonly extractionBudget?: CanonicalProfileExtractionBudget;
   readonly knowledgeService?: Pick<
     CandidateKnowledgeStoreService,
     "createKnowledgeSelectionSnapshot"
@@ -470,6 +489,69 @@ export function createCanonicalCandidateProfileDerivationService(
   const ingestBytes = dependencies.ingestBytes ?? defaultIngestBytes;
   const now = dependencies.now ?? (() => new Date().toISOString());
 
+  /**
+   * Everything a derivation knows before it calls a model: the selection snapshot, the sources as
+   * they would be sent, and which of them the latest version's facts already cover.
+   */
+  const prepare = async (command: PreparedDerivationCommand) => {
+    assertIdentity(command.workspaceId);
+    assertIdentity(command.profileId);
+    if (!Array.isArray(command.selections) || command.selections.length === 0) {
+      throw new Error(canonicalCandidateProfileDerivationErrorMessage);
+    }
+    const selections = command.selections.map((selection) => {
+      if (
+        !isRecord(selection) ||
+        typeof selection.storeRoot !== "string" ||
+        selection.storeRoot.length === 0 ||
+        typeof selection.knowledgeBaseId !== "string"
+      ) {
+        throw new Error(canonicalCandidateProfileDerivationErrorMessage);
+      }
+      const knowledgeBaseId = selection.knowledgeBaseId.trim();
+      assertIdentity(knowledgeBaseId);
+      return { storeRoot: selection.storeRoot, knowledgeBaseId };
+    });
+    const createdAt = requireTimestamp(command.createdAt ?? now());
+    const selectionCommand = {
+      selections,
+      ...(command.combinationApproved === undefined
+        ? {}
+        : { combinationApproved: command.combinationApproved }),
+    };
+    const snapshot = await knowledgeService.createKnowledgeSelectionSnapshot(selectionCommand);
+    assertSnapshotIdentities(snapshot);
+    const materialization = await materializeSelection(
+      snapshot,
+      selections,
+      openKnowledgeStore,
+      ingestBytes,
+      command.excludedSensitivityTiers,
+    );
+    const refreshedSnapshot =
+      await knowledgeService.createKnowledgeSelectionSnapshot(selectionCommand);
+    if (!selectionEntriesEqual(snapshot, refreshedSnapshot)) {
+      throw new Error(canonicalCandidateProfileSelectionStaleErrorMessage);
+    }
+
+    const sensitivity = currentSensitivityIdentity(
+      command.excludedSensitivityTiers,
+      materialization.sensitivityRulesApplied,
+    );
+    const plan = planIncrementalCanonicalProfileExtraction({
+      latest: await dependencies.persistence.getLatestCanonicalCandidateProfile(
+        command.workspaceId,
+        command.profileId,
+      ),
+      identity: dependencies.extractionIdentity,
+      fullExtraction: command.fullExtraction === true,
+      snapshot,
+      materials: materialization.materials,
+      sensitivity,
+    });
+    return { selectionCommand, snapshot, materialization, sensitivity, plan, createdAt };
+  };
+
   const deriveCanonicalCandidateProfile = async (
     command: DeriveCanonicalCandidateProfileCommand,
   ): Promise<CanonicalCandidateProfileDerivationResult> => {
@@ -477,61 +559,8 @@ export function createCanonicalCandidateProfileDerivationService(
       throw new Error(canonicalCandidateProfileDerivationApprovalErrorMessage);
     }
     try {
-      assertIdentity(command.workspaceId);
-      assertIdentity(command.profileId);
-      if (!Array.isArray(command.selections) || command.selections.length === 0) {
-        throw new Error(canonicalCandidateProfileDerivationErrorMessage);
-      }
-      const selections = command.selections.map((selection) => {
-        if (
-          !isRecord(selection) ||
-          typeof selection.storeRoot !== "string" ||
-          selection.storeRoot.length === 0 ||
-          typeof selection.knowledgeBaseId !== "string"
-        ) {
-          throw new Error(canonicalCandidateProfileDerivationErrorMessage);
-        }
-        const knowledgeBaseId = selection.knowledgeBaseId.trim();
-        assertIdentity(knowledgeBaseId);
-        return { storeRoot: selection.storeRoot, knowledgeBaseId };
-      });
-      const createdAt = requireTimestamp(command.createdAt ?? now());
-      const selectionCommand = {
-        selections,
-        ...(command.combinationApproved === undefined
-          ? {}
-          : { combinationApproved: command.combinationApproved }),
-      };
-      const snapshot = await knowledgeService.createKnowledgeSelectionSnapshot(selectionCommand);
-      assertSnapshotIdentities(snapshot);
-      const materialization = await materializeSelection(
-        snapshot,
-        selections,
-        openKnowledgeStore,
-        ingestBytes,
-        command.excludedSensitivityTiers,
-      );
-      const refreshedSnapshot =
-        await knowledgeService.createKnowledgeSelectionSnapshot(selectionCommand);
-      if (!selectionEntriesEqual(snapshot, refreshedSnapshot)) {
-        throw new Error(canonicalCandidateProfileSelectionStaleErrorMessage);
-      }
-
-      const sensitivity = currentSensitivityIdentity(
-        command.excludedSensitivityTiers,
-        materialization.sensitivityRulesApplied,
-      );
-      const plan = planIncrementalCanonicalProfileExtraction({
-        latest: await dependencies.persistence.getLatestCanonicalCandidateProfile(
-          command.workspaceId,
-          command.profileId,
-        ),
-        identity: dependencies.extractionIdentity,
-        fullExtraction: command.fullExtraction === true,
-        snapshot,
-        materials: materialization.materials,
-        sensitivity,
-      });
+      const { selectionCommand, snapshot, materialization, sensitivity, plan, createdAt } =
+        await prepare(command);
       // Only the sources sent now can be too large to window (#2729): an unchanged large source
       // keeps its facts and is not sent, so other sources joining the selection cannot drop it.
       const { boundable, unboundable } = partitionCanonicalProfileUnboundableSources(
@@ -693,7 +722,36 @@ export function createCanonicalCandidateProfileDerivationService(
     }
   };
 
-  return Object.freeze({ deriveCanonicalCandidateProfile });
+  const estimateCanonicalCandidateProfileDerivation = async (
+    command: EstimateCanonicalCandidateProfileDerivationCommand,
+  ): Promise<CanonicalCandidateProfileDerivationEstimate> => {
+    if (!isRecord(command)) throw new Error(canonicalCandidateProfileDerivationErrorMessage);
+    let plan: Awaited<ReturnType<typeof prepare>>["plan"];
+    try {
+      ({ plan } = await prepare(command));
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === canonicalCandidateProfileSelectionStaleErrorMessage
+      ) {
+        throw error;
+      }
+      throw new Error(canonicalCandidateProfileDerivationErrorMessage, { cause: error });
+    }
+    const { boundable } = partitionCanonicalProfileUnboundableSources(plan.materials);
+    return estimateCanonicalProfileExtraction({
+      sources: boundable.map((material) => ({ id: material.id, text: material.text })),
+      reusedSourceCount: plan.reusedSourceCount,
+      ...(dependencies.extractionBudget === undefined
+        ? {}
+        : { budget: dependencies.extractionBudget }),
+    });
+  };
+
+  return Object.freeze({
+    deriveCanonicalCandidateProfile,
+    estimateCanonicalCandidateProfileDerivation,
+  });
 }
 
 /** Categories used by the extraction prompt and deterministic omission checks. */

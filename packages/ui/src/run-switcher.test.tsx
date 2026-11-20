@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { ApplicationRunRowView } from "./application-run-list.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import {
   RunSwitcher,
@@ -197,7 +197,7 @@ function render(applicationRuns?: readonly ApplicationRunRowView[] | null): stri
   const listed = applicationRuns?.map((run) =>
     run.latest ? { ...run, runId: fixture.runId } : run,
   );
-  const state: DesktopReviewState = {
+  const state: ReviewScreenState = {
     ...fixture,
     ...(applicationRuns === undefined ? {} : { applicationRuns: listed ?? null }),
   };

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createFixtureReviewPort,
   createFixtureReviewState,
-  type DesktopReviewState,
+  type ReviewScreenState,
 } from "./model.js";
 
 describe("integrated local alpha review contract", () => {
@@ -14,7 +14,7 @@ describe("integrated local alpha review contract", () => {
     const resumed = await port.dispatch(loaded, { type: "resume" });
     expect(resumed.state).toBe("reviewing");
 
-    const awaitingApproval: DesktopReviewState = {
+    const awaitingApproval: ReviewScreenState = {
       ...resumed,
       state: "awaiting-approval",
       findings: resumed.findings.map((finding) => ({
@@ -34,7 +34,7 @@ describe("integrated local alpha review contract", () => {
   it("keeps the blocking factuality gate intact", async () => {
     const port = createFixtureReviewPort();
     const initial = createFixtureReviewState();
-    const awaitingApproval: DesktopReviewState = {
+    const awaitingApproval: ReviewScreenState = {
       ...initial,
       state: "awaiting-approval",
     };

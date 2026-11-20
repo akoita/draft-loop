@@ -9,7 +9,7 @@ import {
   screenLocaleFromSearch,
 } from "./i18n.js";
 import { formatDate, formatList } from "./locale-format.js";
-import { providerAuthenticationSummary } from "./provider-authentication-summary.js";
+import { serverHeldProviderSignIn } from "./provider-sign-in-readiness.js";
 
 const control = (
   <ApplicationLanguageControl language={null} disabled={false} onSave={async () => undefined} />
@@ -51,15 +51,7 @@ describe("the screens' locale", () => {
       renderToStaticMarkup(<ScreensI18nProvider locale="fr">{node}</ScreensI18nProvider>);
     expect(french(control)).toContain("Rédiger ses documents en");
     activateScreenLocale("fr");
-    expect(
-      providerAuthenticationSummary({
-        fixtureMode: true,
-        anthropicConfigured: false,
-        openaiConfigured: false,
-        anthropicMode: "api-key",
-        openaiMode: "api-key",
-      }),
-    ).toBe("Mode démo (aucune authentification de fournisseur requise)");
+    expect(serverHeldProviderSignIn().summary).toBe("Le service fournit les modèles");
     expect(formatDate("2026-11-24T12:00:00Z", { timeZone: "UTC" })).toBe("24 nov. 2026");
     expect(formatList(["Anthropic", "OpenAI"])).toBe("Anthropic et OpenAI");
   });

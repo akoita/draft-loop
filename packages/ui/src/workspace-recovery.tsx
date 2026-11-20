@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { DesktopBridgeError } from "./native.js";
+import { HostBridgeError } from "./native.js";
 
 export function isWorkspaceContextLost(
   reason: unknown,
@@ -15,7 +15,7 @@ export function isWorkspaceContextLost(
       activeWorkspaceId,
       activeGeneration,
     ) &&
-    reason instanceof DesktopBridgeError &&
+    reason instanceof HostBridgeError &&
     reason.code === "not-found"
   );
 }
@@ -33,29 +33,14 @@ export function isWorkspaceContextCurrent(
   );
 }
 
-export function WorkspaceRecovery({
-  busy,
-  errorMessage,
-  onOpen,
-}: {
-  readonly busy: boolean;
-  readonly errorMessage: string | null;
-  readonly onOpen?: () => void;
-}) {
+export function WorkspaceRecovery({ errorMessage }: { readonly errorMessage: string | null }) {
   return (
     <main className="boot-shell">
       <section className="panel boot-panel">
         <p className="eyebrow">{t`Workspace unavailable`}</p>
-        <h1>{t`Open a workspace to continue`}</h1>
-        <p>{t`The current workspace could not be found. Open a workspace to resume local review.`}</p>
+        <h1>{t`This workspace could not be found`}</h1>
+        <p>{t`Reload the page to try again.`}</p>
         {errorMessage === null ? null : <p role="alert">{errorMessage}</p>}
-        {onOpen === undefined ? (
-          <p>{t`Opening a workspace is unavailable in this host.`}</p>
-        ) : (
-          <button className="button" type="button" disabled={busy} onClick={onOpen}>
-            {busy ? t`Opening workspace…` : t`Open workspace`}
-          </button>
-        )}
       </section>
     </main>
   );

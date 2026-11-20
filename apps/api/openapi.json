@@ -4937,6 +4937,62 @@
         ],
         "description": "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them. A derivation that called a model gives what its calls used."
       },
+      "CareerProfileDerivationEstimateInput": {
+        "type": "object",
+        "properties": {
+          "reusedSourceCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "extractedSourceCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "extractedCharacters": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "low": {
+                    "type": "number"
+                  },
+                  "high": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "low",
+                  "high"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A cost range in US dollars; null when the extraction model has no price."
+          }
+        },
+        "required": [
+          "reusedSourceCount",
+          "extractedSourceCount",
+          "extractedCharacters",
+          "calls",
+          "estimatedUsd"
+        ],
+        "description": "What a derivation would send now, counts only; no model is called."
+      },
       "CareerProfileFreshnessInput": {
         "oneOf": [
           {
@@ -14253,6 +14309,64 @@
           }
         ],
         "description": "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them. A derivation that called a model gives what its calls used."
+      },
+      "CareerProfileDerivationEstimate": {
+        "type": "object",
+        "properties": {
+          "reusedSourceCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "extractedSourceCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "extractedCharacters": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "low": {
+                    "type": "number"
+                  },
+                  "high": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "low",
+                  "high"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A cost range in US dollars; null when the extraction model has no price."
+          }
+        },
+        "required": [
+          "reusedSourceCount",
+          "extractedSourceCount",
+          "extractedCharacters",
+          "calls",
+          "estimatedUsd"
+        ],
+        "additionalProperties": false,
+        "description": "What a derivation would send now, counts only; no model is called."
       },
       "CareerProfileFreshness": {
         "oneOf": [
@@ -24262,6 +24376,87 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CareerProfileFreshness"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/profiles/{profileId}/derivation-estimate": {
+      "get": {
+        "summary": "Estimate what deriving a career profile would send and cost",
+        "description": "Reads the selected evidence as a derivation would and plans its model calls, without calling a model: sources reused from the latest version and extracted again, their characters, the expected calls and a cost range.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "in": "query",
+            "name": "fullExtraction",
+            "required": false,
+            "description": "Estimate extracting every source again instead of only new or changed ones."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "profileId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CareerProfileDerivationEstimate"
                 }
               }
             }

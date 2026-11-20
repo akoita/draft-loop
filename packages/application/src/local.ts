@@ -42,16 +42,6 @@ import {
   type CandidateKnowledgeSensitivityExclusions,
   candidateKnowledgeRequestGuard,
 } from "./candidate-knowledge-sensitivity-exclusion.js";
-import {
-  canonicalCandidateProfileDerivationApprovalErrorMessage,
-  canonicalCandidateProfileDerivationErrorMessage,
-  canonicalProfileDerivationOptions,
-  createCanonicalCandidateProfileDerivationService,
-} from "./candidate-profile-derivation.js";
-import {
-  canonicalProfileExtractionIdentity,
-  canonicalProfileExtractionModel,
-} from "./candidate-profile-extraction-identity.js";
 import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
 import { createChronologyRetrieval } from "./chronology-retrieval.js";
 import { CliUserError, WorkspaceNotFoundError } from "./cli-user-error.js";
@@ -92,12 +82,13 @@ import { selectionSnapshotsMatch } from "./knowledge-selection-match.js";
 import { type LifecycleOptions, runContext, saveLifecycleDecision } from "./lifecycle-decision.js";
 import { requestLocalAdjudicatedRevision } from "./local-adjudicated-revision.js";
 import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
-import {
-  canonicalProfileExtractionPortFor,
-  opportunityExtractionPortFor,
-} from "./local-extraction-ports.js";
+import { opportunityExtractionPortFor } from "./local-extraction-ports.js";
 import { fixtureAgents } from "./local-fixture-agents.js";
 import { contextForRun, ensureWorkspaceRecord, requireRun } from "./local-history-records.js";
+import {
+  deriveLocalCanonicalProfile,
+  estimateLocalCanonicalProfileDerivation,
+} from "./local-profile-derivation.js";
 import {
   createProviderAdapter,
   type ProviderClientFactories,
@@ -143,7 +134,6 @@ import {
 import { modelConfiguration } from "./run-model-selection.js";
 import { outputCoverageAssessments, outputEvents, outputSnapshot } from "./run-output.js";
 import { runSensitivityExclusions } from "./run-sensitivity-exclusions.js";
-import { excludedSensitivityTiersForWorkspace } from "./sensitive-knowledge-consent.js";
 import { resolveRunApplication, withWorkspaceApplications } from "./workspace-applications.js";
 import { configureWorkspaceAutopilot } from "./workspace-autopilot.js";
 import { workspaceFiles } from "./workspace-files.js";
@@ -2124,6 +2114,12 @@ export function createLocalApplicationDriver(
       : { localClaudeCategoryCaptureParent: options.localClaudeCategoryCaptureParent }),
   };
   const settingDeps = { readWorkspace, saveWorkspaceConfig };
+  const profileDerivationDeps = {
+    readWorkspace,
+    openStorage,
+    validateSelection: validateConfiguredKnowledgeSelection,
+    providerOptions: providerOpportunityOptions,
+  };
   /** The descriptor of a workspace after a change to its configuration. */
   const described = async (root: string, config: Promise<WorkspaceConfig>) =>
     workspaceDescriptor(resolve(root), await config);
@@ -2260,49 +2256,10 @@ export function createLocalApplicationDriver(
         await storage.close();
       }
     },
-    deriveCanonicalCandidateProfile: async (command) => {
-      const root = resolve(command.root);
-      const config = await readWorkspace(root);
-      if (command.allowProviderData !== true) {
-        throw new CliUserError(canonicalCandidateProfileDerivationApprovalErrorMessage);
-      }
-      const binding = config.candidateKnowledgeSelection;
-      const validatedSelection = await validateConfiguredKnowledgeSelection(binding);
-      if (binding === undefined || validatedSelection === undefined) {
-        throw new CliUserError(canonicalCandidateProfileDerivationErrorMessage);
-      }
-      // Read before any provider work: an invalid consent file stops the derivation here.
-      const excludedSensitivityTiers = await excludedSensitivityTiersForWorkspace(root);
-      const storage = await openStorage(root);
-      try {
-        await ensureWorkspaceRecord(storage, config.id);
-        const persistence = createCanonicalCandidateProfilePersistenceService(storage);
-        const derivation = createCanonicalCandidateProfileDerivationService({
-          persistence,
-          extractor: canonicalProfileExtractionPortFor(config, {
-            ...providerOpportunityOptions,
-            allowProviderData: true,
-          }),
-          extractionIdentity: canonicalProfileExtractionIdentity(
-            canonicalProfileExtractionModel(config.authorCompany, config.authorModel),
-          ),
-          now: timestamp,
-        });
-        return await derivation.deriveCanonicalCandidateProfile({
-          workspaceId: config.id,
-          profileId: command.profileId,
-          selections: binding.entries.map(({ storeRoot, knowledgeBaseId }) => ({
-            storeRoot,
-            knowledgeBaseId,
-          })),
-          allowProviderData: true,
-          excludedSensitivityTiers,
-          ...canonicalProfileDerivationOptions(binding, command),
-        });
-      } finally {
-        await storage.close();
-      }
-    },
+    deriveCanonicalCandidateProfile: async (command) =>
+      deriveLocalCanonicalProfile(command, profileDerivationDeps),
+    estimateCanonicalCandidateProfileDerivation: async (command) =>
+      estimateLocalCanonicalProfileDerivation(command, profileDerivationDeps),
     getCanonicalCandidateProfile: async (command) => {
       const root = resolve(command.root);
       const config = await readWorkspace(root);

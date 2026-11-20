@@ -28,15 +28,15 @@ import {
 import type { ModelCompany } from "./bridge.js";
 import {
   createFixtureReviewState,
-  type DesktopReviewState,
   type IndependentReviewView,
   type ReviewAction,
+  type ReviewScreenState,
   reduceReviewState,
   reviewFindingSummary,
   roundLimitRecoveryRequired,
   unresolvedBlockingFindings,
 } from "./model.js";
-import { DesktopBridgeError, workspaceCreateInput } from "./native.js";
+import { HostBridgeError } from "./native.js";
 import {
   bulkFindingDecisionTargets,
   canExportReview,
@@ -408,7 +408,7 @@ describe("desktop trust-centered review", () => {
 
   it("shows persisted rubric readiness blockers and keeps approval disabled after accepted warnings", () => {
     const fixture = createFixtureReviewState();
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fixture,
       state: "awaiting-approval",
       findings: fixture.findings
@@ -447,7 +447,7 @@ describe("desktop trust-centered review", () => {
 
   it("offers no final-check override while blocking findings remain", () => {
     const fixture = createFixtureReviewState();
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fixture,
       state: "awaiting-approval",
       approvalReadiness: {
@@ -464,7 +464,7 @@ describe("desktop trust-centered review", () => {
 
   it("shows an approval made past final CV checks as overridden", () => {
     const fixture = createFixtureReviewState();
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fixture,
       state: "approved",
       approval: "approved",
@@ -489,7 +489,7 @@ describe("desktop trust-centered review", () => {
 
   it("ignores readiness projected for an older artifact version", () => {
     const fixture = createFixtureReviewState();
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fixture,
       state: "awaiting-approval",
       findings: fixture.findings
@@ -755,7 +755,7 @@ describe("desktop trust-centered review", () => {
 
   it("serializes bulk finding decisions through the existing durable action", async () => {
     const initial = createFixtureReviewState();
-    const receivedStates: DesktopReviewState[] = [];
+    const receivedStates: ReviewScreenState[] = [];
     const receivedActions: ReviewAction[] = [];
 
     const result = await dispatchFindingDecisions(
@@ -1854,7 +1854,7 @@ describe("desktop workspace setup", () => {
 
     expect(
       workspaceSetupFailureMessage(
-        new DesktopBridgeError("invalid-input", "The desktop command input is invalid."),
+        new HostBridgeError("invalid-input", "The desktop command input is invalid."),
         local,
       ),
     ).toBe(
@@ -1862,13 +1862,13 @@ describe("desktop workspace setup", () => {
     );
     expect(
       workspaceSetupFailureMessage(
-        new DesktopBridgeError("operation-failed", "The desktop operation could not be completed."),
+        new HostBridgeError("operation-failed", "The desktop operation could not be completed."),
         local,
       ),
     ).toBe("The desktop operation could not be completed.");
     expect(
       workspaceSetupFailureMessage(
-        new DesktopBridgeError("invalid-input", "The desktop command input is invalid."),
+        new HostBridgeError("invalid-input", "The desktop command input is invalid."),
         named,
       ),
     ).toBe("The desktop command input is invalid.");
@@ -1980,43 +1980,6 @@ describe("desktop workspace setup", () => {
     expect(workspaceSetupBlocker({ ...named, maxRounds: 0 }, { status: "idle" })).toBe(
       "Choose a maximum round count between 1 and 20.",
     );
-  });
-
-  it("sends only what a person actually chose", () => {
-    expect(workspaceCreateInput("  spaced-workspace  ", workspaceModelSelection(named))).toEqual({
-      name: "spaced-workspace",
-      mode: "real",
-      authorCompany: "anthropic",
-      authorModel: "claude-sonnet-4-5",
-      criticCompany: "openai",
-      criticModel: "gpt-5",
-      maxRounds: 3,
-    });
-    expect(
-      workspaceCreateInput(
-        "local-workspace",
-        workspaceModelSelection({
-          ...named,
-          authorCompany: "local",
-          authorModel: " qwen3-coder-30b ",
-          localEndpoint: " http://127.0.0.1:11434/v1 ",
-          independenceOverrideRationale: "  ",
-        }),
-      ),
-    ).toEqual({
-      name: "local-workspace",
-      mode: "real",
-      authorCompany: "local",
-      authorModel: "qwen3-coder-30b",
-      criticCompany: "openai",
-      criticModel: "gpt-5",
-      localEndpoint: "http://127.0.0.1:11434/v1",
-      maxRounds: 3,
-    });
-    expect(workspaceCreateInput("draft-loop-workspace")).toEqual({
-      name: "draft-loop-workspace",
-      mode: "real",
-    });
   });
 
   it("keeps edit mode focused on model settings", () => {

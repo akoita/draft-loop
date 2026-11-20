@@ -1,6 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { useEffect, useRef, useState } from "react";
-import type { DesktopKnowledgeCapabilities } from "./native.js";
+import type { HostKnowledgeCapabilities } from "./native.js";
 import {
   type CandidateEvidenceKind,
   candidateEvidenceKinds,
@@ -23,7 +23,7 @@ export type SourceEvidenceKindsState =
     };
 
 export type SourceEvidenceKindCapabilities = Pick<
-  DesktopKnowledgeCapabilities,
+  HostKnowledgeCapabilities,
   "listSourceEvidenceKinds" | "setSourceEvidenceKind"
 >;
 

@@ -5,6 +5,10 @@ Simple guided workflow stage (rollup #1092). They are implementation evidence
 from fixture walks, not validated outcome evidence: no real person, real
 material or provider took part.
 
+These walks used the retired v0.8 desktop. Its start page, recent workspaces
+and Close workspace no longer exist; the web screen opens on the workspace the
+server set up.
+
 ## Verdict
 
 **The #1092 exit criterion is met in fixture mode.** In the

@@ -1,6 +1,5 @@
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { CredentialRow } from "./provider-authentication.js";
 import { ApprovalOverrideEditor } from "./review-footer.js";
 import { submitOnEnter } from "./submit-on-enter.js";
 
@@ -87,25 +86,5 @@ describe("Enter in single-line action fields", () => {
     pressOn(ApprovalOverrideEditor({ override: { ...override, reason: "  ", onSubmit } }), key());
     pressOn(ApprovalOverrideEditor({ override: { ...override, disabled: true, onSubmit } }), key());
     expect(onSubmit).not.toHaveBeenCalled();
-  });
-
-  it("saves a typed provider key on Enter and ignores Enter in an empty field", () => {
-    const onSave = vi.fn();
-    const row = (value: string) =>
-      CredentialRow({
-        title: "Synthetic provider key",
-        placeholder: "sk-…",
-        status: { provider: "anthropic", configured: false, source: "none", protection: "none" },
-        value,
-        revealed: false,
-        onReveal: () => undefined,
-        onChange: () => undefined,
-        onSave,
-        onRemove: () => undefined,
-      });
-    pressOn(row(""), key());
-    expect(onSave).not.toHaveBeenCalled();
-    pressOn(row("synthetic-key-value"), key());
-    expect(onSave).toHaveBeenCalledOnce();
   });
 });

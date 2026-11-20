@@ -6,7 +6,6 @@ import {
   careerEvidenceReadinessText,
   careerEvidenceReady,
   loadCareerEvidenceStatus,
-  semanticStatusLine,
 } from "./career-evidence.js";
 
 const store = {
@@ -57,18 +56,8 @@ const selected: KnowledgeCurrentResult = { store, selectedKnowledgeBaseIds: ["ba
 const name = (value: string) => value;
 
 describe("career evidence status", () => {
-  it("reports the selected base, its sources, and no semantic line in lexical mode", async () => {
-    const status = await loadCareerEvidenceStatus(
-      capabilities(selected, {
-        getRetrievalMode: async () => ({
-          workspaceId: "workspace-1",
-          mode: "lexical",
-          modelTier: "311m",
-        }),
-      }),
-      "workspace-1",
-      name,
-    );
+  it("reports the selected base and its sources", async () => {
+    const status = await loadCareerEvidenceStatus(capabilities(selected), "workspace-1", name);
     expect(status).toEqual({
       kind: "selected",
       storeId: "store-1",
@@ -76,38 +65,7 @@ describe("career evidence status", () => {
       displayName: "Engineering",
       sourceCount: 3,
       blockedCount: 0,
-      semanticLine: null,
     });
-  });
-
-  it("reports the semantic model state only when the mode uses it", async () => {
-    const getEmbeddingModelStatus = vi.fn(async () => ({
-      tier: "311m" as const,
-      state: "absent" as const,
-      modelId: "model",
-      revision: "r",
-      license: "gemma",
-      totalSizeBytes: 1,
-      sourceUrl: "https://huggingface.co/model",
-    }));
-    const status = await loadCareerEvidenceStatus(
-      capabilities(selected, {
-        getRetrievalMode: async () => ({
-          workspaceId: "workspace-1",
-          mode: "hybrid",
-          modelTier: "311m",
-        }),
-        getEmbeddingModelStatus,
-      }),
-      "workspace-1",
-      name,
-    );
-    expect(status).toMatchObject({
-      kind: "selected",
-      semanticLine: "Semantic search: model not installed",
-    });
-    expect(getEmbeddingModelStatus).toHaveBeenCalledWith("311m");
-    expect(semanticStatusLine("ready")).toBe("Semantic search: ready");
   });
 
   it("reports an empty selected base as not ready without counting legacy evidence", async () => {
@@ -257,52 +215,6 @@ describe("adding career evidence", () => {
       status: "added",
       message: "Added to Career evidence. 1 document, 1 ready.",
     });
-  });
-
-  const folderResult = (overrides: Record<string, unknown> = {}) => ({
-    ...target,
-    status: "complete" as const,
-    scannedEntryCount: 3,
-    discoveredFileCount: 2,
-    skippedEntryCount: 1,
-    sourceCount: 2,
-    sources: [],
-    sourcesTruncated: false,
-    ...overrides,
-  });
-  const addFolder = (result: ReturnType<typeof folderResult>, afterImport?: () => Promise<void>) =>
-    addCareerEvidence({
-      capabilities: {
-        importCandidateKnowledgeDirectory: async () => result,
-        getCandidateKnowledgeReadiness: async () => readiness({ sourceCount: 5, readyCount: 5 }),
-      },
-      workspaceId: "workspace-1",
-      target,
-      displayName: "Engineering",
-      source: { kind: "directory" },
-      isCurrent: () => true,
-      onChanged: async () => true,
-      ...(afterImport === undefined ? {} : { afterImport }),
-    });
-
-  it("imports a folder into the selected base and says how many sources it added", async () => {
-    await expect(addFolder(folderResult())).resolves.toEqual({
-      status: "added",
-      message: "Added 2 documents from the folder to Engineering. 5 documents, 5 ready.",
-    });
-    await expect(addFolder(folderResult({ status: "partial", sourceCount: 1 }))).resolves.toEqual({
-      status: "added",
-      message:
-        "Added 1 document from the folder to Engineering. Some files could not be imported. 5 documents, 5 ready.",
-    });
-  });
-
-  it("fails on a folder with nothing to add, before a first add selects the base", async () => {
-    const afterImport = vi.fn(async () => undefined);
-    await expect(addFolder(folderResult({ sourceCount: 0 }), afterImport)).rejects.toThrow(
-      "The folder has no supported files to add.",
-    );
-    expect(afterImport).not.toHaveBeenCalled();
   });
 
   it("imports a URL into the selected base only through the knowledge port", async () => {
