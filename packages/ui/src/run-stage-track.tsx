@@ -34,9 +34,15 @@ export function RunStageTrack({
     | "criticFallback"
     | "runId"
     | "applicationRuns"
+    | "findings"
+    | "providerTransmissionPreflight"
   >;
 }): JSX.Element {
-  const track = runStageTrack({ ...state, models: recordedRunModels(state) });
+  const track = runStageTrack({
+    ...state,
+    models: recordedRunModels(state),
+    maxRounds: state.providerTransmissionPreflight.budget.maxRounds,
+  });
   const now = nowSentence(track);
   const folded = track.rounds.slice(0, track.foldedRounds);
   const open = track.rounds.slice(track.foldedRounds);
@@ -63,13 +69,12 @@ export function RunStageTrack({
                   <span className="stage-round-label">
                     {folded.length === 1 ? t`Round 1` : t`Rounds 1–${folded.length}`}
                   </span>
+                  {/* One author–critic pair stands for every folded round, so the chip keeps
+                      its width however many rounds it holds. */}
                   <span className="stage-dots" aria-hidden="true">
-                    {folded.map((round) => (
-                      <span key={round.number}>
-                        <span className="stage-dot stage-dot-author" />
-                        <span className="stage-dot stage-dot-critic" />
-                      </span>
-                    ))}
+                    <span className="stage-dot stage-dot-author" />
+                    <span className="stage-dot stage-dot-critic" />
+                    <span className="stage-dots-more">…</span>
                   </span>
                   <span className="stage-fold-hint">{t`Show`}</span>
                 </summary>
@@ -105,6 +110,7 @@ export function RunStageTrack({
               </span>
             </span>
           </li>
+          {track.revisionOnRequest ? <RevisionOnRequest /> : null}
         </ol>
       </div>
       <details className="stage-track-narrow">
@@ -114,7 +120,13 @@ export function RunStageTrack({
             {now}
           </span>
           <span className="stage-bar" aria-hidden="true">
-            {track.rounds.map((round) => (
+            {/* Folded rounds share one segment, so the open rounds keep their width. */}
+            {folded.length === 0 ? null : (
+              <span className="stage-bar-round stage-bar-folded">
+                <span className="stage-bar-seg stage-bar-earlier" />
+              </span>
+            )}
+            {open.map((round) => (
               <span className="stage-bar-round" key={round.number}>
                 {round.steps.map((step) => (
                   <span
@@ -132,25 +144,25 @@ export function RunStageTrack({
           <CastMember actor="critic" model={track.cast.critic} />
         </p>
         <ol className="stage-timeline">
-          {track.rounds.map((round) => (
-            <li key={round.number}>
-              <span className="stage-round-label">
-                {t`Round ${round.number}`}
-                {round.criticChanged ? ` · ${t`critic changed`}` : ""}
-              </span>
-              <ul>
-                {round.steps.map((step) => (
-                  <li key={step.kind} className={`stage-step-${step.status}`}>
-                    <ActorBadge actor={step.actor} />
-                    <span className="stage-step-label">{stepLabel(step.kind)}</span>
-                    {step.model === null ? null : (
-                      <span className="stage-step-model">{shortModelName(step.model)}</span>
-                    )}
-                    <StatusText status={step.status} />
-                  </li>
-                ))}
-              </ul>
+          {folded.length === 0 ? null : (
+            <li className="stage-timeline-folded">
+              <details>
+                <summary>
+                  <span className="stage-round-label">
+                    {folded.length === 1 ? t`Round 1` : t`Rounds 1–${folded.length}`}
+                  </span>
+                  <StatusText status="done" />
+                </summary>
+                <ol className="stage-timeline">
+                  {folded.map((round) => (
+                    <TimelineRound key={round.number} round={round} />
+                  ))}
+                </ol>
+              </details>
             </li>
+          )}
+          {open.map((round) => (
+            <TimelineRound key={round.number} round={round} />
           ))}
           <li>
             <span className="stage-round-label">{t`Your gate`}</span>
@@ -160,11 +172,60 @@ export function RunStageTrack({
                 <span className="stage-step-label">{t`Approve`}</span>
                 <StatusText status={track.gate} />
               </li>
+              {track.revisionOnRequest ? (
+                <li className="stage-step-optional">
+                  <ActorBadge actor="author" />
+                  <span className="stage-step-label">{t`Revise`}</span>
+                  <span className="stage-step-model">{t`if you request it`}</span>
+                </li>
+              ) : null}
             </ul>
           </li>
         </ol>
       </details>
     </div>
+  );
+}
+
+/**
+ * The author's possible next step, drawn faded after the gate: open findings reach the author only
+ * if the person requests a revision, which starts a new round.
+ */
+function RevisionOnRequest(): JSX.Element {
+  return (
+    <li className="stage-round stage-round-optional">
+      <span className="stage-round-label">{t`Next round`}</span>
+      <span className="stage-steps">
+        <span className="stage-step stage-step-author stage-step-optional">
+          <ActorBadge actor="author" />
+          <span className="stage-step-label">{t`Revise`}</span>
+          <span className="stage-step-model">{t`if you request it`}</span>
+        </span>
+      </span>
+    </li>
+  );
+}
+
+function TimelineRound({ round }: { readonly round: StageRound }): JSX.Element {
+  return (
+    <li>
+      <span className="stage-round-label">
+        {t`Round ${round.number}`}
+        {round.criticChanged ? ` · ${t`critic changed`}` : ""}
+      </span>
+      <ul>
+        {round.steps.map((step) => (
+          <li key={step.kind} className={`stage-step-${step.status}`}>
+            <ActorBadge actor={step.actor} />
+            <span className="stage-step-label">{stepLabel(step.kind)}</span>
+            {step.model === null ? null : (
+              <span className="stage-step-model">{shortModelName(step.model)}</span>
+            )}
+            <StatusText status={step.status} />
+          </li>
+        ))}
+      </ul>
+    </li>
   );
 }
 

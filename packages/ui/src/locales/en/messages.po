@@ -4456,6 +4456,10 @@ msgstr "I reviewed these destinations, data categories, retention preference, an
 msgid "If you read one thing"
 msgstr "If you read one thing"
 
+#: packages/ui/src/run-stage-track.tsx
+msgid "if you request it"
+msgstr "if you request it"
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Illustrative public API token-cost scenario"
 msgstr "Illustrative public API token-cost scenario"
@@ -5529,6 +5533,10 @@ msgstr "New store folder name"
 #: packages/ui/src/run-stage-track.tsx
 msgid "next"
 msgstr "next"
+
+#: packages/ui/src/run-stage-track.tsx
+msgid "Next round"
+msgstr "Next round"
 
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Next-run model profiles"

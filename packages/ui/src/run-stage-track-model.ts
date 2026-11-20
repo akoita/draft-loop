@@ -41,6 +41,11 @@ export interface StageTrack {
   /** Leading rounds folded into one chip; the last two rounds always stay open. */
   readonly foldedRounds: number;
   readonly gate: StageStatus;
+  /**
+   * True at the person's gate while findings stay open and the round limit allows another round:
+   * the author can still revise, but only if the person requests it.
+   */
+  readonly revisionOnRequest: boolean;
   readonly now: StageNow;
   /** The current round, at least 1. */
   readonly round: number;
@@ -56,6 +61,10 @@ type StageTrackInput = Pick<
   readonly criticFallback?: CriticFallbackView | null;
   /** The models the run recorded, or null when it recorded none. */
   readonly models: { readonly author: string; readonly critic: string } | null;
+  /** The run's findings; only their decisions are read. */
+  readonly findings?: readonly { readonly decision: string }[];
+  /** The run's round limit, or null when none is known. */
+  readonly maxRounds?: number | null;
 };
 
 /**
@@ -127,6 +136,12 @@ export function runStageTrack(input: StageTrackInput): StageTrack {
     rounds,
     foldedRounds: Math.max(0, rounds.length - openRoundCount),
     gate: at < 2 ? "waiting" : at === 2 ? "active" : "done",
+    revisionOnRequest:
+      at === 2 &&
+      (input.maxRounds === null || input.maxRounds === undefined || round < input.maxRounds) &&
+      (input.findings ?? []).some(
+        ({ decision }) => decision === "pending" || decision === "accepted",
+      ),
     now: stageNow(input, at, round),
     round,
   };

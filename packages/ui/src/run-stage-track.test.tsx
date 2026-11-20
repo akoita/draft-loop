@@ -119,3 +119,77 @@ describe("RunStageTrack", () => {
     expect(html).toContain("Author is revising the draft · round 2");
   });
 });
+
+describe("RunStageTrack with many rounds", () => {
+  const many: ReviewScreenState = {
+    ...fixture,
+    state: "awaiting-approval",
+    round: 18,
+    execution: idle,
+  };
+
+  it("keeps the folded chip and the phone bar the same size however many rounds there are", () => {
+    const html = renderToStaticMarkup(<RunStageTrack state={many} />);
+    expect(html).toContain("Rounds 1–16");
+    expect(html.match(/stage-dot stage-dot-author/g)).toHaveLength(1);
+    expect(html.match(/stage-bar-earlier/g)).toHaveLength(1);
+    expect(html.match(/class="stage-bar-round"/g)).toHaveLength(2);
+  });
+});
+
+describe("RunStageTrack phone list with many rounds", () => {
+  it("folds the older rounds of the phone list too", () => {
+    const html = renderToStaticMarkup(
+      <RunStageTrack state={{ ...fixture, state: "reviewing", round: 12, execution: idle }} />,
+    );
+    expect(html).toContain('class="stage-timeline-folded"');
+    expect(html.match(/Rounds 1–10/g)).toHaveLength(2);
+  });
+});
+
+describe("revision on request", () => {
+  const open = [{ decision: "pending" }, { decision: "rejected" }];
+  const atGate = (
+    overrides: Parameters<typeof runStageTrack>[0] extends infer I ? Partial<I> : never,
+  ) =>
+    runStageTrack({
+      ...fixture,
+      execution: idle,
+      state: "awaiting-approval",
+      round: 2,
+      models,
+      findings: open,
+      maxRounds: 3,
+      ...overrides,
+    });
+
+  it("shows the author's revision after the gate while findings stay open", () => {
+    expect(atGate({}).revisionOnRequest).toBe(true);
+  });
+
+  it("hides it at the round limit, with no open finding, or before the gate", () => {
+    expect(atGate({ maxRounds: 2 }).revisionOnRequest).toBe(false);
+    expect(atGate({ findings: [{ decision: "rejected" }] }).revisionOnRequest).toBe(false);
+    expect(atGate({ state: "reviewing" }).revisionOnRequest).toBe(false);
+  });
+
+  it("draws it faded after the gate", () => {
+    const html = renderToStaticMarkup(
+      <RunStageTrack
+        state={{
+          ...fixture,
+          state: "awaiting-approval",
+          round: 1,
+          execution: idle,
+          providerTransmissionPreflight: {
+            ...fixture.providerTransmissionPreflight,
+            budget: { ...fixture.providerTransmissionPreflight.budget, maxRounds: 3 },
+          },
+          findings: fixture.findings.map((finding) => ({ ...finding, decision: "pending" })),
+        }}
+      />,
+    );
+    expect(html).toContain("stage-round stage-round-optional");
+    expect(html).toContain("if you request it");
+  });
+});
