@@ -52,8 +52,8 @@ beforeEach(async () => {
   settings.clear();
   versions = [record(1, "reviewed", "2026-11-02T00:00:00.000Z"), record(2, "draft")];
   const factUsage = createFactUsageService({
-    read: async (_root, key) => settings.get(key),
-    write: async (_root, key, value) => {
+    read: async (_root: string, key: string) => settings.get(key),
+    write: async (_root: string, key: string, value: string) => {
       settings.set(key, value);
     },
   } as never);
