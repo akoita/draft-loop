@@ -11,7 +11,7 @@ import { Chip } from "./home.js";
 import { evidencePresentation, type HomeTone } from "./home-model.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
 import type { CandidateProfileSelection } from "./model.js";
-import type { DesktopProfileCapabilities } from "./native.js";
+import type { HostProfileCapabilities } from "./native.js";
 import {
   defaultReviewedProfile,
   loadReviewedProfileChoices,
@@ -245,7 +245,7 @@ export interface ApplicationSetupSummaryProps
   readonly evidenceCapabilities: CareerEvidenceCapabilities;
   /** Bumped when the knowledge selection or contents change, so the summary reads again. */
   readonly evidenceRevision: number;
-  readonly profileCapabilities: DesktopProfileCapabilities;
+  readonly profileCapabilities: HostProfileCapabilities;
 }
 
 /**

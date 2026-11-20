@@ -5,9 +5,9 @@ import type {
   KnowledgeUrlImportResult,
 } from "./bridge.js";
 import { countedNouns } from "./counted-nouns.js";
-import type { DesktopKnowledgeCapabilities } from "./native.js";
+import type { HostKnowledgeCapabilities } from "./native.js";
 
-export type CareerEvidenceCapabilities = DesktopKnowledgeCapabilities;
+export type CareerEvidenceCapabilities = HostKnowledgeCapabilities;
 
 /** What the Career evidence setup card shows about the knowledge base the run will use. */
 export type CareerEvidenceStatus =

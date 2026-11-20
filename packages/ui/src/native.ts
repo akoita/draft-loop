@@ -68,9 +68,9 @@ import {
 } from "./fact-usage-capabilities.js";
 import {
   createFixtureReviewPort,
-  type DesktopReviewPort,
-  type DesktopReviewState,
   type ReviewAction,
+  type ReviewScreenPort,
+  type ReviewScreenState,
 } from "./model.js";
 import { createNativeStartupUnavailablePort, isElectronRendererRuntime } from "./native-startup.js";
 import type { NewApplicationJob } from "./new-application-model.js";
@@ -112,7 +112,7 @@ export interface WorkspaceSetupCapabilities {
   readonly configureModels?: (
     workspaceId: string,
     selection: Omit<WorkspaceConfigureModelsInput, "workspaceId">,
-  ) => Promise<DesktopReviewState>;
+  ) => Promise<ReviewScreenState>;
   /**
    * Reads the policy text to edit; a workspace without a policy gets the starting template.
    * A checksum reads that exact version from the workspace's history instead.
@@ -122,10 +122,7 @@ export interface WorkspaceSetupCapabilities {
     checksum?: string,
   ) => Promise<WritingPolicyReadResult>;
   /** Saves policy text as a new activated version and returns the refreshed review state. */
-  readonly saveWritingPolicy?: (
-    workspaceId: string,
-    content: string,
-  ) => Promise<DesktopReviewState>;
+  readonly saveWritingPolicy?: (workspaceId: string, content: string) => Promise<ReviewScreenState>;
   readonly listModels?: (provider: ModelDiscoveryProvider) => Promise<ModelsListResult>;
   readonly previewIndependence?: (
     author: ModelCandidate,
@@ -149,7 +146,7 @@ export interface WorkspaceSetupCapabilities {
   ) => Promise<RunEvidenceModeView | null>;
 }
 
-export interface DesktopOpportunityCapabilities {
+export interface HostOpportunityCapabilities {
   readonly createOpportunity?: (
     input: Omit<OpportunityCreateInput, "workspaceId">,
   ) => Promise<OpportunityRecordResult>;
@@ -172,7 +169,7 @@ export interface DesktopOpportunityCapabilities {
   ) => Promise<OpportunityRecordResult>;
 }
 
-export interface DesktopProfileCapabilities {
+export interface HostProfileCapabilities {
   readonly deriveCanonicalCandidateProfile?: (
     input: Omit<CanonicalCandidateProfileDeriveInput, "workspaceId">,
   ) => Promise<CanonicalCandidateProfileRecordResult>;
@@ -216,7 +213,7 @@ export interface DesktopProfileCapabilities {
   readonly factSuggestions?: FactSuggestionCapabilities;
 }
 
-export interface DesktopKnowledgeCapabilities {
+export interface HostKnowledgeCapabilities {
   readonly createCandidateKnowledgeStore?: (
     input: Omit<KnowledgeStoreCreateInput, "selection">,
   ) => Promise<KnowledgeStoreResult>;
@@ -275,20 +272,20 @@ export interface DesktopKnowledgeCapabilities {
   ) => Promise<WorkspaceEvidenceMigrationResult>;
 }
 
-export type DesktopSetupPort = DesktopReviewPort &
+export type HostSetupPort = ReviewScreenPort &
   WorkspaceSetupCapabilities &
-  DesktopOpportunityCapabilities &
-  DesktopProfileCapabilities &
-  DesktopKnowledgeCapabilities & {
+  HostOpportunityCapabilities &
+  HostProfileCapabilities &
+  HostKnowledgeCapabilities & {
     /**
      * Shrinks the workspace's run history behind a verified backup the host keeps beside it.
      * Resolves with the sizes and the backup's file name; refuses while a run is working.
      */
     readonly compactHistory?: (workspaceId: string) => Promise<WorkspaceCompactHistoryResult>;
-  } & DesktopApplicationCapabilities;
+  } & HostApplicationCapabilities;
 
 /** Job applications inside the open workspace (ADR 0010), present when the host offers them. */
-export interface DesktopApplicationCapabilities {
+export interface HostApplicationCapabilities {
   readonly listApplications?: (workspaceId: string) => Promise<readonly ApplicationSummaryView[]>;
   /**
    * False when the host cannot fetch a job page for the person: New application then takes pasted
@@ -355,12 +352,12 @@ export interface DesktopApplicationCapabilities {
    * with its review; `null` returns to the latest run. Scoping another application, opening a
    * workspace or starting a review returns to the latest run too.
    */
-  readonly openRun?: (runId: string | null) => Promise<DesktopReviewState>;
+  readonly openRun?: (runId: string | null) => Promise<ReviewScreenState>;
   /**
    * Reads one of the scoped application's runs for the run comparison. Unlike `openRun` it
    * leaves the review on the run it shows: later loads and changes still target that run.
    */
-  readonly loadRunForComparison?: (runId: string) => Promise<DesktopReviewState>;
+  readonly loadRunForComparison?: (runId: string) => Promise<ReviewScreenState>;
   /**
    * Uses one of the scoped application's runs for approval and export, with the person's
    * optional reason, then opens it; resolves with its review. Nothing about any run changes.
@@ -369,7 +366,7 @@ export interface DesktopApplicationCapabilities {
     workspaceId: string,
     runId: string,
     reason: string | null,
-  ) => Promise<DesktopReviewState>;
+  ) => Promise<ReviewScreenState>;
   /**
    * Saves Markdown the renderer prepared, such as a run comparison, where the person picks in a
    * save dialog. Resolves with whether it was saved and the file's name.
@@ -403,22 +400,22 @@ export function createBrowserCapabilityPort(): CapabilityPort {
   return createCapabilityPort(createBrowserNativeBridge());
 }
 
-export class DesktopBridgeError extends Error {
+export class HostBridgeError extends Error {
   public readonly code: string;
 
   public constructor(code: string, message: string) {
     super(message);
-    this.name = "DesktopBridgeError";
+    this.name = "HostBridgeError";
     this.code = code;
   }
 }
 
 function unwrap<Value>(result: BridgeResult<Value>): Value {
   if (result.ok) return result.value;
-  throw new DesktopBridgeError(result.error.code, result.error.message);
+  throw new HostBridgeError(result.error.code, result.error.message);
 }
 
-export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopSetupPort {
+export function createBridgeReviewPort(capabilityPort: CapabilityPort): HostSetupPort {
   // The application the review is scoped to; every load and run start carries it.
   let applicationId: string | undefined;
   // An earlier run of that application opened from the run list; undefined shows the latest.
@@ -427,7 +424,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
     applicationId = selected;
     runId = undefined;
   };
-  const load = async (): Promise<DesktopReviewState> => {
+  const load = async (): Promise<ReviewScreenState> => {
     const result = await capabilityPort.execute({
       type: "review.load",
       input:
@@ -437,7 +434,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
     });
     return unwrap(result);
   };
-  const refresh = async (): Promise<DesktopReviewState> => load();
+  const refresh = async (): Promise<ReviewScreenState> => load();
   const applicationFolders = createApplicationFolderCapabilities(capabilityPort, unwrap);
   const factUsage = createFactUsageCapabilities(capabilityPort, unwrap);
   const factSuggestions = createFactSuggestionCapabilities(capabilityPort, unwrap);
@@ -686,7 +683,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           },
         }
       : {}),
-    dispatch: async (state: DesktopReviewState, action: ReviewAction) => {
+    dispatch: async (state: ReviewScreenState, action: ReviewAction) => {
       const result = await capabilityPort.execute({
         type: "review.dispatch",
         input: {
@@ -1212,7 +1209,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
   };
 }
 
-export interface DesktopReviewPortStartupOptions {
+export interface ReviewScreenPortStartupOptions {
   /** Override the preload bridge for tests and isolated renderer startup. */
   readonly nativeBridge?: unknown;
   /** Override runtime detection without granting additional bridge capability. */
@@ -1220,9 +1217,9 @@ export interface DesktopReviewPortStartupOptions {
 }
 
 /** Uses a host-backed review port when available; only browser mode gets the fixture. */
-export function createDesktopReviewPort(
-  options: DesktopReviewPortStartupOptions = {},
-): DesktopSetupPort {
+export function createReviewScreenPort(
+  options: ReviewScreenPortStartupOptions = {},
+): HostSetupPort {
   const nativeBridge =
     "nativeBridge" in options ? options.nativeBridge : getNativeBridgeCandidate();
   const electronRuntime = options.electronRuntime ?? isElectronRendererRuntime();

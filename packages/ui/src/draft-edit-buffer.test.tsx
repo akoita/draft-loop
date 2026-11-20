@@ -8,7 +8,7 @@ import {
   hasUnsavedDraftEdits,
   nextDraftEditToSave,
 } from "./draft-edit-buffer.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
 const saved = new Map([
@@ -113,7 +113,7 @@ describe("the draft's edit lock (#1925)", () => {
   });
 
   it("locks the draft while a round runs", () => {
-    const running: DesktopReviewState = { ...fixture, state: "reviewing" };
+    const running: ReviewScreenState = { ...fixture, state: "reviewing" };
     const html = renderToStaticMarkup(
       <ReviewWorkspace state={running} onAction={() => undefined} />,
     );
@@ -122,7 +122,7 @@ describe("the draft's edit lock (#1925)", () => {
   });
 
   it("locks the draft while DraftLoop retries a failed step, and says the review is still going", () => {
-    const retrying: DesktopReviewState = {
+    const retrying: ReviewScreenState = {
       ...fixture,
       state: "provider-error",
       reviewComplete: false,
@@ -155,7 +155,7 @@ describe("the draft's edit lock (#1925)", () => {
   });
 
   it("locks the draft once the run is approved", () => {
-    const approved: DesktopReviewState = { ...fixture, state: "approved", approval: "approved" };
+    const approved: ReviewScreenState = { ...fixture, state: "approved", approval: "approved" };
     const html = renderToStaticMarkup(
       <ReviewWorkspace state={approved} onAction={() => undefined} />,
     );

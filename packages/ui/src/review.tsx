@@ -84,7 +84,6 @@ import {
   pendingConfirmedGapIds,
 } from "./known-gaps.js";
 import {
-  type DesktopReviewState,
   type ExportFormat,
   exportFormatLabels,
   type FindingDecision,
@@ -94,6 +93,7 @@ import {
   type ReviewAction,
   type ReviewArtifact,
   type ReviewFinding,
+  type ReviewScreenState,
   reviewFindingSummary,
   roundLimitRecoveryRequired,
 } from "./model.js";
@@ -201,7 +201,7 @@ import { ThemeToggle } from "./theme.js";
 import { usageLimitText } from "./usage-limit.js";
 
 interface ReviewWorkspaceProps {
-  readonly state: DesktopReviewState;
+  readonly state: ReviewScreenState;
   readonly onAction: (action: ReviewAction) => void;
   /** Opens one of the application's runs from the run list; `null` returns to the latest run. */
   readonly onOpenRun?: (runId: string | null) => void;
@@ -327,7 +327,7 @@ export function exportReviewAction(format: ExportFormat, template: ExportTemplat
 }
 
 export function canExportReview(
-  state: Pick<DesktopReviewState, "state" | "reviewComplete">,
+  state: Pick<ReviewScreenState, "state" | "reviewComplete">,
   pendingReviewAction: PendingReviewAction | null,
 ): boolean {
   // An exported run can be exported again, for example after its file was moved or deleted.
@@ -516,14 +516,14 @@ function findingDomId(prefix: string, findingId: string): string {
   return `${prefix}-${findingId.replace(/[^a-zA-Z0-9_-]/gu, "-")}`;
 }
 
-function stateLabel(value: DesktopReviewState["state"]): string {
+function stateLabel(value: ReviewScreenState["state"]): string {
   return value.replaceAll("-", " ");
 }
 
 const loopSteps = () => [t`Draft`, t`Critique`, t`Revise`, t`Approve`] as const;
 
 /** Where the run currently sits on the author–critic loop, for the rail readout. */
-export function loopStageIndex(state: DesktopReviewState): number {
+export function loopStageIndex(state: ReviewScreenState): number {
   switch (state.state) {
     case "collecting":
       return -1;
@@ -847,7 +847,7 @@ export function useModalFocusTrap(
 const useSheetLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 function claimSectionTitle(
-  artifact: DesktopReviewState["artifact"],
+  artifact: ReviewScreenState["artifact"],
   claimId: string,
 ): string | null {
   for (const section of artifact.sections) {
@@ -856,7 +856,7 @@ function claimSectionTitle(
   return null;
 }
 
-function claimBlockId(artifact: DesktopReviewState["artifact"], claimId: string): string | null {
+function claimBlockId(artifact: ReviewScreenState["artifact"], claimId: string): string | null {
   for (const section of artifact.sections) {
     for (const block of section.blocks) {
       if (block.claimIds.includes(claimId)) return block.id;
@@ -867,8 +867,8 @@ function claimBlockId(artifact: DesktopReviewState["artifact"], claimId: string)
 
 /** A draft line is "sourced" only when every claim it asserts links to candidate material. */
 function blockSourceState(
-  block: DesktopReviewState["artifact"]["sections"][number]["blocks"][number],
-  claimById: ReadonlyMap<string, DesktopReviewState["artifact"]["claims"][number]>,
+  block: ReviewScreenState["artifact"]["sections"][number]["blocks"][number],
+  claimById: ReadonlyMap<string, ReviewScreenState["artifact"]["claims"][number]>,
 ): "none" | "sourced" | "unsourced" {
   if (block.claimIds.length === 0) return "none";
   return block.claimIds
@@ -962,7 +962,7 @@ function sameMarginLayout(left: MarginNoteLayout | null, right: MarginNoteLayout
   return true;
 }
 
-function claimSourceLabel(claim: DesktopReviewState["artifact"]["claims"][number]): string {
+function claimSourceLabel(claim: ReviewScreenState["artifact"]["claims"][number]): string {
   if (claim.status === "disputed") return "source conflict";
   return claim.evidence.length > 0 ? "source linked" : "not linked to candidate materials";
 }

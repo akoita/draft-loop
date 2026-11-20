@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { HomeView, ProfileFreshnessNote } from "./home.js";
 import type { HomeProfileStatus } from "./home-model.js";
-import type { DesktopProfileCapabilities } from "./native.js";
+import type { HostProfileCapabilities } from "./native.js";
 import {
   loadProfileFreshness,
   profileFreshnessChangeText,
@@ -97,9 +97,8 @@ describe("profile freshness wording", () => {
 
 describe("profile freshness loading", () => {
   const capabilities = (
-    read: DesktopProfileCapabilities["getCandidateProfileFreshness"],
-  ): DesktopProfileCapabilities =>
-    read === undefined ? {} : { getCandidateProfileFreshness: read };
+    read: HostProfileCapabilities["getCandidateProfileFreshness"],
+  ): HostProfileCapabilities => (read === undefined ? {} : { getCandidateProfileFreshness: read });
 
   it("passes the workspace and profile ids to the host", async () => {
     const calls: string[][] = [];

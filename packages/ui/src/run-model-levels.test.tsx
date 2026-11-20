@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { ApplicationRunRowView } from "./application-run-list.js";
 import { normalizeApplicationRuns } from "./application-run-list.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import { ModelProfileBudget } from "./model-profile-budget.js";
 import { RunDetailsDrawer } from "./run-details.js";
 import { type StartReviewAction, startConfirmationSummary } from "./start-confirmation.js";
@@ -39,7 +39,7 @@ function row(overrides: Partial<ApplicationRunRowView>): ApplicationRunRowView {
   };
 }
 
-function renderDrawer(state: DesktopReviewState): string {
+function renderDrawer(state: ReviewScreenState): string {
   return renderToStaticMarkup(
     <RunDetailsDrawer
       id="run-details"

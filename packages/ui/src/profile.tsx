@@ -15,7 +15,7 @@ import type {
 import type { CareerEvidenceCapabilities } from "./career-evidence.js";
 import type { CandidateProfileSelection } from "./model.js";
 import { providerDisplayName } from "./model-profile-presentation.js";
-import type { DesktopProfileCapabilities } from "./native.js";
+import type { HostProfileCapabilities } from "./native.js";
 import {
   defaultProfileToAutoload,
   findReviewedCanonicalCandidateProfileChoice,
@@ -93,7 +93,7 @@ const maximumProfileIdLength = maximumCanonicalCandidateProfileIdLength;
 
 export type CanonicalCandidateProfileCapabilities = Required<
   Omit<
-    DesktopProfileCapabilities,
+    HostProfileCapabilities,
     | "listReviewedCanonicalCandidateProfiles"
     | "listCanonicalCandidateProfileSummaries"
     | "getCanonicalCandidateProfileProgress"
@@ -101,7 +101,7 @@ export type CanonicalCandidateProfileCapabilities = Required<
   >
 > &
   Pick<
-    DesktopProfileCapabilities,
+    HostProfileCapabilities,
     | "listReviewedCanonicalCandidateProfiles"
     | "listCanonicalCandidateProfileSummaries"
     | "getCanonicalCandidateProfileProgress"
@@ -110,7 +110,7 @@ export type CanonicalCandidateProfileCapabilities = Required<
 
 export interface ProfileWorkspaceProps {
   readonly workspaceId: string;
-  readonly capabilities: DesktopProfileCapabilities;
+  readonly capabilities: HostProfileCapabilities;
   readonly selectedProfile: CandidateProfileSelection | null;
   readonly onSelectionChange: (selection: CandidateProfileSelection | null) => void;
   readonly onPendingChange?: (workspaceId: string, pending: boolean) => void;
@@ -129,7 +129,7 @@ export interface ProfileWorkspaceProps {
 
 /** The packaged host exposes the profile panel only when the whole API is present. */
 export function hasCanonicalCandidateProfileCapabilities(
-  capabilities: DesktopProfileCapabilities,
+  capabilities: HostProfileCapabilities,
 ): capabilities is CanonicalCandidateProfileCapabilities {
   return (
     capabilities.deriveCanonicalCandidateProfile !== undefined &&

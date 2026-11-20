@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { DesktopBridgeError } from "./native.js";
+import { HostBridgeError } from "./native.js";
 
 export function isWorkspaceContextLost(
   reason: unknown,
@@ -15,7 +15,7 @@ export function isWorkspaceContextLost(
       activeWorkspaceId,
       activeGeneration,
     ) &&
-    reason instanceof DesktopBridgeError &&
+    reason instanceof HostBridgeError &&
     reason.code === "not-found"
   );
 }

@@ -27,10 +27,10 @@ import type { FactSuggestionStore } from "@draft-loop/storage/fact-suggestions";
 import { newestApplicationRunId } from "@draft-loop/ui/application-run-order";
 import { exportFileName } from "@draft-loop/ui/export-file-name";
 import type {
-  DesktopReviewState,
   OpportunityBriefSelection,
   ProviderTransmissionPolicy,
   ProviderTransmissionPreflight,
+  ReviewScreenState,
   RunWritingPolicyProjection,
   WorkspaceReadiness,
   WritingPolicyVersionMetadata,
@@ -84,7 +84,7 @@ const reviewStateQuery = z.strictObject({
 });
 
 /**
- * The shared screens' review state. Its fields are the desktop's `DesktopReviewState`, which the
+ * The shared screens' review state. Its fields are those of `ReviewScreenState`, which the
  * web's bridge validates field by field, so the document is only checked here for its identity.
  */
 const reviewStateSchema = z
@@ -164,7 +164,7 @@ function pairDescriptor(
 }
 
 /** The projection as the response schema types it: its own fields, any number of them. */
-const reviewStateView = (state: DesktopReviewState): z.infer<typeof reviewStateSchema> => ({
+const reviewStateView = (state: ReviewScreenState): z.infer<typeof reviewStateSchema> => ({
   ...state,
 });
 

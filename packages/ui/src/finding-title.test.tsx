@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createCapabilityPort, type NativeBridge } from "./bridge.js";
 import { findingRequirement, normalizeFindingRequirement } from "./finding-requirement.js";
 import { findingTitle } from "./finding-title.js";
-import { createFixtureReviewState, type DesktopReviewState, type ReviewFinding } from "./model.js";
+import { createFixtureReviewState, type ReviewFinding, type ReviewScreenState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
 const requirement = { id: "req-1", text: "Lead synthetic platform migrations" };
@@ -22,7 +22,7 @@ function coverageFinding(overrides: Partial<ReviewFinding> = {}): ReviewFinding 
   };
 }
 
-function stateWith(findings: readonly ReviewFinding[]): DesktopReviewState {
+function stateWith(findings: readonly ReviewFinding[]): ReviewScreenState {
   return { ...createFixtureReviewState(), findings };
 }
 
