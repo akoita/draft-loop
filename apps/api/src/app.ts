@@ -36,6 +36,7 @@ import {
 import { type ZodType, z } from "zod";
 import { registerAccountDeletionRoutes } from "./account-deletion-routes.js";
 import { registerAgentConnectionCapRoutes } from "./agent-connection-cap-routes.js";
+import { registerAgentProfileRoutes } from "./agent-profile-routes.js";
 import { type AgentConnectionCapsFor, registerAgentSpendGate } from "./agent-spend-gate.js";
 import { registerAgentTokenRoutes } from "./agent-token-routes.js";
 import { registerApplicationFileRoutes } from "./application-file-routes.js";
@@ -670,6 +671,12 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
           : { intake: application.knowledgeIntake }),
         ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
         ...(screening === undefined ? {} : { screening }),
+      });
+      registerAgentProfileRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        store: application.factSuggestions,
+        ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
       });
     }
     registerRunRequirementEvidenceRoutes(app, {

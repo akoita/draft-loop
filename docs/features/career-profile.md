@@ -46,6 +46,11 @@ who said it and where; Home's career card counts the ones waiting. Accept,
 edit the value and accept, or reject each one. The box waits while the page
 has unsaved edits, because accepting saves a new version.
 
+An agent you connect can suggest updates too, with the **Suggest profile
+updates** scope. It reads your reviewed profile without the facts you marked
+never-say, and its suggestions wait in the same box. Only you decide
+([agent channel](../reference/agent-channel.md#suggesting-career-profile-updates)).
+
 Usage is separate from sensitivity: usage decides where a fact may appear,
 sensitivity decides what may reach a model provider.
 
@@ -59,6 +64,7 @@ sensitivity decides what may reach a model provider.
   `apps/web/src/fact-suggestions-bridge.test.ts`,
   `apps/api/src/profile-routes.test.ts`,
   `apps/api/src/fact-suggestion-routes.test.ts`,
+  `apps/api/src/agent-profile-routes.test.ts`, `apps/mcp/src/profile.test.ts`,
   `packages/application/src/review-edit-suggestions.test.ts` and
   `apps/api/src/review-routes.test.ts`.
 
@@ -75,7 +81,8 @@ sensitivity decides what may reach a model provider.
 | API    | `GET`/`PUT /v1/workspaces/{id}/fact-usage`                                 |
 | API    | `GET .../profiles/{profileId}/suggestions`, `POST .../suggestions/accept`  |
 | API    | `POST .../suggestions/{suggestionId}/reject`                               |
-| MCP    | none                                                                       |
+| API    | `GET .../agent-profile`, `GET`/`POST .../agent-profile/suggestions`         |
+| MCP    | `get_profile`, `suggest_profile_update`, `list_profile_suggestions`        |
 
 ## Limits
 
@@ -85,16 +92,15 @@ sensitivity decides what may reach a model provider.
   waits applies to the next run.
 - The derivation's usage, failed calls included, is kept with the job's
   outcome and read through `GET .../derivation`. The worker also logs one
-  content-free line per call. The page gives no estimate before a derivation
-  starts yet.
+  content-free line per call.
 - Approving a CV run files a suggestion when an edit changes a number, date
   or name of a fact in the run's pinned profile, matched by a word diff with
   no model call, and the approved review says how many wait with a link to
-  them. Nothing else files them yet, and a card does not name the
-  application yet.
+  them. Agents file them too; a card does not name the application or the
+  agent yet.
 - Accepting and rejecting suggestions are people-only routes; an agent token
-  cannot reach them or list suggestions yet. Every decision is recorded with
-  the candidate role; coach decisions come with coach accounts.
+  lists only the suggestions it filed. Every decision is recorded with the
+  candidate role; coach decisions come with coach accounts.
 - One derivation runs per profile at a time; a second answers
   `409 derivation_running`.
 - Derivation calls the writer's model, so in sign-in mode it needs the
