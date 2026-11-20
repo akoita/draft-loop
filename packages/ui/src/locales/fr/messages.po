@@ -2626,6 +2626,10 @@ msgstr "Créer ou choisir une base de connaissances"
 msgid "Create workspace"
 msgstr "Créer l’espace de travail"
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "Create your DraftLoop account"
+msgstr "Créez votre compte DraftLoop"
+
 #: packages/ui/src/profile-status-view.tsx
 msgid "Created"
 msgstr "Créé"
@@ -4386,6 +4390,10 @@ msgstr "Je ne peux pas répondre moi-même pour l’instant. Ces sections du gui
 msgid "I don't remember"
 msgstr "Je ne me souviens pas"
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "I have an invite code"
+msgstr "J'ai un code d'invitation"
+
 #: packages/ui/src/career-interview-model.ts
 msgid "I have no topic to suggest today. Is there anything from your career you would like to tell me about?"
 msgstr "Je n’ai pas de sujet à vous proposer aujourd’hui. Y a-t-il un moment de votre parcours que vous aimeriez me raconter ?"
@@ -4650,10 +4658,6 @@ msgstr "Exigences du poste relues"
 #: packages/ui/src/career-interview-model.ts
 msgid "Jobs you held: employer, title, dates and what you did."
 msgstr "Les postes que vous avez occupés : employeur, intitulé, dates et ce que vous y avez fait."
-
-#: apps/web/src/beta-sign-up.tsx
-msgid "Join the DraftLoop beta"
-msgstr "Rejoindre la bêta de DraftLoop"
 
 #: apps/web/src/landing.tsx
 msgid "Join the waitlist"
@@ -10953,6 +10957,10 @@ msgstr "Avertissements"
 msgid "was opened after the configured maximum of"
 msgstr "a été ouvert après le maximum configuré de"
 
+#: apps/web/src/beta-sign-up-model.ts
+msgid "We found no invite for the email address you signed in with. Enter the code from your invite email, or sign out and sign in with the address the invite was sent to."
+msgstr "Aucune invitation ne correspond à l'adresse email avec laquelle vous êtes connecté. Saisissez le code de votre email d'invitation, ou déconnectez-vous et connectez-vous avec l'adresse à laquelle l'invitation a été envoyée."
+
 #: packages/ui/src/display-preference.tsx
 msgid "We show every screen and option, including advanced ones."
 msgstr "Nous montrons chaque écran et chaque option, y compris les options avancées."
@@ -11286,8 +11294,8 @@ msgid "You"
 msgstr "Vous"
 
 #: apps/web/src/beta-sign-up.tsx
-msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
-msgstr "Votre session est ouverte, mais ce compte n’a pas encore de compte DraftLoop. Saisissez le code d’invitation reçu par e-mail pour le créer."
+msgid "You are signed in, but this sign-in has no DraftLoop account yet. Enter the invite code you received by email to create it."
+msgstr "Vous êtes connecté, mais cette connexion n'a pas encore de compte DraftLoop. Saisissez le code d'invitation reçu par email pour le créer."
 
 #: packages/ui/src/help-ask.tsx
 msgid "You asked:"
@@ -11505,9 +11513,13 @@ msgstr "Vos consignes"
 msgid "Your interview"
 msgstr "Votre entretien"
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "Your invite is ready. Accept the terms to create your account."
+msgstr "Votre invitation est prête. Acceptez les conditions pour créer votre compte."
+
 #: apps/web/src/oidc-sign-in.tsx
-msgid "Your invite is ready. Sign in, or create an account, with the email address the invite was sent to; the code is filled in for you."
-msgstr "Votre invitation est prête. Connectez-vous, ou créez un compte, avec l'adresse email qui a reçu l'invitation ; le code est rempli pour vous."
+msgid "Your invite is ready. Sign in with the email address the invite was sent to; the code is filled in for you."
+msgstr "Votre invitation est prête. Connectez-vous avec l'adresse email à laquelle l'invitation a été envoyée ; le code est déjà rempli."
 
 #: packages/ui/src/knowledge-current.ts
 msgid "Your knowledge base is created when you add your first evidence above."

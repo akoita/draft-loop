@@ -1,0 +1,11 @@
+/* DraftLoop's colours over Keycloak's sign-in pages: Deep teal for actions and links (brand book). */
+:root {
+  --pf-v5-global--primary-color--100: #0f6b5f;
+  --pf-v5-global--primary-color--200: #0b5249;
+  --pf-v5-global--link--Color: #0f6b5f;
+  --pf-v5-global--link--Color--hover: #0b5249;
+  --keycloak-card-top-color: #0f6b5f;
+}
+#kc-info-message .pf-v5-c-button {
+  margin-top: 1rem;
+}

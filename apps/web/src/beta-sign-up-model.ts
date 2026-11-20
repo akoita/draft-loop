@@ -8,11 +8,19 @@ export interface SignUpRefusal {
   readonly retry: boolean;
 }
 
-/** The person's words for a refused sign-up; `undefined` for an error that is not a refusal. */
-export function signUpRefusal(error: unknown): SignUpRefusal | undefined {
+/**
+ * The person's words for a refused sign-up; `undefined` for an error that is not a refusal.
+ * `withoutCode` when the sign-up looked for the invite of the signed-in email address.
+ */
+export function signUpRefusal(error: unknown, withoutCode = false): SignUpRefusal | undefined {
   if (!(error instanceof ApiRequestError)) return undefined;
   switch (error.code) {
     case "invite_unknown":
+      if (withoutCode)
+        return {
+          message: t`We found no invite for the email address you signed in with. Enter the code from your invite email, or sign out and sign in with the address the invite was sent to.`,
+          retry: true,
+        };
       return {
         message: t`No invite has that code. Check it for typos, or ask for a new invite.`,
         retry: true,
@@ -68,9 +76,16 @@ export function signUpRefusal(error: unknown): SignUpRefusal | undefined {
  */
 export const acceptedTermsVersion = "2026-11-18";
 
-/** Redeems a code with the accepted terms; resolves when the account exists. */
-export async function redeemInvite(client: ApiClient, code: string): Promise<void> {
+/**
+ * Redeems an invite with the accepted terms; resolves when the account exists. Without a code the
+ * API uses the open invite of the signed-in, verified email address.
+ */
+export async function redeemInvite(client: ApiClient, code?: string): Promise<void> {
+  const trimmed = code?.trim() ?? "";
   await client.call("POST /v1/sign-up", {
-    body: { code: code.trim(), accepted_terms: acceptedTermsVersion },
+    body:
+      trimmed === ""
+        ? { accepted_terms: acceptedTermsVersion }
+        : { code: trimmed, accepted_terms: acceptedTermsVersion },
   });
 }

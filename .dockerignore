@@ -17,3 +17,5 @@ data
 docs
 # The self-hosted stack's key files and settings; its scripts are mounted, never copied.
 deploy
+# The Keycloak image copies its theme (deploy/keycloak/Dockerfile).
+!deploy/keycloak/themes

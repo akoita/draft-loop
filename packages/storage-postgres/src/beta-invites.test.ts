@@ -91,6 +91,36 @@ describe.runIf(connectionString !== undefined)("Postgres beta invites", () => {
     });
   });
 
+  it("redeems the open invite of a verified email without its code", async () => {
+    await withDirectory(async (directory) => {
+      const invites = directory.betaInvites;
+      const withoutCode = (verifiedEmail: string) =>
+        invites.redeem({ verifiedEmail, cap: 25, organisationName: "My applications", now });
+      await expect(withoutCode("ada@example.test")).resolves.toEqual({
+        redeemed: false,
+        refusal: "invite_unknown",
+      });
+      const revoked = await invites.create({ email: "ada@example.test", now });
+      await invites.revoke({ inviteId: revoked.invite.inviteId, now });
+      await expect(withoutCode("ada@example.test")).resolves.toEqual({
+        redeemed: false,
+        refusal: "invite_unknown",
+      });
+
+      const { invite } = await invites.create({ email: "Ada@Example.Test", now });
+      await invites.create({ email: "bob@example.test", now });
+      const result = await withoutCode("ADA@example.test");
+      expect(result.redeemed).toBe(true);
+      const [listed] = await invites.list({ state: "redeemed" });
+      expect(listed?.inviteId).toBe(invite.inviteId);
+      await expect(withoutCode("ada@example.test")).resolves.toEqual({
+        redeemed: false,
+        refusal: "invite_unknown",
+      });
+      await expect(invites.stateCounts()).resolves.toMatchObject({ open: 1, redeemed: 1 });
+    });
+  });
+
   it("pages invites newest first, filters by state and searches the email", async () => {
     await withDirectory(async (directory) => {
       const invites = directory.betaInvites;

@@ -210,6 +210,21 @@ describe("web screen in sign-in mode", () => {
     expect(html).toContain("Sign out");
   });
 
+  it("skips the landing page on the return from an invite's password page", () => {
+    const html = renderToStaticMarkup(
+      <OidcApp
+        session={stubSession()}
+        createClient={() => unusedClient}
+        navigation={navigation()}
+        waitlist
+        welcome
+      />,
+    );
+
+    expect(html).toContain("Sign in with the email address your invitation was sent to.");
+    expect(html).not.toContain("waitlist");
+  });
+
   it("renders the sign-in screen on its own", () => {
     const html = renderToStaticMarkup(<OidcSignIn notice="Signed out." onSignIn={() => {}} />);
 

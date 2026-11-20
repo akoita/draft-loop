@@ -9,7 +9,8 @@ export interface IdentityAccounts {
   /**
    * Makes sure an invited email has a sign-in account, since the realm lets nobody register
    * (#3082). A new account, or one without a password yet, gets the provider's own email with a
-   * link to choose a password: `password-email`. An account that has a password gets nothing:
+   * link to choose a password: `password-email`. That email is the invite itself, worded by the
+   * realm's DraftLoop theme (deploy/keycloak). An account that has a password gets nothing:
    * `exists`.
    */
   readonly prepareInvitedAccount: (input: {
@@ -19,6 +20,12 @@ export interface IdentityAccounts {
 }
 
 export type InvitedAccount = "password-email" | "exists";
+
+/**
+ * Where the choose-a-password link returns: the web screen, told by `#welcome` to go straight on
+ * to sign-in, after which the invite is found by the verified email.
+ */
+export const welcomeFragment = "#welcome";
 
 /** How long the provider's choose-a-password link works: 7 days, then Forgot password serves. */
 export const passwordLinkLifespanSeconds = 7 * 24 * 60 * 60;
@@ -193,7 +200,7 @@ export function keycloakAccounts(options: KeycloakAccountsOptions): IdentityAcco
       }
       const query = new URLSearchParams({
         client_id: options.webClientId,
-        redirect_uri: options.screenUrl,
+        redirect_uri: `${options.screenUrl}${welcomeFragment}`,
         lifespan: String(passwordLinkLifespanSeconds),
       });
       const sent = await adminCall(token, `/users/${id}/execute-actions-email?${query}`, {
