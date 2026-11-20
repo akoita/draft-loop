@@ -16,6 +16,10 @@ export type PaymentsConfig =
       readonly prices: Readonly<Record<CreditPackId, string>>;
       /** The web screen's address, where the buyer comes back. */
       readonly returnUrl: string;
+      /** Live mode charges real cards; test mode only Stripe's test cards. */
+      readonly live: boolean;
+      /** The organisations that may buy, or every organisation. */
+      readonly buyers: "all" | readonly string[];
     };
 
 const packPriceVariables: Readonly<Record<CreditPackId, string>> = {
@@ -30,13 +34,17 @@ function value(env: NodeJS.ProcessEnv, name: string): string {
 /**
  * Reads `DRAFT_LOOP_PAYMENTS` (#2708). Unset or `off`, nothing is sold. `stripe` needs:
  *
- * - `DRAFT_LOOP_STRIPE_SECRET_KEY`: a test-mode secret or restricted key, from the deployment's
- *   secret. A live key stops the start: payments run in test mode until the live account and the
- *   legal pages are in place.
+ * - `DRAFT_LOOP_STRIPE_MODE`: `test` (the default) or `live`. The key must be of that mode, so a
+ *   live key never runs by mistake and a test key never stands in for a live setup.
+ * - `DRAFT_LOOP_STRIPE_SECRET_KEY`: a secret or restricted key of that mode, from the
+ *   deployment's secret.
  * - `DRAFT_LOOP_STRIPE_WEBHOOK_SECRET`: the signing secret of the webhook endpoint, from the
  *   deployment's secret.
  * - `DRAFT_LOOP_STRIPE_PRICE_PACK_1` and `DRAFT_LOOP_STRIPE_PRICE_PACK_5`: the Stripe price ids.
  * - `DRAFT_LOOP_PAYMENTS_RETURN_URL`: the web screen's HTTPS address.
+ * - `DRAFT_LOOP_PAYMENTS_ORGANISATIONS`: the organisation ids that may buy, comma-separated, or
+ *   `*` for every organisation. Unset, every organisation may buy in test mode; live mode needs
+ *   it, so real sales open to everyone only on purpose.
  *
  * No message repeats the key or the signing secret.
  */
@@ -45,15 +53,20 @@ export function readPaymentsConfig(env: NodeJS.ProcessEnv): PaymentsConfig {
   if (mode === "" || mode === "off") return { mode: "off" };
   if (mode !== "stripe") throw new ApiConfigError("DRAFT_LOOP_PAYMENTS must be off or stripe.");
 
+  const stripeMode = value(env, "DRAFT_LOOP_STRIPE_MODE") || "test";
+  if (stripeMode !== "test" && stripeMode !== "live") {
+    throw new ApiConfigError("DRAFT_LOOP_STRIPE_MODE must be test or live.");
+  }
+  const live = stripeMode === "live";
   const secretKey = value(env, "DRAFT_LOOP_STRIPE_SECRET_KEY");
   if (secretKey === "") {
     throw new ApiConfigError(
-      "DRAFT_LOOP_PAYMENTS=stripe needs DRAFT_LOOP_STRIPE_SECRET_KEY, a test-mode key.",
+      `DRAFT_LOOP_PAYMENTS=stripe needs DRAFT_LOOP_STRIPE_SECRET_KEY, a ${stripeMode}-mode key.`,
     );
   }
-  if (!/^(sk|rk)_test_[A-Za-z0-9]+$/u.test(secretKey)) {
+  if (!new RegExp(`^(sk|rk)_${stripeMode}_[A-Za-z0-9]+$`, "u").test(secretKey)) {
     throw new ApiConfigError(
-      "DRAFT_LOOP_STRIPE_SECRET_KEY must be a Stripe test-mode key (sk_test_ or rk_test_); live keys are refused.",
+      `DRAFT_LOOP_STRIPE_SECRET_KEY must be a Stripe ${stripeMode}-mode key (sk_${stripeMode}_ or rk_${stripeMode}_), as DRAFT_LOOP_STRIPE_MODE says.`,
     );
   }
   const webhookSecret = value(env, "DRAFT_LOOP_STRIPE_WEBHOOK_SECRET");
@@ -92,7 +105,31 @@ export function readPaymentsConfig(env: NodeJS.ProcessEnv): PaymentsConfig {
       "DRAFT_LOOP_PAYMENTS=stripe needs DRAFT_LOOP_PAYMENTS_RETURN_URL, the web screen's HTTPS address.",
     );
   }
-  return { mode: "stripe", secretKey, webhookSecret, prices, returnUrl: parsed.toString() };
+  return {
+    mode: "stripe",
+    secretKey,
+    webhookSecret,
+    prices,
+    returnUrl: parsed.toString(),
+    live,
+    buyers: readBuyers(value(env, "DRAFT_LOOP_PAYMENTS_ORGANISATIONS"), live),
+  };
+}
+
+const buyerPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
+
+function readBuyers(list: string, live: boolean): "all" | readonly string[] {
+  if (list === "*" || (list === "" && !live)) return "all";
+  const ids = list
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id !== "");
+  if (ids.length === 0 || !ids.every((id) => buyerPattern.test(id))) {
+    throw new ApiConfigError(
+      "DRAFT_LOOP_STRIPE_MODE=live needs DRAFT_LOOP_PAYMENTS_ORGANISATIONS: the organisation ids that may buy, comma-separated, or * for every organisation.",
+    );
+  }
+  return ids;
 }
 
 /** The deployment's payment provider: the checkout it opens and the events it sends. */
@@ -109,8 +146,10 @@ export function paymentsFrom(config: PaymentsConfig, fetcher?: typeof fetch): Pa
     url.searchParams.set("purchase", purchase);
     return url.toString();
   };
+  const { buyers } = config;
   return {
     checkout: createStripeCheckout({
+      sellsTo: (organisationId) => buyers === "all" || buyers.includes(organisationId),
       secretKey: config.secretKey,
       prices: config.prices,
       successUrl: back("done"),
@@ -118,6 +157,7 @@ export function paymentsFrom(config: PaymentsConfig, fetcher?: typeof fetch): Pa
       ...(fetcher === undefined ? {} : { fetch: fetcher }),
     }),
     events: createStripeEvents({
+      live: config.live,
       webhookSecret: config.webhookSecret,
       secretKey: config.secretKey,
       ...(fetcher === undefined ? {} : { fetch: fetcher }),

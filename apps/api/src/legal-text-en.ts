@@ -148,6 +148,7 @@ export const legalTextsEn: LegalTexts = {
               ],
             },
             "Each processor is bound by a data processing agreement. We do not sell your data, and we share it with authorities only when the law requires it.",
+            "Where the service sells credit packs, Stripe (Stripe Payments Europe, Limited, Ireland) sells them as the merchant of record, through its Link service. Stripe collects your payment details and billing address on its own page, under its own privacy policy, and sends the receipt. DraftLoop never sees your card; it receives only which pack your organisation bought, the amount and whether it was paid or refunded.",
           ],
         },
         {

@@ -260,6 +260,17 @@ describe("GET /v1/organisation/credits", () => {
     ]);
   });
 
+  it("lists no pack to an organisation the service does not sell to", async () => {
+    const server = await api("oidc", {
+      startCreditPackCheckout: vi.fn(),
+      sellsTo: (id) => id !== tenantId,
+    });
+
+    const response = await get(server, "/v1/organisation/credits");
+
+    expect(response.body.creditPacks).toEqual([]);
+  });
+
   it("refuses an organisation without a plan", async () => {
     scenario.assignment = undefined;
     const server = await api();

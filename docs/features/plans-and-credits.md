@@ -40,7 +40,8 @@ The catalog also lists two **credit packs**, bought once with no subscription:
 1 credit for €5 and 5 credits for €22, valid 12 months. Where the service
 sells them, **Buy credits** beside the balance lists the packs and leads to
 the payment provider's page; the credits arrive within a minute of paying.
-Sales run in Stripe test mode only for now.
+Sales run in Stripe test mode. Live mode exists for the operator's own check
+and sells only to the organisations the deployment names.
 
 A plan sets these entitlements:
 
@@ -70,7 +71,7 @@ A plan sets these entitlements:
 | Screen | Credits and consent                                                           |
 | Screen | **Buy credits** beside the balance, when the service sells packs              |
 | API    | `GET /v1/organisation/credits`, `GET /v1/workspaces/{id}/runs/estimate`       |
-| API    | `POST /v1/organisation/credit-purchases` (opens a hosted checkout, test mode) |
+| API    | `POST /v1/organisation/credit-purchases` (opens a hosted checkout)            |
 | API    | `POST /v1/payments/events` (the payment provider's signed events)             |
 | API    | `/v1/operator/organisations/{id}/plan`, `.../credit-grants`, `.../credits`    |
 | API    | `GET /v1/usage`, `GET /v1/workspaces/{id}/runs/{runId}/usage` (cost by model) |
@@ -79,8 +80,8 @@ A plan sets these entitlements:
 ## Limits
 
 - Partial: prices and self-service sign-up are not live, and production is held.
-- Buying a pack opens a Stripe test-mode checkout only, and a paid checkout
-  adds the pack's credits once. A full refund takes back the purchase's
+- Buying a pack opens a Stripe checkout, in test mode or, for named
+  organisations only, live mode. A paid checkout adds the pack's credits once. A full refund takes back the purchase's
   unspent credits; a partial refund takes nothing back.
 - Free and Beta allow 20 model calls a day outside runs; past that, those routes answer
   `429 model_call_cap_reached` until midnight UTC. Reading a job ad

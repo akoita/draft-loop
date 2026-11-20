@@ -49,8 +49,10 @@ const organisationIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 const paymentIdPattern = /^pi_[A-Za-z0-9]{1,250}$/u;
 
 export interface StripeEventsOptions {
+  /** Live mode acts only on live events; test mode only on test events. Test when unset. */
+  readonly live?: boolean;
   readonly webhookSecret: string;
-  /** The test-mode key that reads a refunded payment's Checkout Session; sent only to Stripe. */
+  /** The key that reads a refunded payment's Checkout Session; sent only to Stripe. */
   readonly secretKey: string;
   readonly fetch?: typeof fetch;
   /** How long one call may take, in milliseconds. */
@@ -61,12 +63,13 @@ export interface StripeEventsOptions {
  * Stripe's signed events behind the payment port (#2709, #2710). A completed Checkout Session
  * whose payment is settled becomes `credit_pack_paid`, and a charge refunded in full becomes
  * `payment_refunded`; everything else is ignored with a reason. A partial refund is ignored: it
- * takes no credits back. The deployment runs in test mode, so a live event is ignored: a live
- * payment must never grant credits on a test deployment.
+ * takes no credits back. An event of the other mode is ignored: a live payment must never grant
+ * credits on a test deployment, and a test payment never on a live one.
  */
 export function createStripeEvents(options: StripeEventsOptions): PaymentEventsPort {
   const call = options.fetch ?? fetch;
   const timeoutMs = options.timeoutMs ?? 10_000;
+  const live = options.live === true;
   return {
     findCheckoutOfPayment: async (paymentId) => {
       if (!paymentIdPattern.test(paymentId)) return undefined;
@@ -124,7 +127,7 @@ export function createStripeEvents(options: StripeEventsOptions): PaymentEventsP
         reason,
       });
       if (eventId === undefined) return ignored("unreadable");
-      if (event.livemode !== false) return ignored("live_event");
+      if (event.livemode !== live) return ignored(live ? "test_event" : "live_event");
       const object = (event.data as { object?: Record<string, unknown> } | undefined)?.object;
       if (event.type === "charge.refunded") {
         const paymentId = text(object?.payment_intent);
