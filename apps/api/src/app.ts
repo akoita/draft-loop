@@ -280,8 +280,10 @@ export interface ApiOptions {
   readonly supportUsage?: SharedSupportUsage;
   /** Members' feedback notes (#2828); without it `/v1/feedback` and its operator route are absent. */
   readonly feedback?: FeedbackRoutesOptions["feedback"];
-  /** The release this server runs, which a feedback note records (#2875). */
+  /** The release this server runs, which a feedback note records (#2875) and health reports. */
   readonly serverRelease?: string;
+  /** The day that release was built, as YYYY-MM-DD, which health reports beside its number. */
+  readonly serverReleasedOn?: string;
   /** When each organisation was last active (#2538); unset, activity is not recorded. */
   readonly organisationActivity?: OrganisationActivityRecorder;
   /** Each member's own settings, such as the screen language; without it those routes are not served. */
@@ -317,7 +319,24 @@ export interface ApiOptions {
 /** Request bodies above this are refused before parsing; job posts and briefs fit well inside. */
 export const apiBodyLimitBytes = 1_048_576;
 
-const healthSchema = z.object({ status: z.literal("ok") }).meta({ id: "Health" });
+const healthSchema = z
+  .object({
+    status: z.literal("ok"),
+    version: z
+      .string()
+      .optional()
+      .describe("The release this server runs, such as 0.26.46; absent on an untagged build."),
+    releasedOn: z.iso
+      .date()
+      .optional()
+      .describe("The day that release was built, as YYYY-MM-DD; absent on an untagged build."),
+  })
+  .meta({ id: "Health" });
+
+/** The version a person may see: the number of a `server-vX.Y.Z` release, never a revision name. */
+export function displayedServerVersion(release: string | undefined): string | undefined {
+  return /^server-v(\d+\.\d+\.\d+)$/u.exec(release ?? "")?.[1];
+}
 
 /**
  * Responses are checked by parsing them against their schema. The provider's own serializer
@@ -454,7 +473,18 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         response: { 200: healthSchema },
       },
     },
-    async () => ({ status: "ok" as const }),
+    async () => {
+      const version = displayedServerVersion(options.serverRelease);
+      if (version === undefined) return { status: "ok" as const };
+      const releasedOn = /^\d{4}-\d{2}-\d{2}$/u.test(options.serverReleasedOn ?? "")
+        ? options.serverReleasedOn
+        : undefined;
+      return {
+        status: "ok" as const,
+        version,
+        ...(releasedOn === undefined ? {} : { releasedOn }),
+      };
+    },
   );
   registerAuthConfigRoutes(app, auth, options.betaWaitlist !== undefined);
   registerServiceNotice(app, {

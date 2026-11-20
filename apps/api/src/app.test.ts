@@ -25,6 +25,22 @@ describe("health", () => {
     expect(response.json()).toEqual({ status: "ok" });
   });
 
+  it("reports a release's number but never a revision name", async () => {
+    const tagged = await buildApi({
+      ownerToken,
+      serverRelease: "server-v0.26.46",
+      serverReleasedOn: "2026-11-19",
+    });
+    const revision = await buildApi({ ownerToken, serverRelease: "api-00042-abc" });
+
+    const served = await tagged.inject({ method: "GET", url: "/v1/health" });
+    const unnamed = await revision.inject({ method: "GET", url: "/v1/health" });
+
+    expect(served.json()).toEqual({ status: "ok", version: "0.26.46", releasedOn: "2026-11-19" });
+    expect(unnamed.json()).toEqual({ status: "ok" });
+    await Promise.all([tagged.close(), revision.close()]);
+  });
+
   it("sends security headers", async () => {
     const response = await app.inject({ method: "GET", url: "/v1/health" });
 

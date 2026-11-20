@@ -1,5 +1,6 @@
 import { HelpDialog, HelpIcon } from "@draft-loop/ui/help-panel";
 import { currentScreenLanguage } from "@draft-loop/ui/i18n";
+import { formatDate } from "@draft-loop/ui/locale-format";
 import { t } from "@lingui/core/macro";
 import { useContext, useMemo, useState } from "react";
 
@@ -16,13 +17,27 @@ export interface HelpMenuViewProps {
   readonly onQuickHelp: () => void;
   /** Opens Send feedback; absent in owner-token mode, which has no members (#2828). */
   readonly onFeedback?: (() => void) | undefined;
+  /** The release the server runs, from its health; absent on an untagged build. */
+  readonly release?: ServerRelease | undefined;
+}
+
+/** A server release as health reports it: its number, such as 0.26.46, and its build day. */
+export interface ServerRelease {
+  readonly version: string;
+  readonly releasedOn?: string | undefined;
+}
+
+/** The menu's last line, such as `Version 0.26.46 · Released 19 Nov 2026`. */
+export function releaseLine({ version, releasedOn }: ServerRelease): string {
+  const day = releasedOn === undefined ? undefined : formatDate(releasedOn, { timeZone: "UTC" });
+  return day === undefined ? t`Version ${version}` : t`Version ${version} · Released ${day}`;
 }
 
 /**
  * The header's Help menu, grouped as apps usually do: quick help in the app, the full user guide
- * and the About page in a new tab, Send feedback, and the legal pages.
+ * and the About page in a new tab, Send feedback, the legal pages, and the version last.
  */
-export function HelpMenuView({ onQuickHelp, onFeedback }: HelpMenuViewProps) {
+export function HelpMenuView({ onQuickHelp, onFeedback, release }: HelpMenuViewProps) {
   const { menu, fold } = useFoldingMenu();
   const french = currentScreenLanguage() === "fr";
   return (
@@ -75,6 +90,7 @@ export function HelpMenuView({ onQuickHelp, onFeedback }: HelpMenuViewProps) {
         <p className="help-menu-legal">
           <LegalLinks newTab={true} />
         </p>
+        {release === undefined ? null : <p className="help-menu-version">{releaseLine(release)}</p>}
       </div>
     </details>
   );
@@ -84,9 +100,11 @@ export function HelpMenuView({ onQuickHelp, onFeedback }: HelpMenuViewProps) {
 export function WebHelpMenu({
   client,
   mode,
+  release,
 }: {
   readonly client: ApiClient;
   readonly mode: "owner" | "sign-in";
+  readonly release?: ServerRelease | undefined;
 }) {
   const recordId = useContext(RecordContext);
   const support = useMemo(() => webHelpSupport(client, recordId, mode), [client, recordId, mode]);
@@ -98,6 +116,7 @@ export function WebHelpMenu({
       <HelpMenuView
         onQuickHelp={() => setQuickHelp(true)}
         onFeedback={mode === "sign-in" ? feedback.open : undefined}
+        release={release}
       />
       {quickHelp ? (
         <HelpDialog

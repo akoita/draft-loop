@@ -10941,6 +10941,14 @@ msgstr "La version {0} est enregistrée mais pas relue. Relisez-la avant qu’un
 msgid "Version {0}."
 msgstr "Version {0}."
 
+#: apps/web/src/help-menu.tsx
+msgid "Version {version}"
+msgstr "Version {version}"
+
+#: apps/web/src/help-menu.tsx
+msgid "Version {version} · Released {day}"
+msgstr "Version {version} · publiée le {day}"
+
 #: packages/ui/src/profile-status-view.tsx
 msgid "Version history"
 msgstr "Historique des versions"
