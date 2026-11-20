@@ -68,7 +68,7 @@ beforeAll(async () => {
       invite: vi.fn(),
       deleteJoinedBefore: vi.fn(async () => 0),
       joinUnconfirmed: vi.fn(async () => "skip" as const),
-      confirm: vi.fn(async () => false),
+      confirm: vi.fn(async () => "unknown" as const),
       deleteUnconfirmedBefore: vi.fn(async () => 0),
     } as BetaWaitlist,
     tenants: {

@@ -176,13 +176,21 @@ export function registerBetaWaitlistRoutes(
       if (!admit(`confirm:${request.ip}`, at.getTime())) {
         return reply.code(429).send(apiError("rate_limited", "Too many requests; retry later."));
       }
-      const confirmed = await waitlist.confirm({
+      const outcome = await waitlist.confirm({
         tokenHash: tokenHash(request.body.token),
         now: at,
         validMs: waitlistConfirmHours * 60 * 60 * 1000,
       });
-      request.log.info({ event: "waitlist_confirm", confirmed }, "waitlist confirm");
-      if (!confirmed) {
+      // `first` is true once per sign-up, so an operator alert on it never repeats (#3208).
+      request.log.info(
+        {
+          event: "waitlist_confirm",
+          confirmed: outcome !== "unknown",
+          first: outcome === "confirmed",
+        },
+        "waitlist confirm",
+      );
+      if (outcome === "unknown") {
         return reply
           .code(404)
           .send(apiError("invalid_token", "That link is unknown or has expired."));

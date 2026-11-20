@@ -418,6 +418,15 @@ export function registerBetaSignUpRoutes(
         },
         "audit",
       );
+      // The seat this sign-up took was the last one: operators hear of it once (#3208).
+      const [operatorCap, seatsUsed] = await Promise.all([
+        invites.operatorCap(),
+        invites.redeemedCount(),
+      ]);
+      const cap = operatorCap ?? options.cap;
+      if (seatsUsed === cap) {
+        request.log.info({ event: "beta_seat_cap_reached", cap, seatsUsed }, "beta seats full");
+      }
       return reply.code(201).send({
         organisationId: member?.tenantId ?? result.organisationId,
         memberId: member?.memberId ?? result.memberId,
