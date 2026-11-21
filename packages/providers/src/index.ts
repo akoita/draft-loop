@@ -17,6 +17,15 @@ import {
   anthropicPromptLayout,
   anthropicSharedOutput,
 } from "./anthropic-prompt-cache.js";
+import {
+  type AnthropicRefusal,
+  type AnthropicRefusalFallback,
+  anthropicRefusal,
+  fallbackCreditBeta,
+  type RefusalFallbackRecord,
+  refusalDiagnostics,
+  refusalFallbackParameters,
+} from "./anthropic-refusal-fallback.js";
 import { anthropicUsage } from "./anthropic-usage.js";
 import { addBilledUsage } from "./billed-usage.js";
 import { openAIPromptLayout } from "./openai-prompt-cache.js";
@@ -32,6 +41,7 @@ import {
 import type { AnthropicRoute, ProviderRoute, RouteFallback } from "./provider-route.js";
 
 export * from "./anthropic-billing-error.js";
+export * from "./anthropic-refusal-fallback.js";
 export * from "./author-model-preflight.js";
 export * from "./provider-error-identity.js";
 export * from "./provider-route.js";
@@ -181,6 +191,8 @@ export interface ModelResponse<Output extends JsonValue = JsonValue> {
   readonly route: ProviderRoute;
   /** Present when the call fell back from its primary route; `route` is then the fallback. */
   readonly routeFallback?: RouteFallback;
+  /** Present when Claude refused and the fallback model answered; `modelId` is then the fallback. */
+  readonly refusalFallback?: RefusalFallbackRecord;
   readonly modelId: string;
   readonly providerRequestId: string | null;
   readonly structuredOutputSha256: string;
@@ -688,7 +700,10 @@ export interface AnthropicClient {
   readonly messages: {
     create(
       parameters: MessageCreateParamsNonStreaming,
-      options?: { readonly signal?: AbortSignal },
+      options?: {
+        readonly signal?: AbortSignal;
+        readonly headers?: Readonly<Record<string, string>>;
+      },
     ): AnthropicMessagePromise;
   };
 }
@@ -707,6 +722,11 @@ export interface AnthropicAdapterOptions extends ProviderAdapterOptions {
    * the prefix outlives the call (#2043); 3.5 minutes by default.
    */
   readonly cacheKeepAliveIntervalMs?: number;
+  /**
+   * The model a refused call retries on once, with a fallback credit (#3120). Unset by default:
+   * a refusal then fails the step, as before.
+   */
+  readonly refusalFallback?: AnthropicRefusalFallback;
 }
 
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -806,7 +826,10 @@ function anthropicMessageData(value: unknown): {
   };
 }
 
-function anthropicStopReasonError(stopReason: unknown): ProviderAdapterError {
+function anthropicStopReasonError(
+  stopReason: unknown,
+  extraDiagnostics: readonly ProviderValidationDiagnostic[] = [],
+): ProviderAdapterError {
   const code =
     stopReason === "max_tokens" ||
     stopReason === "refusal" ||
@@ -817,11 +840,26 @@ function anthropicStopReasonError(stopReason: unknown): ProviderAdapterError {
   return new ProviderAdapterError(
     "anthropic",
     "invalid-response",
-    "The provider did not complete the structured response.",
+    stopReason === "refusal"
+      ? "Claude declined the request."
+      : "The provider did not complete the structured response.",
     {
       retryable: false,
-      diagnostics: [{ code, path: "stop_reason" }],
+      diagnostics: [{ code, path: "stop_reason" }, ...extraDiagnostics],
     },
+  );
+}
+
+/** The refusal's diagnostics: the first refusal's category, and whether the fallback refused too. */
+function stopReasonDiagnostics(
+  refusal: AnthropicRefusal | undefined,
+  fallback: RefusalFallbackRecord | undefined,
+  data: unknown,
+): readonly ProviderValidationDiagnostic[] {
+  if (refusal === undefined) return [];
+  return refusalDiagnostics(
+    refusal,
+    fallback !== undefined && anthropicRefusal(data) !== undefined,
   );
 }
 
@@ -836,14 +874,37 @@ export class AnthropicAdapter<
   private readonly pricing: ModelPricing | undefined;
   private readonly retry: RetryOptions | undefined;
   private readonly cacheKeepAliveIntervalMs: number | undefined;
+  private readonly refusalFallback: AnthropicRefusalFallback | undefined;
 
   constructor(client: AnthropicClient, options: AnthropicAdapterOptions) {
     this.client = client;
+    this.refusalFallback = options.refusalFallback;
     this.route = options.route ?? "anthropic-api";
     this.configuredModel = options.configuredModel;
     this.pricing = options.pricing;
     this.retry = options.retry;
     this.cacheKeepAliveIntervalMs = options.cacheKeepAliveIntervalMs;
+  }
+
+  /** One Messages call; with a refusal fallback, it asks for a fallback credit on any refusal. */
+  private async send(parameters: MessageCreateParamsNonStreaming, signal: AbortSignal | undefined) {
+    const responsePromise = this.client.messages.create(parameters, {
+      ...(signal === undefined ? {} : { signal }),
+      ...(this.refusalFallback === undefined
+        ? {}
+        : { headers: { "anthropic-beta": fallbackCreditBeta } }),
+    });
+    return typeof responsePromise.withResponse === "function"
+      ? await responsePromise.withResponse()
+      : { data: await responsePromise, request_id: null };
+  }
+
+  /** Whether a refused call may retry: a fallback is set, differs, and its switch allows it now. */
+  private async refusalFallbackAllowed(request: ModelRequest<Input>): Promise<boolean> {
+    const fallback = this.refusalFallback;
+    if (fallback === undefined || request.signal?.aborted === true) return false;
+    if (fallback.modelId === request.model.modelId) return false;
+    return (await fallback.allowed?.()) ?? true;
   }
 
   /**
@@ -928,21 +989,42 @@ export class AnthropicAdapter<
       let billed: BilledUsage | undefined;
       const keepAlive = this.startCacheKeepAlive(request, parameters);
       try {
-        const responsePromise = this.client.messages.create(
-          parameters,
-          ...(request.signal === undefined ? [] : [{ signal: request.signal }]),
-        );
-        const response =
-          typeof responsePromise.withResponse === "function"
-            ? await responsePromise.withResponse()
-            : { data: await responsePromise, request_id: null };
-        const message = anthropicMessageData(response.data);
+        let response = await this.send(parameters, request.signal);
+        let message = anthropicMessageData(response.data);
         billed = addBilledUsage(
           await keepAlive.stop(),
           accountOpenAIUsage(anthropicUsage(message.rawUsage), this.pricing),
         );
+        const refusal = anthropicRefusal(response.data);
+        let refusalFallback: RefusalFallbackRecord | undefined;
+        let answeredBy = request.model.modelId;
+        const fallback = this.refusalFallback;
+        if (
+          refusal !== undefined &&
+          fallback !== undefined &&
+          (await this.refusalFallbackAllowed(request))
+        ) {
+          answeredBy = fallback.modelId;
+          response = await this.send(
+            refusalFallbackParameters(parameters, fallback.modelId, refusal),
+            request.signal,
+          );
+          message = anthropicMessageData(response.data);
+          billed = addBilledUsage(
+            billed,
+            accountOpenAIUsage(anthropicUsage(message.rawUsage), fallback.pricing),
+          );
+          refusalFallback = {
+            fromModel: request.model.modelId,
+            category: refusal.category,
+            credit: refusal.creditToken !== null,
+          };
+        }
         if (message.stop_reason !== "end_turn") {
-          throw anthropicStopReasonError(message.stop_reason);
+          throw anthropicStopReasonError(
+            message.stop_reason,
+            stopReasonDiagnostics(refusal, refusalFallback, response.data),
+          );
         }
         const textBlock = message.content.find((block) => block.type === "text");
         if (typeof textBlock?.text !== "string" || textBlock.text.trim() === "") {
@@ -983,7 +1065,8 @@ export class AnthropicAdapter<
           provider: this.provider,
           company: this.provider,
           route: this.route,
-          modelId: request.model.modelId,
+          ...(refusalFallback === undefined ? {} : { refusalFallback }),
+          modelId: answeredBy,
           providerRequestId: response.request_id ?? null,
           structuredOutputSha256: hashStructuredOutput(output),
           ...accounting,
