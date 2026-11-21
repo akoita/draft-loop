@@ -8,7 +8,7 @@ import {
   type HostedAnthropicRouteOptions,
   type OpenAiEndpoint,
   type SecretVersionReader,
-  vertexEuLocation,
+  vertexClaudeLocation,
 } from "@draft-loop/model-gateway";
 
 import { WorkerConfigError } from "./config-error.js";
@@ -53,11 +53,11 @@ export function readModelGatewayConfig(env: NodeJS.ProcessEnv): ModelGatewayConf
   const fallback = env.DRAFT_LOOP_ANTHROPIC_FALLBACK ?? "false";
   const anthropicKeySecret = optional(env, "DRAFT_LOOP_ANTHROPIC_KEY_SECRET");
   try {
-    vertexEuLocation(vertexLocation);
+    vertexClaudeLocation(vertexLocation);
     assertLocationPriceFactor(vertexPriceFactor);
   } catch (error) {
     throw new WorkerConfigError(
-      "DRAFT_LOOP_VERTEX_LOCATION must be an EU location and DRAFT_LOOP_VERTEX_PRICE_FACTOR a number of at least 1.",
+      `DRAFT_LOOP_VERTEX_LOCATION must be the eu multi-region and DRAFT_LOOP_VERTEX_PRICE_FACTOR a number of at least 1: ${(error as Error).message}`,
       { cause: error },
     );
   }

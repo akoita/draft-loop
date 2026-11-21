@@ -32,6 +32,7 @@ const nonCallingGatewayNames = new Set([
   "ModelScreeningUsage",
   "OpenAiEndpoint",
   "SecretVersionReader",
+  "vertexClaudeLocation",
   "vertexEuLocation",
 ]);
 

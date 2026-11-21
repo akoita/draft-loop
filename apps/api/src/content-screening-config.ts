@@ -2,7 +2,7 @@ import { isAbsolute } from "node:path";
 import {
   assertLocationPriceFactor,
   defaultSecretsDirectory,
-  vertexEuLocation,
+  vertexClaudeLocation,
 } from "@draft-loop/model-gateway";
 
 import { ApiConfigError } from "./config.js";
@@ -76,11 +76,11 @@ function readModelRoute(env: NodeJS.ProcessEnv): ScreeningModelRoute {
   const vertexLocation = env.DRAFT_LOOP_VERTEX_LOCATION ?? "eu";
   const vertexPriceFactor = Number(env.DRAFT_LOOP_VERTEX_PRICE_FACTOR ?? "");
   try {
-    vertexEuLocation(vertexLocation);
+    vertexClaudeLocation(vertexLocation);
     assertLocationPriceFactor(vertexPriceFactor);
   } catch (error) {
     throw new ApiConfigError(
-      "DRAFT_LOOP_VERTEX_LOCATION must be an EU location and DRAFT_LOOP_VERTEX_PRICE_FACTOR a number of at least 1.",
+      `DRAFT_LOOP_VERTEX_LOCATION must be the eu multi-region and DRAFT_LOOP_VERTEX_PRICE_FACTOR a number of at least 1: ${(error as Error).message}`,
       { cause: error },
     );
   }

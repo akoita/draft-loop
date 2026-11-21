@@ -3,7 +3,8 @@ import { AnthropicVertex } from "@anthropic-ai/vertex-sdk";
 
 import type { CredentialResolver } from "./secret-credentials.js";
 import type { VertexAnthropicClientOptions } from "./vertex-client.js";
-import { vertexBaseUrl, vertexEuLocation } from "./vertex-location.js";
+import { vertexBaseUrl } from "./vertex-location.js";
+import { vertexClaudeLocation } from "./vertex-models.js";
 
 /**
  * Claude's web search tool as a research brief provider (#2546), the default of
@@ -308,7 +309,7 @@ export function directClaudeSearchClient(
 export function vertexClaudeSearchClient(
   options: VertexAnthropicClientOptions,
 ): () => Promise<ClaudeSearchClient> {
-  const location = vertexEuLocation(options.location);
+  const location = vertexClaudeLocation(options.location);
   const client = new AnthropicVertex({
     projectId: options.projectId,
     region: location,

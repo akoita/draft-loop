@@ -9,8 +9,8 @@ import {
   type ProviderAdapterOptions,
 } from "@draft-loop/providers";
 
-import { type VertexEuLocation, vertexBaseUrl, vertexEuLocation } from "./vertex-location.js";
-import { isVertexClaudeModel } from "./vertex-models.js";
+import { type VertexEuLocation, vertexBaseUrl } from "./vertex-location.js";
+import { isVertexClaudeModel, vertexClaudeLocation } from "./vertex-models.js";
 import { assertLocationPriceFactor, vertexPricing } from "./vertex-pricing.js";
 
 export interface VertexAnthropicClientOptions {
@@ -50,7 +50,7 @@ export const vertexAnthropicVersion = "vertex-2023-10-16";
 export function createVertexAnthropicClient(
   options: VertexAnthropicClientOptions,
 ): AnthropicClient {
-  const location: VertexEuLocation = vertexEuLocation(options.location);
+  const location: VertexEuLocation = vertexClaudeLocation(options.location);
   if (options.projectId.trim() === "") throw new RangeError("A Vertex AI project is required.");
   const client = new AnthropicVertex({
     projectId: options.projectId,
