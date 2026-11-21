@@ -850,7 +850,7 @@ describe("desktop trust-centered review", () => {
     };
     const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
 
-    expect(html).toContain("No draft artifact available");
+    expect(html).toContain("No draft: this review stopped");
     expect(html).toContain("Not evaluated");
     expect(html).toContain("Start a new review");
     expect(html).toContain(

@@ -1,7 +1,11 @@
 import { deriveModelLineage } from "@draft-loop/domain";
 import type { ApplicationSummaryView } from "@draft-loop/ui/application-contract";
 import { maximumApplicationJobTextLength } from "@draft-loop/ui/application-job-contract";
-import { chosenApplicationRun, newestApplicationRunId } from "@draft-loop/ui/application-run-order";
+import {
+  chosenApplicationRun,
+  newestApplicationRunId,
+  runEndedBeforeApproval,
+} from "@draft-loop/ui/application-run-order";
 import type {
   BridgeCapability,
   BridgeCommand,
@@ -168,9 +172,6 @@ function apiProfileReference(reference: {
   return reference.effort === undefined ? exact : { ...exact, effort: reference.effort };
 }
 
-/** Run states a review cannot go on from: the person starts a new review instead. */
-const endedRunStates: ReadonlySet<string> = new Set(["stopped", "budget-exhausted"]);
-
 /** The API's application in the screens' summary, ordered as the desktop host orders runs. */
 export function applicationSummary(application: Application): ApplicationSummaryView {
   const chosenRun = chosenApplicationRun(application.runs, application.chosenRunId);
@@ -189,7 +190,7 @@ export function applicationSummary(application: Application): ApplicationSummary
     briefCount: application.briefs.length,
     exportCount: application.exportCount,
     latestRunId,
-    ...(latestRun !== undefined && endedRunStates.has(latestRun.state)
+    ...(latestRun !== undefined && runEndedBeforeApproval(latestRun.state)
       ? { latestRunEnded: true }
       : {}),
     archivedAt: application.archivedAt,
