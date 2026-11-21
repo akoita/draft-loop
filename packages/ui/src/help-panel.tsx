@@ -3,6 +3,7 @@ import { plural, t } from "@lingui/core/macro";
 import { useEffect, useId, useRef, useState } from "react";
 import { HelpAsk } from "./help-ask.js";
 import type { HelpSupport } from "./help-ask-model.js";
+import { useCurrentHelpSection } from "./help-context.js";
 import { useScreenLocale } from "./i18n.js";
 
 export interface HelpDialogProps {
@@ -15,7 +16,7 @@ export interface HelpDialogProps {
 
 /**
  * The user guide in a modal side sheet (#2830). Each section is a native disclosure, so a phone
- * shows the titles first; the first one starts open. A search field above them (#2880) lists only
+ * shows the titles first; the section that fits the screen behind it starts open, else the first. A search field above them (#2880) lists only
  * the sections that match, open and best first. Escape, a click outside where the browser supports
  * `closedby`, and the Close button all close it.
  */
@@ -28,7 +29,12 @@ export function HelpDialog({ onClose, support, fullGuide }: HelpDialogProps) {
   const searching = query.trim() !== "";
   const sections = searching ? searchHelpGuide(guide, query) : guide.sections;
   // A source link from an answer opens its section and scrolls to it.
-  const [shown, setShown] = useState<{ readonly id: string; readonly at: number } | null>(null);
+  // It opens on the section that fits the screen behind it (#3227), else on the first one.
+  const current = useCurrentHelpSection();
+  const opening = current !== null && guide.sections.some((section) => section.id === current);
+  const [shown, setShown] = useState<{ readonly id: string; readonly at: number } | null>(
+    opening ? { id: current, at: 0 } : null,
+  );
 
   useEffect(() => {
     if (shown === null) return;
@@ -102,7 +108,7 @@ export function HelpDialog({ onClose, support, fullGuide }: HelpDialogProps) {
           key={`${searching ? "found" : "all"}-${section.id}-${shown?.id === section.id ? shown.at : ""}`}
           id={`${id}-section-${section.id}`}
           className="help-section"
-          open={searching || index === 0 || shown?.id === section.id}
+          open={searching || (index === 0 && !opening) || shown?.id === section.id}
         >
           <summary>{section.title}</summary>
           {section.paragraphs.map((paragraph) => (

@@ -1,6 +1,8 @@
+import type { HelpSectionId } from "@draft-loop/user-guide";
 import { t } from "@lingui/core/macro";
 
 import { useDisplayPreference } from "./display-preference.js";
+import { useHelpSection } from "./help-context.js";
 
 export type HintedScreen =
   | "home"
@@ -27,6 +29,22 @@ function hintText(screen: HintedScreen): string {
   }
 }
 
+/** The guide section Quick help opens on while the screen is shown. */
+function hintSection(screen: HintedScreen | undefined): HelpSectionId | null {
+  switch (screen) {
+    case "evidence":
+    case "profile":
+      return "evidence";
+    case "new-application":
+      return "job";
+    case "review":
+    case "approved":
+      return "review";
+    default:
+      return null;
+  }
+}
+
 /**
  * One line at the top of a screen that says what to do there (#2792), for people who chose
  * Guided. Everyone else sees nothing new.
@@ -43,6 +61,8 @@ export function ScreenHint({
   readonly onOpenGuide?: (() => void) | undefined;
 }) {
   const { preference } = useDisplayPreference();
+  // Every view claims the screen's guide section, not only Guided: Quick help opens on it.
+  useHelpSection(hintSection(screen));
   if (preference.mode !== "guided") return null;
   const sentence = text ?? (screen === undefined ? undefined : hintText(screen));
   if (sentence === undefined) return null;
