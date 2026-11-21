@@ -36,6 +36,7 @@ export type {
   SupportModel,
   SupportModelRequest,
   SupportModelResponse,
+  SupportNextStep,
   SupportRunStatus,
   SupportServiceStatus,
   SupportUsageEntry,

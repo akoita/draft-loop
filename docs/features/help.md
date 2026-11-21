@@ -47,8 +47,10 @@ both into the API image (`DRAFT_LOOP_SERVER_RELEASE`,
 or self-hosted build without a `server-vX.Y.Z` tag shows no version line.
 
 When the server runs the support assistant, **Ask a question** sits above the
-search. Type a question in your own words and select **Ask**. The answer names
-the guide sections it used; select one to open it below. Answer **Did this
+search. Type a question in your own words and select **Ask**. Asked what to do
+next, it reads the same next step the screens show for the application you
+worked on last. The answer names the guide sections it used; select one to
+open it below. Answer **Did this
 solve it?** with **No**, or get an answer that needs a person, and **Talk to a
 person** appears. It shows what is sent before **Send the conversation**
 (sign-in mode only).
@@ -119,7 +121,7 @@ pnpm test:support:live
 | `GET /v1/help`, `GET /v1/workspaces/:workspaceId/help` | The guide or a search of it, `language` `en` or `fr`, `q` up to 200 characters |
 | MCP `search_help` (scope `journal`) | Searches the guide for an agent |
 | MCP resources `draftloop://help/guide/en`, `/fr` | The whole guide as Markdown |
-| `POST /v1/workspaces/:workspaceId/support/conversations` and `…/:conversationId/messages` | The support assistant: answers a question from the guide and the member's plan, credits and runs, or returns the matching sections |
+| `POST /v1/workspaces/:workspaceId/support/conversations` and `…/:conversationId/messages` | The support assistant: answers a question from the guide and the member's plan, credits, runs and next step, or returns the matching sections |
 | `…/:conversationId/handoff` | Hands the conversation to a person as a support ticket, with the member's consent; see [Feedback](feedback.md) |
 | `packages/support` | The assistant's answering loop, read tools, limits and golden set |
 | `packages/user-guide/src/guide-en.ts`, `guide-fr.ts` | The guide's text, one module per language |
