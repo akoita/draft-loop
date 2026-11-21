@@ -445,6 +445,7 @@ sequenceDiagram
   A->>M: GET /.well-known/oauth-protected-resource
   A->>I: Sign the person in (PKCE), who grants scopes
   A->>M: POST /mcp with the access token
+  M->>M: Check the token's issuer, audience and expiry
   M->>D: GET /v1/workspaces with that token
   M->>D: The tool's call, in the person's workspace
 ```
@@ -457,11 +458,17 @@ sequenceDiagram
   tool tells the person to set one in Settings > Agents.
 - **Workspace.** The tools act in the signed-in person's workspace. A person
   who reaches several gets the first by id; choosing one is not built.
+- **Token check.** Before any tool runs, the server checks the token itself:
+  signed by the issuer's keys, this server's `DRAFT_LOOP_MCP_PUBLIC_URL` among
+  its audiences, and current. A token issued for anything else never reaches
+  the API. If the issuer's keys can't be fetched, it answers `503`.
 - **A dead token** answers `401` with `invalid_token`, so the assistant
   refreshes it. An account without a workspace answers `403`.
 - **Identity provider.** It needs one confidential client per assistant with
-  that assistant's redirect address, PKCE with S256, refresh tokens, the API's
-  audience on the token and the `draftloop:` scopes as optional client scopes.
+  that assistant's redirect address, PKCE with S256, refresh tokens, two
+  audiences on the token (the API's and the `DRAFT_LOOP_MCP_PUBLIC_URL`) and
+  the `draftloop:` scopes as optional client scopes. In Keycloak, give each
+  assistant client an audience mapper for each address.
 
 ## How the candidate reviews
 

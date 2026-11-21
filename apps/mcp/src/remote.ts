@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import type { JWTVerifyGetKey } from "jose";
 
 import { isAgentToken } from "./agent-token.js";
 import { createApplicationsApi } from "./applications.js";
@@ -18,6 +19,7 @@ import { createMaterialApi } from "./material.js";
 import { createOperatorFeedbackApi } from "./operator-feedback.js";
 import { createProfileApi } from "./profile.js";
 import { createProjectsApi } from "./projects.js";
+import { remoteTokenChecker } from "./remote-token.js";
 import { createRunsApi } from "./runs.js";
 import { createWorkJournalMcpServer } from "./server.js";
 import { createServiceNoticeApi } from "./service-notice.js";
@@ -25,8 +27,10 @@ import { createServiceNoticeApi } from "./service-notice.js";
 /**
  * The remote transport (ADR 0011 D17, #2647): the same tools over Streamable HTTP on one URL,
  * for assistants that connect to an MCP server by address. Each request carries the caller's
- * own bearer credential, which this process only forwards to the API: it keeps no token, no
- * session and no candidate data, and the API alone decides what the credential may do.
+ * own bearer credential. With OAuth sign-in, this process first checks the token was issued for
+ * it (`remote-token.ts`, #3221), then forwards it to the API, which the token also names as an
+ * audience. It keeps no token, no session and no candidate data, and the API alone decides what
+ * the credential may do.
  */
 
 /** The one path the tools answer on. */
@@ -76,6 +80,8 @@ export interface RemoteMcpOptions {
   readonly workspaceId: string;
   readonly oauth?: RemoteOAuthOptions;
   readonly fetch?: typeof fetch;
+  /** The issuer's signing keys; discovered from `oauth.issuer` when unset. Tests pass their own. */
+  readonly tokenKeys?: JWTVerifyGetKey;
 }
 
 /** The address, workspace, port and bind address from the environment. */
@@ -245,6 +251,8 @@ async function workspaceOf(options: RemoteMcpOptions, token: string): Promise<Wo
 export function createRemoteMcpHandler(
   options: RemoteMcpOptions,
 ): (request: IncomingMessage, response: ServerResponse) => Promise<void> {
+  const checkToken =
+    options.oauth === undefined ? undefined : remoteTokenChecker(options.oauth, options.tokenKeys);
   return async (request, response) => {
     const path = (request.url ?? "").split("?")[0];
     if (path === "/healthz" && request.method === "GET") {
@@ -273,7 +281,21 @@ export function createRemoteMcpHandler(
       });
     }
     let { workspaceId } = options;
-    if (oauth !== undefined) {
+    if (oauth !== undefined && checkToken !== undefined) {
+      let check: Awaited<ReturnType<typeof checkToken>>;
+      try {
+        check = await checkToken(token);
+      } catch {
+        return answer(response, 503, "The sign-in could not be checked. Try again shortly.", {
+          "retry-after": "30",
+        });
+      }
+      // A token issued for another server, or not current, never reaches the API.
+      if (check.status === "refused") {
+        return answer(response, 401, "The sign-in is not valid for this server.", {
+          "www-authenticate": challenge(oauth, "invalid_token"),
+        });
+      }
       const lookup = await workspaceOf(options, token);
       if (lookup.outcome === "refused") {
         return answer(
