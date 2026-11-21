@@ -26,6 +26,8 @@ describe("the daily quality digest sweep (#2916)", () => {
         digestsBetween: async () => [],
         organisationsActiveSince: async () => ["org-a", "org-b"],
         spansBetween,
+        outcomesBetween: async () => ({ events: [], runPairs: [] }),
+        feedbackNotesBetween: async () => 0,
         listInsights: async () => saved,
         saveInsights: async (insights) => {
           saved.push(...insights);
@@ -48,7 +50,11 @@ describe("the daily quality digest sweep (#2916)", () => {
         message: "quality digest",
         fields: {
           ...digest,
-          trend: { through: "2026-11-16", pairs: [] },
+          trend: {
+            through: "2026-11-16",
+            pairs: [],
+            feedbackNotes: { current: 0, previous: 0 },
+          },
           latencyTrend: { through: "2026-11-16", rows: [] },
         },
       },
@@ -74,6 +80,8 @@ describe("the daily quality digest sweep (#2916)", () => {
           digestsBetween: async () => [],
           organisationsActiveSince,
           spansBetween: async () => [],
+          outcomesBetween: async () => ({ events: [], runPairs: [] }),
+          feedbackNotesBetween: async () => 0,
           listInsights: async () => [],
           saveInsights: async () => undefined,
           log,
@@ -117,6 +125,8 @@ describe("the daily quality digest sweep (#2916)", () => {
         digestsBetween,
         organisationsActiveSince: async () => [],
         spansBetween: async () => [],
+        outcomesBetween: async () => ({ events: [], runPairs: [] }),
+        feedbackNotesBetween: async () => 0,
         listInsights: async () => [],
         saveInsights: async () => undefined,
         log: (message, fields) => lines.push({ message, fields }),
@@ -136,5 +146,115 @@ describe("the daily quality digest sweep (#2916)", () => {
     expect(lines[1]?.fields.changes).toEqual([
       { key: "quality-drop:ready-rate:claude-haiku-5-5:gpt-terra", from: null, to: "new" },
     ]);
+  });
+
+  it("counts what members did with their drafts by model pair, next to the ready rate (#3245)", async () => {
+    const lines: { message: string; fields: Record<string, unknown> }[] = [];
+    const outcomesBetween = vi.fn(async (organisationId: string) => ({
+      events: [
+        { runId: `${organisationId}-run`, kind: "finding-accepted" as const },
+        { runId: `${organisationId}-run`, kind: "finding-rejected" as const },
+        { runId: `${organisationId}-run`, kind: "exported" as const },
+        { runId: "run-without-evaluation", kind: "stopped" as const },
+      ],
+      runPairs: [
+        {
+          runId: `${organisationId}-run`,
+          authorModel: "claude-haiku-5-5",
+          criticModel: "gpt-terra",
+        },
+      ],
+    }));
+    const digest = await sweepQualityDigest(
+      {
+        claimDay: async () => true,
+        save: async () => undefined,
+        digestsBetween: async () => [
+          // A day stored before outcomes counts as a day without any.
+          { day: "2026-11-15", digest: {} },
+          {
+            day: "2026-11-08",
+            digest: {
+              outcomes: {
+                feedbackNotes: 2,
+                pairs: [
+                  {
+                    authorModel: "claude-haiku-5-5",
+                    criticModel: "gpt-terra",
+                    findingsAccepted: 1,
+                    findingsRejected: 3,
+                    exported: 0,
+                    refunded: 1,
+                    stopped: 0,
+                  },
+                ],
+              },
+            },
+          },
+        ],
+        organisationsActiveSince: async () => ["org-a", "org-b"],
+        spansBetween: async () => [],
+        outcomesBetween,
+        feedbackNotesBetween: async () => 3,
+        listInsights: async () => [],
+        saveInsights: async () => undefined,
+        log: (message, fields) => lines.push({ message, fields }),
+      },
+      { now },
+    );
+
+    expect(outcomesBetween).toHaveBeenCalledWith(
+      "org-b",
+      new Date("2026-11-16T00:00:00.000Z"),
+      new Date("2026-11-17T00:00:00.000Z"),
+    );
+    expect(digest?.outcomes).toEqual({
+      feedbackNotes: 3,
+      pairs: [
+        {
+          authorModel: "claude-haiku-5-5",
+          criticModel: "gpt-terra",
+          findingsAccepted: 2,
+          findingsRejected: 2,
+          exported: 2,
+          refunded: 0,
+          stopped: 0,
+        },
+        {
+          authorModel: "unknown",
+          criticModel: "unknown",
+          findingsAccepted: 0,
+          findingsRejected: 0,
+          exported: 0,
+          refunded: 0,
+          stopped: 2,
+        },
+      ],
+    });
+    // Counts only: no run id reaches the digest's outcomes or its log line.
+    expect(JSON.stringify(digest?.outcomes)).not.toContain("run");
+    const trend = lines[0]?.fields.trend as {
+      pairs: { authorModel: string; outcomes: unknown }[];
+      feedbackNotes: unknown;
+    };
+    expect(trend.feedbackNotes).toEqual({ current: 3, previous: 2 });
+    expect(trend.pairs.find((pair) => pair.authorModel === "claude-haiku-5-5")?.outcomes).toEqual({
+      current: {
+        findingsAccepted: 2,
+        findingsRejected: 2,
+        exported: 2,
+        refunded: 0,
+        stopped: 0,
+        acceptRate: 0.5,
+      },
+      previous: {
+        findingsAccepted: 1,
+        findingsRejected: 3,
+        exported: 0,
+        refunded: 1,
+        stopped: 0,
+        acceptRate: 0.25,
+      },
+    });
   });
 });

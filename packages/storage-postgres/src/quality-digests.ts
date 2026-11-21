@@ -34,6 +34,17 @@ export interface QualityDigests {
     from: Date,
     to: Date,
   ) => Promise<readonly QualitySweepSpan[]>;
+  /**
+   * One organisation's member outcomes in [from, to) (#3245): decided findings, completed exports,
+   * refunds and stopped runs, each with its run id only, and the models of those runs' evaluations.
+   */
+  readonly outcomesBetween: (
+    organisationId: string,
+    from: Date,
+    to: Date,
+  ) => Promise<QualityOutcomeRows>;
+  /** How many feedback notes (not support tickets) members sent in [from, to), everywhere. */
+  readonly feedbackNotesBetween: (from: Date, to: Date) => Promise<number>;
   /** Every insight in the ledger (#2917), at most 1,000. */
   readonly listInsights: () => Promise<readonly QualityInsightRow[]>;
   /** Inserts or replaces each insight, in one transaction. */
@@ -42,6 +53,50 @@ export interface QualityDigests {
 }
 
 /** One ledger row; the same shape as the application's `QualityInsight`. */
+export type QualityOutcomeKind =
+  | "finding-accepted"
+  | "finding-rejected"
+  | "exported"
+  | "refunded"
+  | "stopped";
+
+export interface QualityOutcomeRows {
+  readonly events: readonly { readonly runId: string; readonly kind: QualityOutcomeKind }[];
+  readonly runPairs: readonly {
+    readonly runId: string;
+    readonly authorModel: string;
+    readonly criticModel: string;
+  }[];
+}
+
+const outcomeKinds = new Set<string>([
+  "finding-accepted",
+  "finding-rejected",
+  "exported",
+  "refunded",
+  "stopped",
+]);
+
+// Times stored as text are ISO 8601; the casts compare them as times.
+const outcomesSql = `
+  SELECT run_id, CASE type WHEN 'accept-finding' THEN 'finding-accepted' ELSE 'finding-rejected' END AS kind
+    FROM decisions WHERE type IN ('accept-finding', 'reject-finding')
+     AND created_at::timestamptz >= $1 AND created_at::timestamptz < $2
+  UNION ALL
+  SELECT run_id, 'exported' FROM exports
+   WHERE status = 'completed' AND created_at::timestamptz >= $1 AND created_at::timestamptz < $2
+  UNION ALL
+  SELECT run_id, 'refunded' FROM credit_ledger
+   WHERE kind = 'refund' AND created_at >= $1 AND created_at < $2
+  UNION ALL
+  SELECT DISTINCT run_id, 'stopped' FROM run_snapshots
+   WHERE state IN ('stopped', 'budget-exhausted')
+     AND updated_at::timestamptz >= $1 AND updated_at::timestamptz < $2
+  LIMIT 5000`;
+
+const modelText = (value: unknown): string =>
+  typeof value === "string" && value !== "" ? value.slice(0, 200) : "unknown";
+
 export interface QualityInsightRow {
   readonly key: string;
   readonly firstSeen: string;
@@ -109,6 +164,45 @@ export function createPostgresQualityDigests(options: PostgresSchemaOptions): Qu
         [since.toISOString(), limit],
       );
       return rows.map((row) => String(row.organisation_id));
+    },
+    outcomesBetween: async (organisationId, from, to) => {
+      const tenant = pool.forTenant(requireTenantId(organisationId));
+      const rows = await tenant.query(outcomesSql, [from.toISOString(), to.toISOString()]);
+      const events = rows.flatMap((row) => {
+        const kind = String(row.kind);
+        return outcomeKinds.has(kind)
+          ? [{ runId: String(row.run_id), kind: kind as QualityOutcomeKind }]
+          : [];
+      });
+      const runIds = [...new Set(events.map((event) => event.runId))];
+      if (runIds.length === 0) return { events, runPairs: [] };
+      const spans = await tenant.query(
+        `SELECT DISTINCT ON (run_id) run_id, attributes FROM run_spans
+          WHERE name = 'evaluate_run' AND run_id = ANY($1::text[])
+          ORDER BY run_id, started_at DESC`,
+        [runIds],
+      );
+      return {
+        events,
+        runPairs: spans.map((row) => {
+          const attributes = (
+            typeof row.attributes === "string" ? JSON.parse(row.attributes) : row.attributes
+          ) as Record<string, unknown>;
+          return {
+            runId: String(row.run_id),
+            authorModel: modelText(attributes["draftloop.quality.author_model"]),
+            criticModel: modelText(attributes["gen_ai.request.model"]),
+          };
+        }),
+      };
+    },
+    feedbackNotesBetween: async (from, to) => {
+      const [row] = await pool.query(
+        `SELECT count(*) AS total FROM feedback_notes
+          WHERE kind = 'note' AND sent_at >= $1 AND sent_at < $2`,
+        [from.toISOString(), to.toISOString()],
+      );
+      return Number(row?.total ?? 0);
     },
     spansBetween: async (organisationId, from, to) => {
       const rows = await pool.forTenant(requireTenantId(organisationId)).query(
