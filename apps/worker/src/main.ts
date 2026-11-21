@@ -44,6 +44,7 @@ import {
   tenantServices,
   type WorkspaceJob,
 } from "./tenant-services.js";
+import { createTraceExport, traceExportConfig } from "./trace-export.js";
 import { runWaitlistRetention } from "./waitlist-retention.js";
 import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
 
@@ -88,6 +89,16 @@ const serviceFor = tenantServices({ tenancy, blobsFor: blobs.storageFor, local }
 const researchSearch = researchSearchFor(process.env, config.modelRoutes, local);
 const screenSource = researchScreen();
 
+// Run spans also go to Cloud Trace where DRAFT_LOOP_TRACE_EXPORT=cloud-trace (#3238); content-free.
+const traceExportSettings = traceExportConfig(process.env);
+const traceExport =
+  traceExportSettings === undefined
+    ? undefined
+    : createTraceExport(traceExportSettings, {
+        onError: (error) =>
+          console.error(logLine("ERROR", "trace export failed", { err: errorFields(error) })),
+      });
+
 const workspaceRoot = (job: WorkspaceJob) =>
   hostedWorkspaceReference(job.tenantId, job.workspaceId);
 // In a sign-in deployment, each job checks its record's consent again before any provider call.
@@ -121,15 +132,18 @@ const worker = await startWorker({
     allowProviderData: config.allowProviderData,
     ...(consentFor === undefined ? {} : { consentFor }),
     // The run's content-free spans (#2686); a failed save is logged and never reaches the run.
-    spansFor: (job) =>
-      createRunSpanRecorder({
+    spansFor: (job) => {
+      const recorder = createRunSpanRecorder({
         store: tenancy.forTenant(job.tenantId).runSpans,
         workspaceId: job.workspaceId,
         runId: job.runId,
         ...(job.requestId === undefined ? {} : { requestId: job.requestId }),
         onError: (error) =>
           console.error(logLine("ERROR", "run span not saved", { err: errorFields(error) })),
-      }),
+      });
+      // The same spans in Cloud Trace when the deployment turns export on (#3238).
+      return traceExport === undefined ? recorder : traceExport.wrap(recorder);
+    },
     ...(criticFallback === undefined
       ? {}
       : {
@@ -296,8 +310,8 @@ const onStopped = (error?: unknown) => {
   if (error !== undefined) {
     console.error(logLine("ERROR", "worker stopped with an error", { err: errorFields(error) }));
   }
-  void tenancy
-    .close()
+  void (traceExport?.shutdown() ?? Promise.resolve())
+    .then(() => tenancy.close())
     .finally(() => cloudSql.close())
     .finally(() => process.exit(error === undefined ? 0 : 1));
 };
