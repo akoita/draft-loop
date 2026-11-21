@@ -10984,6 +10984,7 @@ msgid "version"
 msgstr "version"
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/profile-status-view.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/review.tsx
@@ -11137,6 +11138,11 @@ msgstr "We show one thing to do at a time and explain each screen."
 msgid "Weak points and how to answer"
 msgstr "Weak points and how to answer"
 
+#: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
+msgid "Web build"
+msgstr "Web build"
+
 #: apps/web/src/research-brief.tsx
 msgid "Web pages can be wrong or out of date. Check a fact at its source before you rely on it."
 msgstr "Web pages can be wrong or out of date. Check a fact at its source before you rely on it."
@@ -11144,11 +11150,6 @@ msgstr "Web pages can be wrong or out of date. Check a fact at its source before
 #: apps/web/src/feedback.tsx
 msgid "Web screen"
 msgstr "Web screen"
-
-#: apps/web/src/feedback.tsx
-#: apps/web/src/operator.tsx
-msgid "Web version"
-msgstr "Web version"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "what changed thanks to your work"
