@@ -5,7 +5,7 @@ import { readModelGatewayConfig, workerProviderOptions } from "./model-routes.js
 
 const env = {
   DRAFT_LOOP_VERTEX_PROJECT_ID: "synthetic-project",
-  DRAFT_LOOP_VERTEX_LOCATION: "europe-west1",
+  DRAFT_LOOP_VERTEX_LOCATION: "eu",
   DRAFT_LOOP_VERTEX_PRICE_FACTOR: "1.1",
   DRAFT_LOOP_OPENAI_KEY_SECRET: "projects/synthetic/secrets/openai-key/versions/latest",
 };
@@ -43,7 +43,7 @@ describe("readModelGatewayConfig", () => {
   it("reads the Vertex location, its price factor and the key secrets", () => {
     expect(readModelGatewayConfig(env)).toEqual({
       vertexProjectId: "synthetic-project",
-      vertexLocation: "europe-west1",
+      vertexLocation: "eu",
       vertexPriceFactor: 1.1,
       openAiKeySecret: env.DRAFT_LOOP_OPENAI_KEY_SECRET,
       openAiEndpoint: "eu",
@@ -60,6 +60,10 @@ describe("readModelGatewayConfig", () => {
 
   it.each([
     ["a location outside the EU", { DRAFT_LOOP_VERTEX_LOCATION: "us-east5" }],
+    [
+      "a single europe-* region, which serves no current Claude model",
+      { DRAFT_LOOP_VERTEX_LOCATION: "europe-west1" },
+    ],
     ["no price factor", { DRAFT_LOOP_VERTEX_PRICE_FACTOR: undefined }],
     ["a price factor below 1", { DRAFT_LOOP_VERTEX_PRICE_FACTOR: "0.9" }],
     ["no OpenAI key secret", { DRAFT_LOOP_OPENAI_KEY_SECRET: "" }],

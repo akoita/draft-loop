@@ -365,13 +365,17 @@ Values come from the deployment's configuration, never from this repository.
 | Variable                          | Meaning                                                                     |
 | --------------------------------- | --------------------------------------------------------------------------- |
 | `DRAFT_LOOP_VERTEX_PROJECT_ID`    | The project that serves Claude on Vertex AI; setting it turns routes on     |
-| `DRAFT_LOOP_VERTEX_LOCATION`      | `eu` (default) or a `europe-*` region; any other location is refused        |
+| `DRAFT_LOOP_VERTEX_LOCATION`      | `eu` (default, 10% above global prices); anything else stops startup        |
 | `DRAFT_LOOP_VERTEX_PRICE_FACTOR`  | The location's price factor over first-party rates, at least 1              |
 | `DRAFT_LOOP_OPENAI_KEY_SECRET`    | The Secret Manager version holding the critic's OpenAI EU project key       |
 | `DRAFT_LOOP_OPENAI_ENDPOINT`      | `eu` (default) or `global`, OpenAI's endpoint outside the EU                |
 | `DRAFT_LOOP_ANTHROPIC_FALLBACK`   | `true` allows the direct Claude API as a recorded fallback; default `false` |
 | `DRAFT_LOOP_ANTHROPIC_KEY_SECRET` | The Secret Manager version holding the Claude API key; fallback only        |
 
+- **Location:** use `eu`. A single `europe-*` region serves Claude Sonnet 4.6
+  and earlier only, so the API and the worker refuse it at startup with that
+  message. Vertex AI has no Message Batches or Files API; a feature that needs
+  them keeps the direct route.
 - **Author:** calls Claude on Vertex AI with the worker's service identity, so
   no Claude key exists unless the fallback is on. The fallback processes
   material outside the EU, which is why it is off by default.

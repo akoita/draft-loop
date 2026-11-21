@@ -5,7 +5,7 @@ import { readScreeningConfig } from "./content-screening-config.js";
 
 const vertex = {
   DRAFT_LOOP_VERTEX_PROJECT_ID: "example-proj",
-  DRAFT_LOOP_VERTEX_LOCATION: "europe-west1",
+  DRAFT_LOOP_VERTEX_LOCATION: "eu",
   DRAFT_LOOP_VERTEX_PRICE_FACTOR: "1.1",
 };
 
@@ -31,7 +31,7 @@ describe("readScreeningConfig", () => {
       allowProviderData: false,
       model: {
         vertexProjectId: "example-proj",
-        vertexLocation: "europe-west1",
+        vertexLocation: "eu",
         vertexPriceFactor: 1.1,
       },
     });
@@ -47,7 +47,7 @@ describe("readScreeningConfig", () => {
       }).model,
     ).toEqual({
       vertexProjectId: "example-proj",
-      vertexLocation: "europe-west1",
+      vertexLocation: "eu",
       vertexPriceFactor: 1.1,
       anthropicKeySecret: "projects/p/secrets/anthropic-api-key/versions/latest",
     });
@@ -137,6 +137,10 @@ describe("readScreeningConfig", () => {
   it.each([
     ["no Vertex project", { ...vertex, DRAFT_LOOP_VERTEX_PROJECT_ID: "" }],
     ["a location outside the EU", { ...vertex, DRAFT_LOOP_VERTEX_LOCATION: "global" }],
+    [
+      "a single europe-* region, which serves no current Claude model",
+      { ...vertex, DRAFT_LOOP_VERTEX_LOCATION: "europe-west1" },
+    ],
     ["no price factor", { ...vertex, DRAFT_LOOP_VERTEX_PRICE_FACTOR: "" }],
     ["a price factor below one", { ...vertex, DRAFT_LOOP_VERTEX_PRICE_FACTOR: "0.5" }],
   ])("refuses rules+model with %s", (_label, env) => {

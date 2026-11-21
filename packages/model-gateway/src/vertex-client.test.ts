@@ -45,23 +45,10 @@ describe("Claude on Vertex AI", () => {
     expect(response.cost.estimatedUsd).toBeCloseTo(0.0077, 10);
   });
 
-  it("uses a europe-* region's own endpoint", async () => {
-    const { calls, fetchImpl } = scriptedVertex();
-    const client = createVertexAnthropicClient({
-      projectId: "synthetic-project",
-      location: "europe-west1",
-      auth,
-      fetch: fetchImpl,
-    });
-
-    await createVertexAnthropicAdapter(client, {
-      configuredModel: model,
-      locationPriceFactor: 1,
-    }).execute(request);
-
-    expect(calls[0]?.url).toMatch(
-      /^https:\/\/europe-west1-aiplatform\.googleapis\.com\/v1\/projects\/synthetic-project\/locations\/europe-west1\//u,
-    );
+  it("refuses a single europe-* region, which serves no current Claude model", () => {
+    expect(() =>
+      createVertexAnthropicClient({ projectId: "synthetic-project", location: "europe-west1" }),
+    ).toThrow(/europe-west1 does not serve claude-opus-5-5.*Use the eu multi-region/u);
   });
 
   it.each(["global", "us", "us-east5", "asia-southeast1", "europe", ""])(
