@@ -337,8 +337,8 @@ export function CareerEvidenceCardView({
                 <textarea
                   className="url-input"
                   rows={3}
-                  placeholder={t`https://github.com/…
-https://www.linkedin.com/in/…`}
+                  placeholder={t`https://www.linkedin.com/in/…
+https://your-portfolio.example/…`}
                   value={url}
                   onChange={(event) => onUrlChange(event.target.value)}
                   aria-label={

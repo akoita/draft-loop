@@ -708,7 +708,7 @@ describe("desktop canonical candidate profile", () => {
     expect(html).toContain('aria-labelledby="canonical-profile-title"');
     expect(html).toContain('aria-label="Profile name"');
     expect(html).toContain("Profile name");
-    expect(html).toContain('placeholder="e.g. senior-data-engineer-cv"');
+    expect(html).toContain('placeholder="e.g. account-executive-cv"');
     expect(html).toContain(
       "Choose a name for this profile: letters, digits, dots, dashes, or underscores. Approval",
     );
