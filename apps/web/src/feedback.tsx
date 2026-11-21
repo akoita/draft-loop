@@ -7,9 +7,13 @@ import {
   type FeedbackClientContext,
   feedbackContextFor,
 } from "./feedback-context.js";
+import {
+  feedbackCharactersLeft,
+  feedbackReference,
+  maximumFeedbackLength,
+} from "./feedback-model.js";
 
-/** The longest note the API takes (#2828). */
-export const maximumFeedbackLength = 2_000;
+export { maximumFeedbackLength } from "./feedback-model.js";
 
 export type FeedbackCategory = "bug" | "idea" | "other";
 
@@ -30,6 +34,8 @@ export interface FeedbackDialogProps {
   readonly problem?: string | undefined;
   /** True once the note is sent: the dialog thanks the member and offers only Close. */
   readonly sent: boolean;
+  /** The sent note's reference, such as `FB-1A2B3C4D`, for the member to quote (#2876). */
+  readonly reference?: string | undefined;
   /** The technical facts the note will carry (#2875), listed under What we include. */
   readonly context?: FeedbackClientContext | undefined;
   /** The server's release number, as the Help menu shows it; absent on an untagged build. */
@@ -105,11 +111,12 @@ export function FeedbackContextFold({
   );
 }
 
-/** A short note about DraftLoop for the people who run it, with an optional category. */
+/** A short note about DraftLoop for the people who run it, with an optional kind (#2876). */
 export function FeedbackDialog({
   busy,
   problem,
   sent,
+  reference,
   context,
   version,
   onSubmit,
@@ -118,7 +125,8 @@ export function FeedbackDialog({
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const [text, setText] = useState("");
-  const [category, setCategory] = useState<FeedbackCategory | "">("");
+  const [category, setCategory] = useState<FeedbackCategory>();
+  const [empty, setEmpty] = useState(false);
 
   useEffect(() => {
     const element = dialog.current;
@@ -129,9 +137,20 @@ export function FeedbackDialog({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (text.trim() === "") return;
-    onSubmit({ text, category: category === "" ? undefined : category });
+    if (busy) return;
+    if (text.trim() === "") {
+      setEmpty(true);
+      return;
+    }
+    onSubmit({ text, category });
   }
+
+  const kinds: readonly (readonly [FeedbackCategory, string])[] = [
+    ["bug", t`Something is broken`],
+    ["idea", t`An idea`],
+    ["other", t`Something else`],
+  ];
+  const left = feedbackCharactersLeft(text.length);
 
   return (
     <dialog
@@ -143,12 +162,21 @@ export function FeedbackDialog({
         onClose();
       }}
     >
-      <form onSubmit={submit}>
-        <h3 id={`${id}-title`}>{t`Send feedback`}</h3>
+      <form onSubmit={submit} noValidate>
+        <h2 id={`${id}-title`} className="feedback-title">
+          {t`Send feedback`}
+        </h2>
         {sent ? (
           <>
             <p role="status">{t`Thank you. The people who run DraftLoop read every note.`}</p>
-            <div className="actions">
+            {reference === undefined ? null : (
+              <p>
+                {t`Your reference:`} <strong className="feedback-reference">{reference}</strong>
+                <br />
+                <span className="muted">{t`Quote it if you write to us about this note.`}</span>
+              </p>
+            )}
+            <div className="actions feedback-actions">
               <button type="button" onClick={onClose}>
                 {t`Close`}
               </button>
@@ -159,41 +187,60 @@ export function FeedbackDialog({
             <p>
               {t`Tell the people who run DraftLoop what works, what breaks or what you miss. Your note goes with the technical details listed under What we include, never your CV, job descriptions, page text or screenshots.`}
             </p>
-            <label htmlFor={`${id}-category`}>{t`Kind of note`}</label>
-            <select
-              id={`${id}-category`}
-              value={category}
-              onChange={(event) => setCategory(event.target.value as FeedbackCategory | "")}
-            >
-              <option value="">{t`Not sure`}</option>
-              <option value="bug">{t`Something is broken`}</option>
-              <option value="idea">{t`An idea`}</option>
-              <option value="other">{t`Something else`}</option>
-            </select>
+            <fieldset className="feedback-kind">
+              <legend className="feedback-label">{t`Kind of note (optional)`}</legend>
+              <div className="feedback-chips">
+                {kinds.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className="feedback-chip"
+                    aria-pressed={category === value}
+                    onClick={() => setCategory(category === value ? undefined : value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
             <label htmlFor={`${id}-text`}>{t`Your note`}</label>
             <textarea
               id={`${id}-text`}
               value={text}
-              required
               maxLength={maximumFeedbackLength}
+              placeholder={t`What happened? What did you expect?`}
               aria-describedby={`${id}-hint`}
-              onChange={(event) => setText(event.target.value)}
+              aria-invalid={empty ? true : undefined}
+              onChange={(event) => {
+                setText(event.target.value);
+                if (event.target.value.trim() !== "") setEmpty(false);
+              }}
             />
-            <p id={`${id}-hint`} className="muted">
-              {t`Up to ${maximumFeedbackLength} characters. Leave out passwords and other people's details.`}
+            <p id={`${id}-hint`} className="muted feedback-hint">
+              <span>{t`Leave out passwords and other people's details.`}</span>
+              {left === undefined ? null : (
+                <span className="feedback-counter" aria-live="polite">
+                  {t`${left} characters left`}
+                </span>
+              )}
             </p>
+            {empty ? (
+              <p className="problem" role="alert">
+                {t`Write a note first.`}
+              </p>
+            ) : null}
             <FeedbackContextFold context={context} version={version} />
             {problem === undefined ? null : (
               <p className="problem" role="alert">
                 {problem}
               </p>
             )}
-            <div className="actions">
-              <button type="submit" disabled={busy || text.trim() === ""}>
-                {busy ? t`Sending…` : t`Send`}
-              </button>
+            <div className="actions feedback-actions">
               <button type="button" className="secondary" onClick={onClose}>
                 {t`Cancel`}
+              </button>
+              <button type="submit" aria-disabled={busy ? true : undefined}>
+                {busy ? t`Sending…` : t`Send`}
               </button>
             </div>
           </>
@@ -212,8 +259,8 @@ export async function sendFeedback(
     screen: string;
     context?: FeedbackClientContext | undefined;
   },
-): Promise<void> {
-  await client.call("POST /v1/feedback", {
+): Promise<{ readonly noteId: string }> {
+  return await client.call("POST /v1/feedback", {
     body: {
       text: note.text,
       screen: note.screen,
@@ -237,6 +284,7 @@ export function useFeedbackDialog(
   const [isOpen, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  const [reference, setReference] = useState<string>();
   const [problem, setProblem] = useState<string>();
   const [context, setContext] = useState<FeedbackClientContext>();
 
@@ -248,6 +296,7 @@ export function useFeedbackDialog(
   function close() {
     setOpen(false);
     setSent(false);
+    setReference(undefined);
     setProblem(undefined);
   }
 
@@ -255,11 +304,12 @@ export function useFeedbackDialog(
     setBusy(true);
     setProblem(undefined);
     try {
-      await sendFeedback(client, {
+      const { noteId } = await sendFeedback(client, {
         ...note,
         screen: feedbackScreen(window.location.hash),
         context,
       });
+      setReference(feedbackReference(noteId));
       setSent(true);
     } catch (error) {
       setProblem(describeError(error));
@@ -275,6 +325,7 @@ export function useFeedbackDialog(
         busy={busy}
         problem={problem}
         sent={sent}
+        reference={reference}
         context={context}
         version={version}
         onSubmit={(note) => void submit(note)}

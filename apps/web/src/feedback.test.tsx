@@ -12,6 +12,7 @@ import {
   sendFeedback,
 } from "./feedback.js";
 import type { FeedbackClientContext } from "./feedback-context.js";
+import { feedbackCharactersLeft, feedbackReference } from "./feedback-model.js";
 
 function render(node: ReactNode, locale: "en" | "fr" = "en"): string {
   return renderToStaticMarkup(<ScreensI18nProvider locale={locale}>{node}</ScreensI18nProvider>);
@@ -24,17 +25,29 @@ const idle: FeedbackDialogProps = {
   onClose: () => {},
 };
 
-describe("the Send feedback dialog (#2844)", () => {
-  it("asks for a note of at most 2,000 characters and an optional kind, in English", () => {
+describe("the Send feedback dialog (#2844, #2876)", () => {
+  it("titles the dialog and asks for a note with optional kind chips, none chosen", () => {
     const html = render(<FeedbackDialog {...idle} />);
 
-    expect(html).toContain("Send feedback");
+    expect(html).toMatch(/<h2 id="[^"]+-title" class="feedback-title">Send feedback<\/h2>/u);
     expect(html).toContain(`maxLength="${maximumFeedbackLength}"`);
-    expect(html).toContain('<option value="" selected="">Not sure</option>');
-    expect(html).toContain('<option value="bug">Something is broken</option>');
-    expect(html).toContain("Up to 2000 characters.");
-    // Nothing typed yet: Send waits for a note.
-    expect(html).toMatch(/<button type="submit" disabled="">Send<\/button>/u);
+    expect(html).toContain('placeholder="What happened? What did you expect?"');
+    expect(html).toContain("Kind of note (optional)");
+    expect(html).toContain("<legend class=\"feedback-label\">Kind of note (optional)</legend>");
+    expect(html).not.toContain("<select");
+    for (const kind of ["Something is broken", "An idea", "Something else"]) {
+      expect(html).toContain(
+        `<button type="button" class="feedback-chip" aria-pressed="false">${kind}</button>`,
+      );
+    }
+    // Far from the limit: no counter, no number in the hint.
+    expect(html).not.toContain("characters left");
+    expect(html).not.toContain("Up to 2000");
+    // Send is never a pale disabled button: an empty note says why instead.
+    expect(html).toMatch(/<button type="submit">Send<\/button>/u);
+    expect(html).not.toContain("disabled");
+    // Cancel then Send, on one row.
+    expect(html.indexOf(">Cancel<")).toBeLessThan(html.indexOf(">Send<"));
   });
 
   it("speaks French when the screen does", () => {
@@ -43,6 +56,7 @@ describe("the Send feedback dialog (#2844)", () => {
     expect(html).toContain("Envoyer un avis");
     expect(html).toContain("Quelque chose ne marche pas");
     expect(html).not.toContain("Something is broken");
+    expect(html).not.toContain("What happened?");
   });
 
   it("shows a failed send as an alert and keeps the form", () => {
@@ -53,12 +67,34 @@ describe("the Send feedback dialog (#2844)", () => {
     expect(html).toContain("<textarea");
   });
 
-  it("thanks the member once the note is sent", () => {
-    const html = render(<FeedbackDialog {...idle} sent />);
+  it("marks Send busy while the note is on its way", () => {
+    const html = render(<FeedbackDialog {...idle} busy />);
+
+    expect(html).toContain('<button type="submit" aria-disabled="true">Sending…</button>');
+  });
+
+  it("thanks the member once the note is sent and gives a reference to quote", () => {
+    const html = render(<FeedbackDialog {...idle} sent reference="FB-1A2B3C4D" />);
 
     expect(html).toContain('role="status"');
     expect(html).toContain("The people who run DraftLoop read every note.");
+    expect(html).toContain('<strong class="feedback-reference">FB-1A2B3C4D</strong>');
     expect(html).not.toContain("<textarea");
+  });
+});
+
+describe("the note's counter and reference (#2876)", () => {
+  it("counts the characters left only near the limit", () => {
+    expect(feedbackCharactersLeft(0)).toBeUndefined();
+    expect(feedbackCharactersLeft(maximumFeedbackLength - 201)).toBeUndefined();
+    expect(feedbackCharactersLeft(maximumFeedbackLength - 200)).toBe(200);
+    expect(feedbackCharactersLeft(maximumFeedbackLength)).toBe(0);
+    expect(feedbackCharactersLeft(maximumFeedbackLength + 5)).toBe(0);
+  });
+
+  it("makes a short reference from the note id", () => {
+    expect(feedbackReference("1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d")).toBe("FB-1A2B3C4D");
+    expect(feedbackReference("ab-cd")).toBe("FB-ABCD");
   });
 });
 
