@@ -150,6 +150,11 @@ export function guidePageHtml(language: HelpGuideLanguage): string {
 <meta property="og:description" content="${e(words.description)}" />
 <meta property="og:type" content="article" />
 <meta property="og:locale" content="${words.locale}" />
+<meta property="og:url" content="${siteOriginToken}${guidePagePaths[language]}" />
+<meta property="og:image" content="${siteOriginToken}/about/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
 <link rel="canonical" href="${siteOriginToken}${guidePagePaths[language]}" />
 <link rel="icon" href="/showcase/mark.svg" type="image/svg+xml" />
 ${alternates.join("\n")}
