@@ -14,7 +14,13 @@ interface SectionVocabulary {
   readonly identities: readonly string[];
   readonly queryTerms: readonly string[];
   readonly evidenceTerms: readonly string[];
+  /** Role-neutral shapes that mark a clause as this section's content, such as a dated period. */
+  readonly evidencePatterns?: readonly RegExp[];
 }
+
+/** A dated period such as "2021 to present", "2019-2023" or "since September 2020". */
+const periodPattern =
+  /\b(?:19|20)\d{2}\s*(?:-|–|—|to|until)\s*(?:(?:19|20)\d{2}|present|now|today)\b|\bsince\s+(?:[a-z]+\s+)?(?:19|20)\d{2}\b/iu;
 
 const sectionVocabularies: readonly SectionVocabulary[] = Object.freeze([
   {
@@ -31,6 +37,8 @@ const sectionVocabularies: readonly SectionVocabulary[] = Object.freeze([
       "employmenthistory",
       "workhistory",
       "roles",
+      "placements",
+      "clinicalplacements",
     ],
     queryTerms: [
       "experience",
@@ -42,7 +50,8 @@ const sectionVocabularies: readonly SectionVocabulary[] = Object.freeze([
       "organisation",
       "organization",
       "period",
-      "engineer",
+      "placement",
+      "placements",
     ],
     evidenceTerms: [
       "experience",
@@ -53,8 +62,10 @@ const sectionVocabularies: readonly SectionVocabulary[] = Object.freeze([
       "organisation",
       "organization",
       "period",
-      "engineer",
+      "placement",
+      "placements",
     ],
+    evidencePatterns: [periodPattern],
   },
   {
     identities: [
@@ -79,6 +90,11 @@ const sectionVocabularies: readonly SectionVocabulary[] = Object.freeze([
       "college",
       "school",
       "studied",
+      "diploma",
+      "apprenticeship",
+      "pgce",
+      "nvq",
+      "btec",
     ],
     evidenceTerms: [
       "education",
@@ -95,6 +111,11 @@ const sectionVocabularies: readonly SectionVocabulary[] = Object.freeze([
       "college",
       "school",
       "studied",
+      "diploma",
+      "apprenticeship",
+      "pgce",
+      "nvq",
+      "btec",
     ],
   },
   {
@@ -108,6 +129,13 @@ const sectionVocabularies: readonly SectionVocabulary[] = Object.freeze([
       "credentials",
       "licenses",
       "licensesandcertifications",
+      "licences",
+      "licencesandcertifications",
+      "registrations",
+      "registrationsandlicences",
+      "registrationsandlicenses",
+      "professionalregistrations",
+      "accreditations",
     ],
     queryTerms: [
       "certification",
@@ -120,6 +148,14 @@ const sectionVocabularies: readonly SectionVocabulary[] = Object.freeze([
       "license",
       "licensed",
       "training",
+      "licence",
+      "licenced",
+      "registration",
+      "registered",
+      "accreditation",
+      "accredited",
+      "chartered",
+      "card",
     ],
     evidenceTerms: [
       "certification",
@@ -132,6 +168,14 @@ const sectionVocabularies: readonly SectionVocabulary[] = Object.freeze([
       "license",
       "licensed",
       "training",
+      "licence",
+      "licenced",
+      "registration",
+      "registered",
+      "accreditation",
+      "accredited",
+      "chartered",
+      "card",
     ],
   },
   {
@@ -178,7 +222,18 @@ const sectionVocabularies: readonly SectionVocabulary[] = Object.freeze([
     ],
   },
   {
-    identities: ["skill", "skills", "technicalskills", "technologies", "techstack", "tools"],
+    identities: [
+      "skill",
+      "skills",
+      "technicalskills",
+      "technologies",
+      "techstack",
+      "tools",
+      "keyskills",
+      "competencies",
+      "corecompetencies",
+      "capabilities",
+    ],
     queryTerms: [
       "skill",
       "skills",
@@ -187,6 +242,9 @@ const sectionVocabularies: readonly SectionVocabulary[] = Object.freeze([
       "technical",
       "stack",
       "programming",
+      "competencies",
+      "competency",
+      "capabilities",
     ],
     evidenceTerms: [
       "skill",
@@ -196,6 +254,9 @@ const sectionVocabularies: readonly SectionVocabulary[] = Object.freeze([
       "technical",
       "stack",
       "programming",
+      "competencies",
+      "competency",
+      "capabilities",
     ],
   },
   {
@@ -364,7 +425,10 @@ export function matchesRequiredSectionEvidence(section: string, text: string): b
   return (
     hasRequiredHeading ||
     hasHeading ||
-    clauses.some((clause) => sectionTerms.some((term) => textHasTerm(clause, term)))
+    clauses.some((clause) => sectionTerms.some((term) => textHasTerm(clause, term))) ||
+    clauses.some((clause) =>
+      (vocabularyFor(section)?.evidencePatterns ?? []).some((pattern) => pattern.test(clause)),
+    )
   );
 }
 

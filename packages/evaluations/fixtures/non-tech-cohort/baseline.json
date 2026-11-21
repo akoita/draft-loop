@@ -114,35 +114,35 @@
   "sections": [
     {
       "id": "sec-t03",
-      "recognised": false
+      "recognised": true
     },
     {
       "id": "sec-s03",
-      "recognised": false
+      "recognised": true
     },
     {
       "id": "sec-n01",
-      "recognised": false
+      "recognised": true
     },
     {
       "id": "sec-e01",
-      "recognised": false
+      "recognised": true
     },
     {
       "id": "sec-e06",
-      "recognised": false
+      "recognised": true
     },
     {
       "id": "sec-n02",
-      "recognised": false
+      "recognised": true
     },
     {
       "id": "sec-s01",
-      "recognised": false
+      "recognised": true
     },
     {
       "id": "sec-t01",
-      "recognised": false
+      "recognised": true
     },
     {
       "id": "sec-t02",
@@ -150,7 +150,7 @@
     },
     {
       "id": "sec-e02",
-      "recognised": false
+      "recognised": true
     }
   ]
 }

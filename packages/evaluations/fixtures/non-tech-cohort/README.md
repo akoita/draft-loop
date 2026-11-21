@@ -32,12 +32,12 @@ the same command to rewrite it.
 | Grounding: supported claims rejected    | 3 of 13: "Advanced Life Support" for ALS, "Key Stage 2" for KS2, "QTS" for Qualified Teacher Status      | #3089                                  |
 | Grounding: contradicted claims accepted | 3 of 7: "two years" for six months, a crew of "eight" for three, "17th Edition" for 18th                 | The critic must catch these; see below |
 | Retrieval recall                        | Today's picks 0.656, BM25 0.719; both miss ALS, complex deals, Key Stage 2 and special educational needs | Semantic arm, #3088                    |
-| Required-section evidence               | 1 of 10 lines recognised (only "PGCE" as Education)                                                      | #3088                                  |
+| Required-section evidence               | 10 of 10 lines recognised since #3088 (1 of 10 before)                                                   | Done                                   |
 
-The section matcher recognises an experience line through words such as
-"engineer", so a software line passes and a nurse's or teacher's line does
-not. Lines here have no Markdown heading, as in the offline check behind the
-rollup (#3086). A chunk under a matching heading still passes.
+The section matcher used to recognise an experience line through words such
+as "engineer", so a software line passed and a nurse's or teacher's line did
+not. Since #3088 it uses role-neutral terms (competencies, registration,
+licence, card, placement) and a dated period such as "2021 to present".
 
 Number words ("two", "eight") and ordinals ("17th") are not protected values
 today, so a wrong count or edition passes deterministic grounding and only the
