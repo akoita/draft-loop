@@ -1,5 +1,12 @@
 import type { RunSpanAttributes, RunSpanName } from "@draft-loop/domain/run-span";
 
+import {
+  type DigestOutcomeCounts,
+  type DigestOutcomes,
+  type OutcomeWeek,
+  outcomeWeek,
+} from "./outcome-digest.js";
+
 /**
  * Output quality in the daily digest (#3240): each day's `evaluate_run` spans reduced by author
  * and critic model, then the last seven days compared with the seven before, so the outer loop
@@ -121,12 +128,16 @@ export interface QualityTrendPair {
   readonly previous: QualityWeek;
   /** Metrics that fell by more than the threshold, with enough runs in both weeks. */
   readonly drops: readonly QualityTrendMetric[];
+  /** What members did with this pair's drafts, this week and the week before (#3245). */
+  readonly outcomes: { readonly current: OutcomeWeek; readonly previous: OutcomeWeek };
 }
 
 export interface QualityTrend {
   /** The last day of the current week, as YYYY-MM-DD. */
   readonly through: string;
   readonly pairs: readonly QualityTrendPair[];
+  /** Feedback notes members sent, this week and the week before (#3245). */
+  readonly feedbackNotes: { readonly current: number; readonly previous: number };
 }
 
 /** A drop counts when a week's value is this much lower than the week before, relatively. */
@@ -162,7 +173,11 @@ const dropped = (current: number | null, previous: number | null): boolean =>
  */
 export function qualityTrend(
   through: string,
-  days: readonly { readonly day: string; readonly quality?: DigestQuality }[],
+  days: readonly {
+    readonly day: string;
+    readonly quality?: DigestQuality;
+    readonly outcomes?: DigestOutcomes;
+  }[],
 ): QualityTrend {
   const end = Date.parse(`${through}T00:00:00.000Z`);
   const byPair = new Map<
@@ -172,23 +187,41 @@ export function qualityTrend(
       criticModel: string;
       current: DigestQualityPair[];
       previous: DigestQualityPair[];
+      currentOutcomes: DigestOutcomeCounts[];
+      previousOutcomes: DigestOutcomeCounts[];
     }
   >();
+  const entryFor = (authorModel: string, criticModel: string) => {
+    const key = `${authorModel}\u0000${criticModel}`;
+    const entry = byPair.get(key) ?? {
+      authorModel,
+      criticModel,
+      current: [],
+      previous: [],
+      currentOutcomes: [],
+      previousOutcomes: [],
+    };
+    byPair.set(key, entry);
+    return entry;
+  };
+  const feedbackNotes = { current: 0, previous: 0 };
   for (const day of days) {
     const age = Math.round((end - Date.parse(`${day.day}T00:00:00.000Z`)) / dayMs);
     if (!(age >= 0 && age < 14)) continue;
     const saved = day.quality?.pairs;
     for (const pair of Array.isArray(saved) ? saved : []) {
-      const key = `${pair.authorModel}\u0000${pair.criticModel}`;
-      const entry = byPair.get(key) ?? {
-        authorModel: pair.authorModel,
-        criticModel: pair.criticModel,
-        current: [],
-        previous: [],
-      };
+      const entry = entryFor(pair.authorModel, pair.criticModel);
       (age < 7 ? entry.current : entry.previous).push(pair);
-      byPair.set(key, entry);
     }
+    // Days stored before #3245 have no outcomes and count as days without any.
+    const outcomes = day.outcomes?.pairs;
+    for (const pair of Array.isArray(outcomes) ? outcomes : []) {
+      const entry = entryFor(pair.authorModel, pair.criticModel);
+      (age < 7 ? entry.currentOutcomes : entry.previousOutcomes).push(pair);
+    }
+    const notes = number(day.outcomes?.feedbackNotes) ?? 0;
+    if (age < 7) feedbackNotes.current += notes;
+    else feedbackNotes.previous += notes;
   }
   const pairs = [...byPair.values()].map((entry) => {
     const current = week(entry.current);
@@ -203,6 +236,10 @@ export function qualityTrend(
       current,
       previous,
       drops,
+      outcomes: {
+        current: outcomeWeek(entry.currentOutcomes),
+        previous: outcomeWeek(entry.previousOutcomes),
+      },
     };
   });
   pairs.sort(
@@ -211,5 +248,5 @@ export function qualityTrend(
       a.authorModel.localeCompare(b.authorModel) ||
       a.criticModel.localeCompare(b.criticModel),
   );
-  return { through, pairs };
+  return { through, pairs, feedbackNotes };
 }

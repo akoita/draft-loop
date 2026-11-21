@@ -1,9 +1,11 @@
 import type { RunSpanAttributes, RunSpanName, RunSpanStatus } from "@draft-loop/domain/run-span";
 
 import { type DigestLatency, digestLatency } from "./latency-trend.js";
+import type { DigestOutcomes } from "./outcome-digest.js";
 import { type DigestQuality, digestQuality } from "./quality-trend.js";
 
 export * from "./latency-trend.js";
+export * from "./outcome-digest.js";
 export * from "./quality-trend.js";
 
 /**
@@ -68,6 +70,8 @@ export interface QualityDigest {
   readonly quality: DigestQuality;
   /** Step latency from the day's finished spans (#3251). */
   readonly latency: readonly DigestLatency[];
+  /** What members did with their drafts that day, per model pair (#3245). */
+  readonly outcomes: DigestOutcomes;
 }
 
 /** The most failure patterns one digest lists, the most frequent first. */
@@ -99,6 +103,8 @@ export function buildQualityDigest(input: {
   readonly day: string;
   readonly organisations: number;
   readonly spans: readonly QualityDigestSpan[];
+  /** The day's member outcomes; none when the sweep read none. */
+  readonly outcomes?: DigestOutcomes;
 }): QualityDigest {
   const runs = new Set<string>();
   const attempts = new Map<string, { step: string; model: string; ok: number; error: number }>();
@@ -182,5 +188,6 @@ export function buildQualityDigest(input: {
     },
     quality: digestQuality(input.spans),
     latency: digestLatency(input.spans),
+    outcomes: input.outcomes ?? { feedbackNotes: 0, pairs: [] },
   };
 }

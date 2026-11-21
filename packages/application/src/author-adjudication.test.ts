@@ -16,6 +16,12 @@ import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
 import { projectCardInstructions } from "./author-project-card-prompts.js";
 import { relevanceWeightedRoomInstructions } from "./author-relevance-prompts.js";
 import { automaticRoundAndVoiceInstructions } from "./author-voice-prompts.js";
+import {
+  createCriticAdjudicationPrompt,
+  criticReadsCompactEvidenceTable,
+  criticReportsFindingTargets,
+} from "./critic-adjudication.js";
+import { roleNeutralSectionInstructions } from "./role-neutral-prompts.js";
 
 const authorVersion = promptTemplateVersion("author");
 const authorOutputBudget = { maxOutputTokens: 32_768 };
@@ -294,8 +300,8 @@ const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
   it("records v18 for new author runs and v11 for the critic", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v20");
-    expect(promptTemplateVersion("critic")).toBe("cli-critic-v11");
+    expect(promptTemplateVersion("author")).toBe("cli-author-v21");
+    expect(promptTemplateVersion("critic")).toBe("cli-critic-v12");
   });
 
   it("keeps the v1 prompt byte-identical to the prompt v1 runs were started with", () => {
@@ -736,5 +742,26 @@ describe("author prompt cli-author-v20", () => {
     expect(v20).toContain("never write (public), (private) or (unknown) in the CV");
     expect(v19).not.toContain(projectCardInstructions);
     expect(v20.replace(projectCardInstructions, "")).toBe(v19);
+  });
+});
+
+describe("author prompt cli-author-v21 and critic cli-critic-v12 (#3090)", () => {
+  it("give examples from several fields and keep earlier versions unchanged", () => {
+    const v20 = createAuthorAdjudicationPrompt("cli-author-v20", undefined).systemPrompt;
+    const v21 = createAuthorAdjudicationPrompt("cli-author-v21", undefined).systemPrompt;
+    expect(v21).toContain("supervised versus independent practice, a pilot versus a full rollout");
+    expect(v21).toContain("outcomes, numbers, tools, or methods.");
+    expect(v21).toContain(roleNeutralSectionInstructions);
+    expect(v21).not.toContain("outcomes, numbers, or technologies.");
+    expect(v20).toContain("including production versus staging and");
+    expect(v20).not.toContain(roleNeutralSectionInstructions);
+
+    const v11 = createCriticAdjudicationPrompt("cli-critic-v11");
+    const v12 = createCriticAdjudicationPrompt("cli-critic-v12");
+    expect(v12).toContain("no listed employment in a stated field does not mean");
+    expect(v12).not.toContain("software employment");
+    expect(v11).toContain("no listed software employment does not mean");
+    expect(criticReportsFindingTargets("cli-critic-v12")).toBe(true);
+    expect(criticReadsCompactEvidenceTable("cli-critic-v12")).toBe(true);
   });
 });

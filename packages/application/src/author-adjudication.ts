@@ -14,6 +14,7 @@ import { relevanceWeightedRoomInstructions } from "./author-relevance-prompts.js
 import type { AuthorRevision } from "./author-revision-memory.js";
 import { structuredRoleInstructions } from "./author-structure-prompts.js";
 import { automaticRoundAndVoiceInstructions } from "./author-voice-prompts.js";
+import { roleNeutralAuthorProse, roleNeutralSectionInstructions } from "./role-neutral-prompts.js";
 
 /** The per-generation output-token cap a prompt version states and sends. */
 export type AuthorOutputBudget = Readonly<{ readonly maxOutputTokens: number }>;
@@ -94,6 +95,9 @@ const jobTailoredCvInstructions =
     " Do not invent ownership, outcomes, numbers, or technologies.",
   ) +
   " Tailor the CV to the job in context. The job description, its requirements and its responsibilities are employer context, never candidate facts. Open the summary section with a one-line headline block naming the candidate's own supported titles and the strongest skill areas the job asks for; never present the target job title as a role the candidate held. Directly after the summary, add one section of kind \"alignment\" titled \"Core areas\" with three to five bullets, each grouping supported evidence that answers one or more of the job's main requirements or responsibilities, worded differently from the experience bullets. Give a bullet a short label only when the label's words appear in cited evidence, and cover the label with its own claim citing that evidence; otherwise write the bullet without a label. Within each role, lead with the bullets most relevant to the job's requirements and responsibilities, and shorten or merge detail unrelated to the job; keep every role with its title, employer and dates, in chronological order. List the skills and certifications the job asks for first. Use a requirement's wording only when the cited evidence supports it. When context.writingPolicy sets a section order or emphasis, follow it over this guidance.";
+
+// v21 keeps v7's tailoring rules with examples from several fields (#3090).
+const roleNeutralJobTailoredCvInstructions = roleNeutralAuthorProse(jobTailoredCvInstructions);
 
 // v8 adds the critic's judged coverage of the draft being revised.
 const requirementCoverageInstructions =
@@ -282,6 +286,16 @@ const authorPromptTemplateVersions = Object.freeze({
     true,
     true,
   ),
+  // v21 gives examples from several fields and places registrations, licences and volunteering (#3090, #3088).
+  "cli-author-v21": authorPromptTemplate(
+    `${structuredFieldInstructions}${compositionalTerminologyInstructions}${roleNeutralJobTailoredCvInstructions}${requirementCoverageInstructions}${candidateDirectionInstructions}${applicationPlanAuthorInstructions}${structuredRoleInstructions}${pageTargetLengthInstructions}${singleStatementInstructions}${coherentStatementInstructions}${fullDraftInstructions}${relevanceWeightedRoomInstructions}${automaticRoundAndVoiceInstructions}${projectCardInstructions}${roleNeutralSectionInstructions}`,
+    32_768,
+    true,
+    true,
+    true,
+    true,
+    true,
+  ),
 } as const satisfies Readonly<Record<string, AuthorPromptTemplate>>);
 
 /**
@@ -291,7 +305,7 @@ const authorPromptTemplateVersions = Object.freeze({
  * author version to `createAuthorAdjudicationPrompt`, never this value.
  */
 export function promptTemplateVersion(role: "author" | "critic"): string {
-  return role === "author" ? "cli-author-v20" : "cli-critic-v11";
+  return role === "author" ? "cli-author-v21" : "cli-critic-v12";
 }
 
 /** Whether the recorded author version states, and so can honour, the candidate's directions. */
@@ -388,7 +402,8 @@ export function createAuthorAdjudicationPrompt(
     authorPromptTemplateVersion === "cli-author-v17" ||
     authorPromptTemplateVersion === "cli-author-v18" ||
     authorPromptTemplateVersion === "cli-author-v19" ||
-    authorPromptTemplateVersion === "cli-author-v20";
+    authorPromptTemplateVersion === "cli-author-v20" ||
+    authorPromptTemplateVersion === "cli-author-v21";
   const usesV5FactualityRules =
     usesV6SystemPrompt || authorPromptTemplateVersion === "cli-author-v5";
   const systemPrompt = usesV6SystemPrompt

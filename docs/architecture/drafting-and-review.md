@@ -321,7 +321,7 @@ summary, experience, projects, skills, education, certifications and languages.
 It includes each section that retrieved evidence supports, and its section and
 entry order is kept through the artifact and every exporter.
 
-New runs use author template `cli-author-v20`. A resumed run keeps the exact
+New runs use author template `cli-author-v21`. A resumed run keeps the exact
 prompt and output ceiling it started with.
 
 ### Writing for the job
@@ -345,6 +345,10 @@ context, never candidate facts. The author:
 - writes an approved project card as one Projects line with cited bullets,
   with the card's link only when the card is public, and uses the card's
   counts exactly (`cli-author-v20`);
+- writes registrations, licences and trade cards in a **Registrations and
+  licences** section and voluntary work in a **Volunteering** section, takes
+  its examples from several fields, and keeps acronyms as the evidence writes
+  them (`cli-author-v21`, #3090);
 - lists the skills and certifications the job asks for first.
 
 A writing policy's section order or emphasis overrides this guidance.
@@ -758,7 +762,7 @@ The critique reviews the draft three ways, and a fourth for a CV not in English:
 
 The language review is added only for a document language other than English
 (#2319). It follows the run's cached prefix as a call instruction, so English
-runs keep `cli-critic-v11` unchanged. The critic reads each cited source in its
+runs keep `cli-critic-v12` unchanged. The critic reads each cited source in its
 own language, and the review shows sources as written.
 
 The editorial codes mean:
@@ -834,7 +838,7 @@ billed. A run with no candidate chunks skips the check.
 
 ### Critic prompt versions
 
-New runs use `cli-critic-v11`. A resumed run keeps the prompt and omission check
+New runs use `cli-critic-v12`. A resumed run keeps the prompt and omission check
 it started with.
 
 | Version | What it added | Issue |
@@ -849,6 +853,7 @@ it started with.
 | v9 | Omission check as its own call, over theme-cited chunks | #2039 |
 | v10 | Check over every retrieved chunk; every omission blocks | #2046 |
 | v11 | Each finding names its claim, section or requirement in its own fields, so a revision can target it | #2232 |
+| v12 | A role-neutral example in the employment-gap rule | #3090 |
 
 ### Fallback critic
 

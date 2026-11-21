@@ -3403,12 +3403,12 @@ msgstr ""
 msgid "Dropped"
 msgstr ""
 
-#: packages/ui/src/review-footer.tsx
-msgid "e.g. lead with tokenisation; drop certification dates"
+#: packages/ui/src/profile.tsx
+msgid "e.g. account-executive-cv"
 msgstr ""
 
-#: packages/ui/src/profile.tsx
-msgid "e.g. senior-data-engineer-cv"
+#: packages/ui/src/review-footer.tsx
+msgid "e.g. lead with tokenisation; drop certification dates"
 msgstr ""
 
 #: apps/web/src/evidence-panels.tsx
@@ -4014,7 +4014,7 @@ msgid "For example: my move into team leadership"
 msgstr ""
 
 #: apps/web/src/interview-guide.tsx
-msgid "For example: recruiter, or engineering manager"
+msgid "For example: recruiter, or hiring manager"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
@@ -4472,8 +4472,8 @@ msgid "https://…"
 msgstr ""
 
 #: packages/ui/src/career-evidence-card.tsx
-msgid "https://github.com/…\n"
-"https://www.linkedin.com/in/…"
+msgid "https://www.linkedin.com/in/…\n"
+"https://your-portfolio.example/…"
 msgstr ""
 
 #: apps/web/src/beta-sign-up.tsx

@@ -3397,13 +3397,13 @@ msgstr "Retirer les marques de modification et lire l’ébauche telle quelle"
 msgid "Dropped"
 msgstr "Retiré"
 
+#: packages/ui/src/profile.tsx
+msgid "e.g. account-executive-cv"
+msgstr "p. ex. cv-commercial-grands-comptes"
+
 #: packages/ui/src/review-footer.tsx
 msgid "e.g. lead with tokenisation; drop certification dates"
 msgstr "p. ex. commencer par la tokenisation ; retirer les dates de certification"
-
-#: packages/ui/src/profile.tsx
-msgid "e.g. senior-data-engineer-cv"
-msgstr "p. ex. cv-data-engineer-senior"
 
 #: apps/web/src/evidence-panels.tsx
 msgid "Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them."
@@ -4008,8 +4008,8 @@ msgid "For example: my move into team leadership"
 msgstr "Par exemple : mon passage au management d'équipe"
 
 #: apps/web/src/interview-guide.tsx
-msgid "For example: recruiter, or engineering manager"
-msgstr "Par exemple : recruteur, ou responsable d’équipe technique"
+msgid "For example: recruiter, or hiring manager"
+msgstr "Par exemple : recruteur, ou responsable du recrutement"
 
 #: apps/web/src/application-material.tsx
 msgid "For example: the hiring team"
@@ -4466,10 +4466,10 @@ msgid "https://…"
 msgstr "https://…"
 
 #: packages/ui/src/career-evidence-card.tsx
-msgid "https://github.com/…\n"
-"https://www.linkedin.com/in/…"
-msgstr "https://github.com/…\n"
-"https://www.linkedin.com/in/…"
+msgid "https://www.linkedin.com/in/…\n"
+"https://your-portfolio.example/…"
+msgstr "https://www.linkedin.com/in/…\n"
+"https://your-portfolio.example/…"
 
 #: apps/web/src/beta-sign-up.tsx
 msgid "I accept the terms of use and the privacy policy."
