@@ -42,11 +42,12 @@ application's last review stopped or ran out of budget, step 4 says to start a
 new review from **Run details**.
 
 The current step has one button that opens the right screen. **Hide the
-guide** folds the list to one line, and **Show the guide** brings it back.
-Once the application you worked on last is downloaded, the list becomes one
-line that says every step is done, with a **New application** button for the
-next job. Once you hide the
-guide, Home keeps one hint line that says what to do next.
+guide** folds the list to one line that names the next step, and **Show the
+guide** brings it back. Once the application you worked on last is downloaded,
+the list becomes one line that says every step is done, with a **New
+application** button for the next job. Once you hide that line, Home keeps one
+hint line with the next step, such as "Acme: the CV is approved. Pick a
+template and export it."
 
 Guided also puts one line at the top of Career evidence, Career profile, New
 application and the CV review. It says what to do on that screen. Once a CV

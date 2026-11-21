@@ -757,6 +757,10 @@ msgstr "{name} ({role}), moins de 0,01 US$ par brouillon"
 msgid "{name}, lines {0}"
 msgstr "{name}, lignes {0}"
 
+#: packages/ui/src/next-step.ts
+msgid "{name}: {action}"
+msgstr "{name} : {action}"
+
 #: packages/ui/src/getting-started.tsx
 msgid "{name}: {detail}"
 msgstr "{name} : {detail}"
@@ -1165,6 +1169,10 @@ msgstr "Les coûts réels peuvent différer. Sont exclus les appels supplémenta
 #: apps/web/src/records.tsx
 msgid "Add a candidate"
 msgstr "Ajouter un candidat"
+
+#: packages/ui/src/next-step.ts
+msgid "Add a CV or other documents in Career evidence, or tell your story in a conversation."
+msgstr "Ajoutez un CV ou d’autres documents dans Éléments de parcours, ou racontez votre parcours dans une conversation."
 
 #: packages/ui/src/getting-started.tsx
 msgid "Add a CV or other documents, or tell your story in a conversation."
@@ -7015,8 +7023,13 @@ msgid "Read the draft as it stands, without change marks"
 msgstr "Lire l’ébauche telle quelle, sans marques de modification"
 
 #: packages/ui/src/getting-started.tsx
+#: packages/ui/src/next-step.ts
 msgid "Read the draft, accept or reject each finding, then approve it."
 msgstr "Lisez le brouillon, acceptez ou rejetez chaque remarque, puis approuvez-le."
+
+#: packages/ui/src/next-step.ts
+msgid "Read the facts in Career profile, then confirm or fix them."
+msgstr "Lisez les faits dans Profil professionnel, puis confirmez-les ou corrigez-les."
 
 #: packages/ui/src/getting-started.tsx
 msgid "Read the facts taken from your documents, then confirm or fix them."
@@ -8328,6 +8341,10 @@ msgstr "Tout sélectionner à l'écran ({0})"
 msgid "Select an exact reviewed candidate profile before starting a review."
 msgstr "Sélectionnez un profil candidat relu exact avant de lancer une relecture."
 
+#: packages/ui/src/next-step.ts
+msgid "Select New application and paste the job you want."
+msgstr "Sélectionnez Nouvelle candidature et collez l’offre qui vous intéresse."
+
 #: apps/web/src/operator.tsx
 msgid "Select none"
 msgstr "Ne rien sélectionner"
@@ -8803,7 +8820,7 @@ msgstr "Lancer des exécutions et des brouillons"
 msgid "Start the review"
 msgstr "Démarrer la relecture"
 
-#: packages/ui/src/getting-started.tsx
+#: packages/ui/src/next-step.ts
 msgid "Start the review to get a first draft."
 msgstr "Démarrez la relecture pour obtenir un premier brouillon."
 
@@ -9422,6 +9439,14 @@ msgstr "La relecture du critique n'a pas abouti : votre lettre reste telle qu'el
 msgid "The current model settings are unavailable."
 msgstr "Les réglages de modèles actuels sont indisponibles."
 
+#: packages/ui/src/next-step.ts
+msgid "The CV is approved. Pick a template and export it."
+msgstr "Le CV est approuvé. Choisissez un modèle et exportez-le."
+
+#: packages/ui/src/next-step.ts
+msgid "The CV is downloaded. Select New application for your next job."
+msgstr "Le CV est téléchargé. Sélectionnez Nouvelle candidature pour votre prochain poste."
+
 #: packages/ui/src/application-language.tsx
 msgid "The CV, cover letter and interview questions of new runs use this language."
 msgstr "Le CV, la lettre de motivation et les questions d’entretien des nouvelles exécutions utilisent cette langue."
@@ -9505,6 +9530,10 @@ msgstr "Les vérifications finales du CV n’échouent que sur les lacunes que v
 #: packages/ui/src/app.tsx
 msgid "The finding decisions could not be completed."
 msgstr "Les décisions sur les constats n’ont pas pu aboutir."
+
+#: packages/ui/src/next-step.ts
+msgid "The first draft is being written. Open the application to follow it."
+msgstr "Le premier brouillon est en cours de rédaction. Ouvrez la candidature pour le suivre."
 
 #: packages/ui/src/home-folders.tsx
 msgid "The folder could not be created. Try again."
@@ -9657,7 +9686,7 @@ msgstr "La langue n’a pas pu être enregistrée."
 msgid "The last attempt saved no facts. Fix the cause below, then try again."
 msgstr "La dernière tentative n’a enregistré aucun fait. Corrigez la cause ci-dessous, puis réessayez."
 
-#: packages/ui/src/getting-started.tsx
+#: packages/ui/src/next-step.ts
 msgid "The last review stopped before you approved a CV. Open it and start a new review from Run details."
 msgstr "La dernière relecture s’est arrêtée avant que vous approuviez un CV. Ouvrez la candidature et démarrez une nouvelle relecture depuis Détails de l’exécution."
 

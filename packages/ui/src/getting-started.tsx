@@ -8,6 +8,7 @@ import {
   type GettingStartedStepKey,
   gettingStartedView,
 } from "./getting-started-model.js";
+import { applicationStageAction, nextStep, nextStepSentence } from "./next-step.js";
 import { ScreenHint } from "./screen-hint.js";
 
 export interface GettingStartedActions {
@@ -18,20 +19,15 @@ export interface GettingStartedActions {
   readonly onOpenApplication: (application: ApplicationSummaryView) => void;
 }
 
-function reviewDetail(step: GettingStartedStep): string {
-  switch (step.reviewState) {
-    case "not-started":
-      return t`Start the review to get a first draft.`;
-    case "ended":
-      return t`The last review stopped before you approved a CV. Open it and start a new review from Run details.`;
-    default:
-      return t`Read the draft, accept or reject each finding, then approve it.`;
-  }
-}
-
 /** The step's detail, led by the application's name when the step opens one. */
 function stepDetail(step: GettingStartedStep): string {
-  const detail = step.key === "review" ? reviewDetail(step) : stepText(step.key).detail;
+  const detail =
+    step.key === "review" &&
+    step.stage !== undefined &&
+    step.stage !== "export" &&
+    step.stage !== "done"
+      ? applicationStageAction(step.stage)
+      : stepText(step.key).detail;
   const name = step.application?.name;
   return name === undefined ? detail : t`${name}: ${detail}`;
 }
@@ -106,7 +102,15 @@ export function GettingStarted({
   if (choose === undefined) return null;
   const view = gettingStartedView(preference, inputs);
   // Guided keeps a line on Home once the guide is hidden or done, so it never looks like Simple.
-  if (view.kind === "hidden") return <ScreenHint screen="home" />;
+  if (view.kind === "hidden") {
+    const loading = inputs.applications.status === "loading" || inputs.evidence.kind === "loading";
+    // Guided keeps the next step on Home, worked out like every other guidance surface.
+    return loading ? (
+      <ScreenHint screen="home" />
+    ) : (
+      <ScreenHint text={nextStepSentence(nextStep(inputs))} />
+    );
+  }
   if (view.kind === "offer") {
     return (
       <aside className="getting-started getting-started-offer" aria-label={t`Getting started`}>
@@ -164,7 +168,7 @@ export function GettingStarted({
     return (
       <aside className="getting-started getting-started-folded" aria-label={t`Getting started`}>
         <p>
-          <strong>{t`Getting started`}</strong> · {progress}: {stepText(view.current.key).title}
+          <strong>{t`Getting started`}</strong> · {progress}: {nextStepSentence(nextStep(inputs))}
         </p>
         <button
           type="button"

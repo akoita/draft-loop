@@ -2,15 +2,16 @@ import type { ApplicationSummaryView } from "./application-contract.js";
 import type { CareerEvidenceStatus } from "./career-evidence.js";
 import type { DisplayPreference } from "./display-preference.js";
 import type { HomeApplicationsState, HomeProfileStatus } from "./home-model.js";
+import {
+  type ApplicationStage,
+  applicationStage,
+  followedApplication,
+  followedApplications,
+  hasCareerEvidence,
+} from "./next-step.js";
 
 /** The Getting started steps on Home (#2791), from the career story to a downloaded CV. */
 export type GettingStartedStepKey = "career" | "profile" | "job" | "review" | "download";
-
-/**
- * Where the followed application's review stands: no run yet, a review that stopped or ran out of
- * budget before approval, or a review going on.
- */
-export type GettingStartedReviewState = "not-started" | "ended" | "ongoing";
 
 export interface GettingStartedStep {
   readonly key: GettingStartedStepKey;
@@ -18,8 +19,8 @@ export interface GettingStartedStep {
   readonly done: boolean;
   /** The application a review or download step opens; null for the other steps. */
   readonly application: ApplicationSummaryView | null;
-  /** The followed application's review state, on the review step only. */
-  readonly reviewState?: GettingStartedReviewState;
+  /** The followed application's stage (see `nextStep`), on the review step only. */
+  readonly stage?: ApplicationStage;
 }
 
 export interface GettingStartedInputs {
@@ -44,31 +45,6 @@ export type GettingStartedView =
       readonly position: number;
     };
 
-function hasEvidence(inputs: GettingStartedInputs): boolean {
-  if (inputs.legacyEvidenceSourceCount > 0) return true;
-  return inputs.evidence.kind === "selected" && inputs.evidence.sourceCount > 0;
-}
-
-function shownApplications(state: HomeApplicationsState): readonly ApplicationSummaryView[] {
-  if (state.status !== "ready") return [];
-  return state.applications.filter(
-    (application) => application.archivedAt === null && application.jobMissing !== true,
-  );
-}
-
-function newest(applications: readonly ApplicationSummaryView[]): ApplicationSummaryView | null {
-  return applications.reduce<ApplicationSummaryView | null>(
-    (best, application) =>
-      best === null || application.updatedAt > best.updatedAt ? application : best,
-    null,
-  );
-}
-
-function reviewState(application: ApplicationSummaryView | null): GettingStartedReviewState {
-  if (application === null || application.runCount === 0) return "not-started";
-  return application.latestRunEnded === true ? "ended" : "ongoing";
-}
-
 /**
  * The steps in order, each ticked from what the record holds. The review and download steps
  * follow one application, the one the person worked on last, so an older finished application
@@ -76,13 +52,13 @@ function reviewState(application: ApplicationSummaryView | null): GettingStarted
  * rather than show one the person cannot finish.
  */
 export function gettingStartedSteps(inputs: GettingStartedInputs): readonly GettingStartedStep[] {
-  const applications = shownApplications(inputs.applications);
-  const followed = newest(applications);
-  const exported =
-    followed !== null && (followed.status === "exported" || followed.exportCount > 0);
-  const approved = followed !== null && (exported || followed.status === "approved");
+  const applications = followedApplications(inputs.applications);
+  const followed = followedApplication(applications);
+  const stage = followed === null ? "start-review" : applicationStage(followed);
+  const exported = stage === "done";
+  const approved = exported || stage === "export";
   const steps: GettingStartedStep[] = [
-    { key: "career", done: hasEvidence(inputs), application: null },
+    { key: "career", done: hasCareerEvidence(inputs), application: null },
   ];
   if (inputs.profile.kind !== "unsupported") {
     steps.push({ key: "profile", done: inputs.profile.kind === "reviewed", application: null });
@@ -93,7 +69,7 @@ export function gettingStartedSteps(inputs: GettingStartedInputs): readonly Gett
       key: "review",
       done: approved,
       application: followed,
-      reviewState: reviewState(followed),
+      stage,
     },
     { key: "download", done: exported, application: followed },
   );

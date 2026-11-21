@@ -37,6 +37,18 @@ flowchart LR
    `packages/review-state`, which fills it on the server side for the
    hosted API.
 
+## Say what to do next
+
+A screen never works out "what next" on its own. Guidance text (the Getting
+started list, hint lines, status chips, help) reads `nextStep` in
+`packages/ui/src/next-step.ts`, which follows the application the person worked
+on last.
+
+- A new record state gets a stage in `nextStep` and a row in the table test in
+  `next-step.test.tsx` first.
+- A new guidance surface adds its own check to that table, so every surface
+  reads each state the same way.
+
 ## Advanced options
 
 A card shows the basic path only. Its technical choices go in one
@@ -66,9 +78,9 @@ and lists where DraftLoop's rules take precedence. Prefer a native element or
 API over a hand-built one or a new dependency, with a fallback for browsers
 that lack it.
 
-| Agent       | How it finds the skill                                         |
-| ----------- | -------------------------------------------------------------- |
-| Codex       | `.agents/skills`, and the pointer in `AGENTS.md`               |
+| Agent       | How it finds the skill                                          |
+| ----------- | --------------------------------------------------------------- |
+| Codex       | `.agents/skills`, and the pointer in `AGENTS.md`                |
 | Claude Code | A short file in `.claude/skills` that sends it to the same file |
 
 Three choices are deliberate and should survive edits:

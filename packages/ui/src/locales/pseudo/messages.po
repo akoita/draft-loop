@@ -763,6 +763,10 @@ msgstr ""
 msgid "{name}, lines {0}"
 msgstr ""
 
+#: packages/ui/src/next-step.ts
+msgid "{name}: {action}"
+msgstr ""
+
 #: packages/ui/src/getting-started.tsx
 msgid "{name}: {detail}"
 msgstr ""
@@ -1170,6 +1174,10 @@ msgstr ""
 
 #: apps/web/src/records.tsx
 msgid "Add a candidate"
+msgstr ""
+
+#: packages/ui/src/next-step.ts
+msgid "Add a CV or other documents in Career evidence, or tell your story in a conversation."
 msgstr ""
 
 #: packages/ui/src/getting-started.tsx
@@ -7020,7 +7028,12 @@ msgid "Read the draft as it stands, without change marks"
 msgstr ""
 
 #: packages/ui/src/getting-started.tsx
+#: packages/ui/src/next-step.ts
 msgid "Read the draft, accept or reject each finding, then approve it."
+msgstr ""
+
+#: packages/ui/src/next-step.ts
+msgid "Read the facts in Career profile, then confirm or fix them."
 msgstr ""
 
 #: packages/ui/src/getting-started.tsx
@@ -8333,6 +8346,10 @@ msgstr ""
 msgid "Select an exact reviewed candidate profile before starting a review."
 msgstr ""
 
+#: packages/ui/src/next-step.ts
+msgid "Select New application and paste the job you want."
+msgstr ""
+
 #: apps/web/src/operator.tsx
 msgid "Select none"
 msgstr ""
@@ -8808,7 +8825,7 @@ msgstr ""
 msgid "Start the review"
 msgstr ""
 
-#: packages/ui/src/getting-started.tsx
+#: packages/ui/src/next-step.ts
 msgid "Start the review to get a first draft."
 msgstr ""
 
@@ -9427,6 +9444,14 @@ msgstr ""
 msgid "The current model settings are unavailable."
 msgstr ""
 
+#: packages/ui/src/next-step.ts
+msgid "The CV is approved. Pick a template and export it."
+msgstr ""
+
+#: packages/ui/src/next-step.ts
+msgid "The CV is downloaded. Select New application for your next job."
+msgstr ""
+
 #: packages/ui/src/application-language.tsx
 msgid "The CV, cover letter and interview questions of new runs use this language."
 msgstr ""
@@ -9509,6 +9534,10 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "The finding decisions could not be completed."
+msgstr ""
+
+#: packages/ui/src/next-step.ts
+msgid "The first draft is being written. Open the application to follow it."
 msgstr ""
 
 #: packages/ui/src/home-folders.tsx
@@ -9662,7 +9691,7 @@ msgstr ""
 msgid "The last attempt saved no facts. Fix the cause below, then try again."
 msgstr ""
 
-#: packages/ui/src/getting-started.tsx
+#: packages/ui/src/next-step.ts
 msgid "The last review stopped before you approved a CV. Open it and start a new review from Run details."
 msgstr ""
 
