@@ -10,8 +10,8 @@ import { openSqliteStorage } from "@draft-loop/storage";
 import { describe, expect, it } from "vitest";
 
 import { replayRejectedAuthorCapture } from "./rejected-author-replay.js";
-import { pickRequirementEvidence } from "./requirement-picked-evidence.js";
 import { matchesRequiredSectionEvidence } from "./required-section-evidence.js";
+import { pickRequirementEvidence } from "./requirement-picked-evidence.js";
 
 /**
  * Baseline for roles outside software (#3087, rollup #3086). Fictional cases for a nurse, an
