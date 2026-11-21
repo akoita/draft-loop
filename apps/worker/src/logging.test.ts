@@ -1,7 +1,13 @@
 import type { ExecutionRecord, RunSnapshot } from "@draft-loop/orchestrator";
 import { describe, expect, it } from "vitest";
 
-import { errorFields, logLine, quarantineFields, runOutcomeFields } from "./logging.js";
+import {
+  errorFields,
+  logLine,
+  quarantineFields,
+  runOutcomeFields,
+  runQualityFields,
+} from "./logging.js";
 import { requestFields, withRequestId } from "./request-trace.js";
 
 /** Synthetic text standing in for anything a person might send or a model might write. */
@@ -140,5 +146,39 @@ describe("the worker's logs", () => {
       },
     });
     expect(line).not.toContain(marker);
+  });
+});
+
+describe("the run quality line (#3237)", () => {
+  const ready = {
+    ...run,
+    round: 1,
+    totalCostUsd: 0.2,
+    latestEvaluation: null,
+    findings: [{ code: "unsupported-metric", severity: "warning", message: marker }],
+  } as unknown as RunSnapshot;
+
+  it("is written when a job brings the run to a draft awaiting review, with no content", () => {
+    const fields = runQualityFields(job, "advanced", ready, { ...ready, state: "reviewing" });
+    expect(fields).toMatchObject({
+      ...job,
+      quality: { state: "awaiting-approval", findings: { total: 1, warnings: 1 } },
+    });
+    expect(JSON.stringify(fields)).not.toContain(marker);
+  });
+
+  it("is skipped when the run did not move or is still working", () => {
+    expect(runQualityFields(job, "advanced", ready, ready)).toBeUndefined();
+    expect(
+      runQualityFields(job, "settled", ready, { ...ready, state: "reviewing" }),
+    ).toBeUndefined();
+    expect(
+      runQualityFields(
+        job,
+        "advanced",
+        { ...ready, state: "revising" },
+        { ...ready, state: "reviewing" },
+      ),
+    ).toBeUndefined();
   });
 });

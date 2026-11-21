@@ -1,4 +1,4 @@
-import { runUsage } from "@draft-loop/application";
+import { type RunQualityInput, runQuality, runUsage } from "@draft-loop/application";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { RunJob } from "@draft-loop/run-queue";
 import { requestFields } from "./request-trace.js";
@@ -82,6 +82,38 @@ export function runOutcomeFields(
         estimatedUsd: line.estimatedUsd,
       })),
     },
+  };
+}
+
+/** The message of the per-run quality line (#3237); log-based metrics read it, so it is a contract. */
+export const runQualityMessage = "run quality";
+
+/** States where the critic's last verdict stands, so the run's quality is worth recording. */
+const qualityStates: ReadonlySet<string> = new Set([
+  "awaiting-approval",
+  "budget-exhausted",
+  "stopped",
+]);
+
+/**
+ * The quality line's fields when this job brought the run to a state where its draft waits or
+ * stops, or `undefined` when it did not: ids, codes, counts and scores only (ADR 0011, D16).
+ */
+export function runQualityFields(
+  job: RunJob,
+  outcome: RunJobOutcome,
+  run?: RunQualityInput,
+  before?: Pick<RunQualityInput, "state" | "round">,
+): Record<string, unknown> | undefined {
+  if (outcome !== "advanced" || run === undefined || !qualityStates.has(run.state))
+    return undefined;
+  if (before !== undefined && before.state === run.state && before.round === run.round)
+    return undefined;
+  return {
+    tenantId: job.tenantId,
+    workspaceId: job.workspaceId,
+    runId: job.runId,
+    quality: runQuality(run),
   };
 }
 
