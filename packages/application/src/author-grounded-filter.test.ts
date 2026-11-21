@@ -24,7 +24,7 @@ function chunk(id: string, text: string, rank = 0): ScoredEvidenceChunk {
 }
 
 const evidence = [
-  chunk("summary", "Backend engineer building TypeScript services.", 0),
+  chunk("summary", "Backend engineer building TypeScript services since 2019.", 0),
   chunk("work", "Reduced processing time by 25 percent at Northwind Freight in 2021.", 1),
   chunk("tools", "Maintained deployment tooling for Northwind Freight.", 2),
 ];
@@ -55,8 +55,8 @@ function proposal(experience: readonly BlockInput[]): AuthorArtifactProposal {
         kind: "summary",
         blocks: [
           block({
-            text: "Backend engineer building TypeScript services.",
-            claims: ["Backend engineer building TypeScript services."],
+            text: "Backend engineer building TypeScript services since 2019.",
+            claims: ["Backend engineer building TypeScript services since 2019."],
             cite: "summary",
           }),
         ],
