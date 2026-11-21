@@ -706,6 +706,10 @@ msgstr ""
 msgid "{label} not recorded for either run, so it cannot be compared"
 msgstr ""
 
+#: apps/web/src/feedback.tsx
+msgid "{left} characters left"
+msgstr ""
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "{legacyCount, plural, one {# source ready} other {# sources ready}}"
 msgstr ""
@@ -4810,7 +4814,7 @@ msgid "Kind of interview"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
-msgid "Kind of note"
+msgid "Kind of note (optional)"
 msgstr ""
 
 #: packages/ui/src/knowledge.tsx
@@ -4888,6 +4892,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
 msgid "Leadership"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Leave out passwords and other people's details."
 msgstr ""
 
 #: apps/web/src/application-material.tsx
@@ -6096,10 +6104,6 @@ msgstr ""
 msgid "Not set"
 msgstr ""
 
-#: apps/web/src/feedback.tsx
-msgid "Not sure"
-msgstr ""
-
 #: apps/web/src/operator.tsx
 msgid "Not used yet"
 msgstr ""
@@ -6977,6 +6981,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Quick replies"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Quote it if you write to us about this note."
 msgstr ""
 
 #. placeholder {0}: view.reason
@@ -10782,10 +10790,6 @@ msgstr ""
 msgid "Unvalidated"
 msgstr ""
 
-#: apps/web/src/feedback.tsx
-msgid "Up to {maximumFeedbackLength} characters. Leave out passwords and other people's details."
-msgstr ""
-
 #: packages/ui/src/profile-freshness.ts
 msgid "Up to date with your career evidence"
 msgstr ""
@@ -11186,6 +11190,10 @@ msgstr ""
 msgid "What each source is could not be read."
 msgstr ""
 
+#: apps/web/src/feedback.tsx
+msgid "What happened? What did you expect?"
+msgstr ""
+
 #: packages/ui/src/run-details.tsx
 msgid "What is cut"
 msgstr ""
@@ -11372,6 +11380,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Write"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Write a note first."
 msgstr ""
 
 #: packages/ui/src/application-language.tsx
@@ -11797,6 +11809,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
 msgid "Your record says nothing between {from} and {to}."
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Your reference:"
 msgstr ""
 
 #: apps/web/src/oidc-session.ts

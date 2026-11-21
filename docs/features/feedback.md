@@ -17,8 +17,11 @@ members, so it takes no notes.
 
 ## How to use it
 
-In the web screen, open **Help** in the header and select **Send feedback**, pick a kind of
-note if you know it, write it and select **Send**. Open **What we include**
+In the web screen, open **Help** in the header and select **Send feedback**.
+Pick a kind of note if you know it (**Something is broken**, **An idea** or
+**Something else**), write the note and select **Send**. The dialog then shows
+a reference such as `FB-1A2B3C4D` to quote in a later message; the operator's
+search finds the note by it. Open **What we include**
 in the dialog to see every technical value the note carries. Its first rows
 name the server's version, such as `Version 0.26.60`, as the Help menu shows
 it, and the web screen's build id (**Web build**).
@@ -56,7 +59,7 @@ stateDiagram-v2
 | Control | What it does |
 | --- | --- |
 | Tabs: New, Kept, Linked to an issue, Closed | Show one status, with each tab's count from the server; New is the default |
-| Search | Keeps notes whose text, page or kind contains the words, in every tab's count too |
+| Search | Keeps notes whose text, page, kind or `FB-` reference contains the words, in every tab's count too |
 | **Show more** | Reads the next 50 notes; the list says how many show out of how many match |
 | **Close**, **Keep for later**, **Reopen** | Set the note's status |
 | **Link an issue** | Saves a GitHub issue address on the note and moves it to Linked |

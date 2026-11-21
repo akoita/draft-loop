@@ -2,6 +2,7 @@ import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
+import { feedbackReference } from "./feedback-model.js";
 import { ListMore, ListSearch, useBackgroundRefresh, usePagedList } from "./operator-list.js";
 import {
   appendUnique,
@@ -422,6 +423,7 @@ function FeedbackItem({
         ) : null}
         <h3>{kind}</h3>
         <span className="muted">{t`Sent ${operatorTime(note.sentAt)} from ${note.screen}`}</span>
+        <span className="muted feedback-reference">{feedbackReference(note.noteId)}</span>
       </div>
       <p className="operator-note">{note.text}</p>
       {note.issueUrl === null ? null : (

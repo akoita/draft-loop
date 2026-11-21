@@ -1,0 +1,51 @@
+{
+  "description": "Invented CV lines from the four fictional candidates, each labelled with the required section it should count as evidence for. The labels were written before the section matcher ran.",
+  "cases": [
+    {
+      "id": "sec-t03",
+      "section": "Skills",
+      "text": "Competencies: lesson planning, safeguarding, SEN support, phonics intervention."
+    },
+    {
+      "id": "sec-s03",
+      "section": "Skills",
+      "text": "Capabilities: MEDDIC qualification, Salesforce forecasting, cold outreach."
+    },
+    {
+      "id": "sec-n01",
+      "section": "Certifications",
+      "text": "Registered Nurse (Adult), NMC registration PIN 12A3456E, revalidated in March 2025."
+    },
+    {
+      "id": "sec-e01",
+      "section": "Certifications",
+      "text": "JIB Gold Card holder, Approved Electrician."
+    },
+    {
+      "id": "sec-e06",
+      "section": "Certifications",
+      "text": "IPAF licence for mobile elevating work platforms."
+    },
+    {
+      "id": "sec-n02",
+      "section": "Experience",
+      "text": "Band 6 staff nurse, acute medical ward, Larkfield General Hospital, 2021 to present."
+    },
+    {
+      "id": "sec-s01",
+      "section": "Experience",
+      "text": "Account Executive, Orrin Fieldware, 2022 to present."
+    },
+    {
+      "id": "sec-t01",
+      "section": "Experience",
+      "text": "Class teacher, Year 5, Brookmere Primary School, since September 2020."
+    },
+    { "id": "sec-t02", "section": "Education", "text": "PGCE in Primary Education, 2019." },
+    {
+      "id": "sec-e02",
+      "section": "Education",
+      "text": "NVQ Level 3 in Electrotechnical Services, 2016."
+    }
+  ]
+}

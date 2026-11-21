@@ -639,6 +639,12 @@ a.help-menu-item[target="_blank"]::after {
   padding-inline: 1rem;
 }
 
+/* index.html's plain landing page holds the bar's place, so the page does not move when the app
+   renders the real bar. */
+.preferences-bar:empty {
+  min-height: 2rem;
+}
+
 .service-status {
   display: inline-flex;
   align-items: center;
@@ -1118,6 +1124,91 @@ form button[type="submit"]:where(:not(.button)) {
 
 .release-dialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
+}
+
+/* Send feedback (#2876): a real title, optional kind chips, a quiet hint row with the counter near
+   the limit, and Cancel and Send on one row at one height, Send last as the primary. */
+.feedback-dialog {
+  max-width: 35rem;
+}
+
+.feedback-dialog .feedback-title {
+  margin: 0 0 var(--space-2);
+  font-size: 1.25rem;
+}
+
+.feedback-dialog .feedback-kind {
+  border: 0;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.feedback-dialog .feedback-label {
+  font-weight: 600;
+  padding: 0;
+  margin: 0 0 0.25rem;
+}
+
+.feedback-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.feedback-dialog button.feedback-chip {
+  background: transparent;
+  color: var(--text-1);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+}
+
+.feedback-dialog button.feedback-chip[aria-pressed="true"] {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: var(--teal-ink);
+}
+
+.feedback-dialog textarea {
+  min-height: 8rem;
+}
+
+.feedback-hint {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+}
+
+.feedback-dialog .feedback-context {
+  margin-top: var(--space-3);
+}
+
+.feedback-counter {
+  font-variant-numeric: tabular-nums;
+}
+
+.feedback-reference {
+  font-family: ui-monospace, monospace;
+  user-select: all;
+}
+
+.feedback-dialog .feedback-actions {
+  justify-content: flex-end;
+  align-items: stretch;
+}
+
+.feedback-dialog .feedback-actions button {
+  margin: 0;
+  line-height: 1.25;
+  min-height: 2.5rem;
+}
+
+.feedback-dialog .feedback-actions button[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: progress;
 }
 
 /* Send feedback's What we include fold (#2875): name and value on one row, wrapping long ids. */

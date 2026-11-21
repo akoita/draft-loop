@@ -1,0 +1,156 @@
+{
+  "grounding": [
+    {
+      "id": "nurse-registration/literal",
+      "expected": "supported",
+      "status": "accepted"
+    },
+    {
+      "id": "nurse-registration/wrong-date",
+      "expected": "contradicted",
+      "status": "rejected"
+    },
+    {
+      "id": "nurse-resuscitation/literal",
+      "expected": "supported",
+      "status": "accepted"
+    },
+    {
+      "id": "nurse-resuscitation/acronym-spelled-out",
+      "expected": "supported",
+      "status": "rejected"
+    },
+    {
+      "id": "nurse-resuscitation/wrong-certificate",
+      "expected": "contradicted",
+      "status": "rejected"
+    },
+    {
+      "id": "nurse-icu/acronym-spelled-out",
+      "expected": "supported",
+      "status": "accepted"
+    },
+    {
+      "id": "nurse-icu/wrong-duration",
+      "expected": "contradicted",
+      "status": "accepted"
+    },
+    {
+      "id": "sales-quota/literal",
+      "expected": "supported",
+      "status": "accepted"
+    },
+    {
+      "id": "sales-quota/inflated-attainment",
+      "expected": "contradicted",
+      "status": "rejected"
+    },
+    {
+      "id": "sales-meddic/literal",
+      "expected": "supported",
+      "status": "accepted"
+    },
+    {
+      "id": "sales-meddic/wrong-crm",
+      "expected": "contradicted",
+      "status": "rejected"
+    },
+    {
+      "id": "teacher-key-stage/literal",
+      "expected": "supported",
+      "status": "accepted"
+    },
+    {
+      "id": "teacher-key-stage/acronym-spelled-out",
+      "expected": "supported",
+      "status": "rejected"
+    },
+    {
+      "id": "teacher-key-stage/wrong-year-group",
+      "expected": "contradicted",
+      "status": "rejected"
+    },
+    {
+      "id": "teacher-qts/acronym-used",
+      "expected": "supported",
+      "status": "rejected"
+    },
+    {
+      "id": "teacher-qts/wrong-qualification",
+      "expected": "contradicted",
+      "status": "rejected"
+    },
+    {
+      "id": "electrician-credentials/literal",
+      "expected": "supported",
+      "status": "accepted"
+    },
+    {
+      "id": "electrician-credentials/wrong-edition",
+      "expected": "contradicted",
+      "status": "accepted"
+    },
+    {
+      "id": "electrician-crew/literal",
+      "expected": "supported",
+      "status": "accepted"
+    },
+    {
+      "id": "electrician-crew/inflated-crew",
+      "expected": "contradicted",
+      "status": "accepted"
+    }
+  ],
+  "groundingSummary": {
+    "claims": 20,
+    "supportedRejected": 3,
+    "contradictedAccepted": 3
+  },
+  "retrieval": {
+    "picksRecall": 0.656,
+    "bm25Recall": 0.719,
+    "missedByBoth": ["rn3", "rs4", "rt2", "rt3"]
+  },
+  "sections": [
+    {
+      "id": "sec-t03",
+      "recognised": false
+    },
+    {
+      "id": "sec-s03",
+      "recognised": false
+    },
+    {
+      "id": "sec-n01",
+      "recognised": false
+    },
+    {
+      "id": "sec-e01",
+      "recognised": false
+    },
+    {
+      "id": "sec-e06",
+      "recognised": false
+    },
+    {
+      "id": "sec-n02",
+      "recognised": false
+    },
+    {
+      "id": "sec-s01",
+      "recognised": false
+    },
+    {
+      "id": "sec-t01",
+      "recognised": false
+    },
+    {
+      "id": "sec-t02",
+      "recognised": true
+    },
+    {
+      "id": "sec-e02",
+      "recognised": false
+    }
+  ]
+}
