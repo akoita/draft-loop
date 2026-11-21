@@ -679,6 +679,14 @@ msgstr ""
 msgid "{first}, {second} and {third}"
 msgstr ""
 
+#: packages/ui/src/run-details.tsx
+msgid "{fromModel} declined the {stepName} call in round {round} ({category}), so {toModel} answered it."
+msgstr ""
+
+#: packages/ui/src/run-details.tsx
+msgid "{fromModel} declined the {stepName} call in round {round}, so {toModel} answered it."
+msgstr ""
+
 #: packages/ui/src/review-panels.tsx
 msgid "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
 msgstr ""
@@ -2770,6 +2778,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Critical"
+msgstr ""
+
+#: packages/ui/src/run-details.tsx
+msgid "critique"
 msgstr ""
 
 #: packages/ui/src/run-stage-track.tsx
@@ -7982,6 +7994,10 @@ msgstr ""
 msgid "Revise"
 msgstr ""
 
+#: packages/ui/src/run-details.tsx
+msgid "revision"
+msgstr ""
+
 #: packages/ui/src/run-steps.tsx
 msgid "Revision"
 msgstr ""
@@ -11539,6 +11555,10 @@ msgstr ""
 #: packages/ui/src/application-model-pair.tsx
 #: packages/ui/src/model-preset-cards.tsx
 msgid "writes ·"
+msgstr ""
+
+#: packages/ui/src/run-details.tsx
+msgid "writing"
 msgstr ""
 
 #: apps/web/src/application-material.tsx

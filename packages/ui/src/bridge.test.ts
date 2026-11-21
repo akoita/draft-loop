@@ -1925,6 +1925,40 @@ describe("desktop capability bridge", () => {
     }
   });
 
+  it("accepts Claude's refusal fallbacks and rejects malformed ones (#3120)", async () => {
+    const fixture = createFixtureReviewState();
+    const entry = {
+      step: "revision",
+      round: 2,
+      fromModel: "claude-sonnet-5-5",
+      toModel: "claude-sonnet-5",
+      category: "cyber",
+    };
+    const load = (refusalFallbacks: unknown) =>
+      createCapabilityPort(
+        bridge(
+          async () => ({ ok: true, value: { ...fixture, refusalFallbacks } }),
+          ["review.load"],
+        ),
+      ).execute({ type: "review.load", input: { workspaceId: fixture.workspaceId } });
+
+    await expect(load([entry, { ...entry, category: null }])).resolves.toMatchObject({ ok: true });
+    await expect(load([])).resolves.toMatchObject({ ok: true });
+    for (const bad of [
+      entry,
+      [{ ...entry, extra: 1 }],
+      [{ ...entry, step: "planner" }],
+      [{ ...entry, category: "<b>cyber</b>" }],
+      [{ ...entry, round: -1 }],
+      [{ ...entry, fromModel: "has spaces" }],
+    ]) {
+      await expect(load(bad)).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+    }
+  });
+
   it("rejects inconsistent provider failure projections from the host", async () => {
     const baseFailure = {
       code: "timeout",

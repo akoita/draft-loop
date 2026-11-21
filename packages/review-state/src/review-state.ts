@@ -47,6 +47,7 @@ import { criticFallbackView } from "./critic-fallback-view.js";
 import { executionCallLimitMs } from "./execution-call-limit.js";
 import { groupRepeatedWarnings } from "./finding-groups.js";
 import { readableFindingMessage } from "./finding-message.js";
+import { refusalFallbackViews } from "./refusal-fallback-view.js";
 import { reviewCoverage } from "./review-coverage.js";
 import { usageLimitView } from "./usage-limit-view.js";
 
@@ -439,6 +440,7 @@ export function reviewState(
     providerFailure: providerFailure(snapshot, background.retriedByHost === true),
     usageLimit: usageLimitView(snapshot),
     criticFallback: criticFallbackView(snapshot),
+    refusalFallbacks: refusalFallbackViews(snapshot),
     previousArtifact: previousArtifact(snapshot, artifact),
     artifact,
     findings: groupRepeatedWarnings(

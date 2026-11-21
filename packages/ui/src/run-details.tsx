@@ -25,6 +25,7 @@ import { formatDateTime } from "./locale-format.js";
 import {
   type CriticFallbackView,
   type IndependentReviewView,
+  type RefusalFallbackView,
   type ReviewEvent,
   type ReviewScreenState,
   type RunWritingPolicyProjection,
@@ -290,6 +291,33 @@ export function CriticFallbackNote({
   );
 }
 
+/**
+ * Each call Claude declined that the fallback model answered (#3120), so the run's record says
+ * which model wrote what. Nothing to recover: the fallback's answer is the call's result.
+ */
+export function RefusalFallbackNote({
+  fallbacks,
+}: {
+  readonly fallbacks: readonly RefusalFallbackView[];
+}): JSX.Element | null {
+  if (fallbacks.length === 0) return null;
+  return (
+    <>
+      {fallbacks.map(({ step, round, fromModel, toModel, category }) => {
+        const stepName =
+          step === "author" ? t`writing` : step === "critic" ? t`critique` : t`revision`;
+        return (
+          <p className="setup-note" key={`${step}-${round}-${fromModel}`}>
+            {category === null
+              ? t`${fromModel} declined the ${stepName} call in round ${round}, so ${toModel} answered it.`
+              : t`${fromModel} declined the ${stepName} call in round ${round} (${category}), so ${toModel} answered it.`}
+          </p>
+        );
+      })}
+    </>
+  );
+}
+
 /** The trust and policy facts: identities with lineage, data and writing policy, evidence. */
 function RunTrustFacts({ state }: { readonly state: ReviewScreenState }): JSX.Element {
   const evidenceMode = runEvidenceModeDisplay(state.evidenceMode);
@@ -341,6 +369,7 @@ function RunTrustFacts({ state }: { readonly state: ReviewScreenState }): JSX.El
         )}
       </div>
       <CriticFallbackNote fallback={state.criticFallback ?? null} />
+      <RefusalFallbackNote fallbacks={state.refusalFallbacks ?? []} />
       {configuredDiffers ? (
         <p className="setup-note">
           {t`New runs use:`} {configuredAuthor.model} → {configuredCritic.model}

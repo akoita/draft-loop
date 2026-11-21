@@ -142,6 +142,7 @@ import type {
   PendingWritingPolicyOverride,
   ProviderExposureView,
   ProviderFailureView,
+  RefusalFallbackView,
   ReviewAction,
   ReviewFinding,
   ReviewScreenState,
@@ -1536,6 +1537,7 @@ const reviewScreenStateKeys = [
   "providerFailure",
   "usageLimit",
   "criticFallback",
+  "refusalFallbacks",
   "previousArtifact",
   "artifact",
   "findings",
@@ -1594,6 +1596,14 @@ const criticFallbackResultKeys = resultKeys<CriticFallbackView>()([
   "errorClass",
   "round",
   "sameCompanyAsAuthor",
+]);
+
+const refusalFallbackResultKeys = resultKeys<RefusalFallbackView>()([
+  "step",
+  "round",
+  "fromModel",
+  "toModel",
+  "category",
 ]);
 
 const providerFailureResultKeys = resultKeys<ProviderFailureView>()([
@@ -6144,6 +6154,21 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     if (!/^[a-z][a-z-]{0,39}$/u.test(stringValue(record.errorClass, 40))) return invalidInput();
     if (!Number.isInteger(record.round) || (record.round as number) < 0) return invalidInput();
     if (typeof record.sameCompanyAsAuthor !== "boolean") return invalidInput();
+  }
+  const refusalFallbacks = value.refusalFallbacks;
+  if (refusalFallbacks !== undefined) {
+    if (!Array.isArray(refusalFallbacks) || refusalFallbacks.length > 100) return invalidInput();
+    for (const entry of refusalFallbacks) {
+      const record = requireRecord(entry);
+      if (!hasOnlyKeys(record, refusalFallbackResultKeys)) return invalidInput();
+      enumValue(record.step, ["author", "critic", "revision"] as const);
+      if (!Number.isInteger(record.round) || (record.round as number) < 0) return invalidInput();
+      identifier(record.fromModel);
+      identifier(record.toModel);
+      if (record.category !== null && !/^[a-z_]{1,40}$/u.test(stringValue(record.category, 40))) {
+        return invalidInput();
+      }
+    }
   }
   return {
     ...value,

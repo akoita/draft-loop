@@ -223,6 +223,18 @@ export interface RouteFallbackRecord {
   readonly cause: string;
 }
 
+/**
+ * A Claude call that Claude declined and its fallback model answered instead (#3120). The
+ * execution's own provider and model are the fallback's; this names the model that declined.
+ */
+export interface RefusalFallbackRecord {
+  readonly fromModel: string;
+  /** The refusal's category token, such as `cyber`; null when Claude gave none. */
+  readonly category: string | null;
+  /** True when Claude credited the declined call, so only the retry was billed in full. */
+  readonly credit: boolean;
+}
+
 /** The critic the run switched away from after a provider error it could not wait out (#3122). */
 export interface CriticFallbackRecord {
   readonly fromProvider: string;
@@ -241,6 +253,8 @@ export interface AgentExecution<T> {
   readonly routeFallback?: RouteFallbackRecord;
   /** Present when a fallback critic served the call in place of the configured one. */
   readonly criticFallback?: CriticFallbackRecord;
+  /** Present when Claude declined the call and the fallback model answered it (#3120). */
+  readonly refusalFallback?: RefusalFallbackRecord;
   readonly modelId: string;
   readonly providerRequestId: string | null;
   readonly outputChecksum: string;
@@ -338,6 +352,8 @@ export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly routeFallback?: RouteFallbackRecord;
   /** Present when a fallback critic served the call in place of the configured one (#3122). */
   readonly criticFallback?: CriticFallbackRecord;
+  /** Present when Claude declined the call and the fallback model answered it (#3120). */
+  readonly refusalFallback?: RefusalFallbackRecord;
   readonly modelId: string;
   readonly providerRequestId: string | null;
   readonly outputChecksum?: string;
@@ -2132,6 +2148,9 @@ export function createOrchestrationEngine(
         ...(execution.criticFallback === undefined
           ? {}
           : { criticFallback: execution.criticFallback }),
+        ...(execution.refusalFallback === undefined
+          ? {}
+          : { refusalFallback: execution.refusalFallback }),
         modelId: execution.modelId,
         providerRequestId: execution.providerRequestId,
         outputChecksum: execution.outputChecksum,

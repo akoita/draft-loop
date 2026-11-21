@@ -297,6 +297,16 @@ export interface CriticFallbackView {
   readonly sameCompanyAsAuthor: boolean;
 }
 
+/** A call Claude declined and the deployment's fallback model answered instead (#3120). */
+export interface RefusalFallbackView {
+  readonly step: "author" | "critic" | "revision";
+  readonly round: number;
+  readonly fromModel: string;
+  readonly toModel: string;
+  /** The refusal's category token, such as `cyber`; null when Claude gave none. */
+  readonly category: string | null;
+}
+
 /** Why a paused run waits: the provider's subscription usage limit, with when it resets. */
 export interface UsageLimitView {
   readonly provider: string;
@@ -352,6 +362,8 @@ export interface ReviewScreenState {
   readonly usageLimit?: UsageLimitView | null;
   /** Set when the run's critic switched to the deployment's fallback critic; absent otherwise. */
   readonly criticFallback?: CriticFallbackView | null;
+  /** The calls Claude declined that its fallback model answered; absent or empty when none. */
+  readonly refusalFallbacks?: readonly RefusalFallbackView[];
   readonly previousArtifact: ReviewArtifact | null;
   readonly artifact: ReviewArtifact;
   readonly findings: readonly ReviewFinding[];
