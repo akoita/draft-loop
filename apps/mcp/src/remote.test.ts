@@ -139,13 +139,18 @@ describe("with OAuth sign-in", () => {
   };
   let tokenKeys: JWTVerifyGetKey;
   /** Tokens for this server, named for how the scripted API answers them. */
-  const tokens = { member: "", expired: "", unscoped: "", foreign: "" };
+  const tokens = { member: "", expired: "", unscoped: "", foreign: "", journalOnly: "" };
+  const defaultGrant = "openid draftloop:journal draftloop:applications:read draftloop:jobs:write";
 
   beforeAll(async () => {
     const { publicKey, privateKey } = await generateKeyPair("RS256");
     tokenKeys = createLocalJWKSet({ keys: [{ ...(await exportJWK(publicKey)), kid: "k1" }] });
-    const sign = (sub: string, aud: readonly string[] = ["draft-loop-api", oauth.resource]) =>
-      new SignJWT({ iss: oauth.issuer, aud: [...aud], sub })
+    const sign = (
+      sub: string,
+      aud: readonly string[] = ["draft-loop-api", oauth.resource],
+      scope = defaultGrant,
+    ) =>
+      new SignJWT({ iss: oauth.issuer, aud: [...aud], sub, scope })
         .setProtectedHeader({ alg: "RS256", kid: "k1" })
         .setExpirationTime("5m")
         .sign(privateKey);
@@ -154,6 +159,7 @@ describe("with OAuth sign-in", () => {
     tokens.unscoped = await sign("unscoped");
     // Issued for the API alone: valid there, but not for this server.
     tokens.foreign = await sign("member", ["draft-loop-api"]);
+    tokens.journalOnly = await sign("member", undefined, "draftloop:journal");
   });
 
   /** A remote server whose API knows one signed-in person, with the workspaces given. */
@@ -264,6 +270,62 @@ describe("with OAuth sign-in", () => {
       expect(response.headers.get("www-authenticate")).toContain('error="invalid_token"');
     }
     expect(calls).toEqual([]);
+  });
+
+  const callTool = (origin: string, token: string, name: string) =>
+    fetch(`${origin}${remoteMcpPath}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/call",
+        params: { name, arguments: {} },
+      }),
+    });
+
+  it("asks for a scope the connection lacks, keeping the ones it holds, before any API call", async () => {
+    const calls: ApiCall[] = [];
+    const origin = await signedIn(["ws-1"], calls);
+
+    const response = await callTool(origin, tokens.member, "get_cv");
+    const header = response.headers.get("www-authenticate") ?? "";
+
+    expect(response.status).toBe(403);
+    expect(header).toContain('error="insufficient_scope"');
+    expect(header).toContain(
+      'scope="draftloop:journal draftloop:applications:read draftloop:jobs:write draftloop:drafts:read"',
+    );
+    expect(header).toContain(
+      'resource_metadata="https://draftloop.example.test/.well-known/oauth-protected-resource"',
+    );
+    expect(calls).toEqual([]);
+  });
+
+  it("asks for a default scope too, and lets a covered call through", async () => {
+    const origin = await signedIn(["ws-1"]);
+
+    const missing = await callTool(origin, tokens.journalOnly, "list_applications");
+    const covered = await callTool(origin, tokens.member, "list_applications");
+
+    expect(missing.status).toBe(403);
+    expect(missing.headers.get("www-authenticate")).toContain(
+      'scope="draftloop:journal draftloop:applications:read"',
+    );
+    expect(covered.status).toBe(200);
+  });
+
+  it("sends no challenge for a tool no scope opens, and leaves the API to refuse it", async () => {
+    const origin = await signedIn(["ws-1"]);
+
+    const response = await callTool(origin, tokens.member, "list_feedback");
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("www-authenticate")).toBeNull();
   });
 
   it("answers 503 and calls no API when the issuer's keys cannot be had", async () => {

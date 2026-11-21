@@ -462,6 +462,11 @@ sequenceDiagram
   signed by the issuer's keys, this server's `DRAFT_LOOP_MCP_PUBLIC_URL` among
   its audiences, and current. A token issued for anything else never reaches
   the API. If the issuer's keys can't be fetched, it answers `503`.
+- **A missing scope.** A tool call the connection holds no scope for answers
+  `403` with `error="insufficient_scope"`, before it runs. The challenge's
+  `scope` lists the scopes already granted plus the missing one, so the
+  assistant can ask the person to grant it and retry. Each tool's scope is in
+  `apps/mcp/src/tool-scopes.ts`; the API still checks every call.
 - **A dead token** answers `401` with `invalid_token`, so the assistant
   refreshes it. An account without a workspace answers `403`.
 - **Identity provider.** It needs one confidential client per assistant with
