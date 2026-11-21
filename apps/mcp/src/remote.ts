@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import type { JWTVerifyGetKey } from "jose";
 
 import { isAgentToken } from "./agent-token.js";
 import { createApplicationsApi } from "./applications.js";
@@ -18,15 +19,19 @@ import { createMaterialApi } from "./material.js";
 import { createOperatorFeedbackApi } from "./operator-feedback.js";
 import { createProfileApi } from "./profile.js";
 import { createProjectsApi } from "./projects.js";
+import { remoteTokenChecker } from "./remote-token.js";
 import { createRunsApi } from "./runs.js";
 import { createWorkJournalMcpServer } from "./server.js";
 import { createServiceNoticeApi } from "./service-notice.js";
+import { missingToolScope } from "./tool-scopes.js";
 
 /**
  * The remote transport (ADR 0011 D17, #2647): the same tools over Streamable HTTP on one URL,
  * for assistants that connect to an MCP server by address. Each request carries the caller's
- * own bearer credential, which this process only forwards to the API: it keeps no token, no
- * session and no candidate data, and the API alone decides what the credential may do.
+ * own bearer credential. With OAuth sign-in, this process first checks the token was issued for
+ * it (`remote-token.ts`, #3221), then forwards it to the API, which the token also names as an
+ * audience. It keeps no token, no session and no candidate data, and the API alone decides what
+ * the credential may do.
  */
 
 /** The one path the tools answer on. */
@@ -76,6 +81,8 @@ export interface RemoteMcpOptions {
   readonly workspaceId: string;
   readonly oauth?: RemoteOAuthOptions;
   readonly fetch?: typeof fetch;
+  /** The issuer's signing keys; discovered from `oauth.issuer` when unset. Tests pass their own. */
+  readonly tokenKeys?: JWTVerifyGetKey;
 }
 
 /** The address, workspace, port and bind address from the environment. */
@@ -172,6 +179,23 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
+const unread = Symbol("unread");
+const unreadable = Symbol("unreadable");
+
+/** The JSON body, or `unreadable` once a `413` or `400` has answered. */
+async function readBody(
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<unknown | typeof unreadable> {
+  try {
+    return await readJson(request);
+  } catch (error) {
+    if (error instanceof RangeError) answer(response, 413, "The request is too large.");
+    else answer(response, 400, "The request is not JSON.");
+    return unreadable;
+  }
+}
+
 /** The metadata an assistant reads to find where to sign the person in (RFC 9728). */
 export function protectedResourceMetadata(oauth: RemoteOAuthOptions) {
   return {
@@ -191,6 +215,25 @@ function challenge(oauth: RemoteOAuthOptions | undefined, error?: string): strin
     `Bearer resource_metadata="${metadata}"`,
     `scope="${remoteDefaultScopes.join(" ")}"`,
     ...(error === undefined ? [] : [`error="${error}"`]),
+  ].join(", ");
+}
+
+/**
+ * The `403` scope challenge (MCP authorization, scope challenge handling): the scopes already
+ * granted plus the missing one, so signing in again keeps what the person granted before.
+ */
+function scopeChallenge(
+  oauth: RemoteOAuthOptions,
+  granted: readonly string[],
+  missing: string,
+): string {
+  const known: ReadonlySet<string> = new Set(remoteScopes);
+  const scopes = [...new Set([...granted.filter((scope) => known.has(scope)), missing])];
+  return [
+    `Bearer error="insufficient_scope"`,
+    `scope="${scopes.join(" ")}"`,
+    `resource_metadata="${new URL(oauth.resource).origin}${protectedResourcePath}"`,
+    `error_description="This tool needs the ${missing} scope."`,
   ].join(", ");
 }
 
@@ -245,6 +288,8 @@ async function workspaceOf(options: RemoteMcpOptions, token: string): Promise<Wo
 export function createRemoteMcpHandler(
   options: RemoteMcpOptions,
 ): (request: IncomingMessage, response: ServerResponse) => Promise<void> {
+  const checkToken =
+    options.oauth === undefined ? undefined : remoteTokenChecker(options.oauth, options.tokenKeys);
   return async (request, response) => {
     const path = (request.url ?? "").split("?")[0];
     if (path === "/healthz" && request.method === "GET") {
@@ -273,7 +318,34 @@ export function createRemoteMcpHandler(
       });
     }
     let { workspaceId } = options;
-    if (oauth !== undefined) {
+    let body: unknown = unread;
+    if (oauth !== undefined && checkToken !== undefined) {
+      let check: Awaited<ReturnType<typeof checkToken>>;
+      try {
+        check = await checkToken(token);
+      } catch {
+        return answer(response, 503, "The sign-in could not be checked. Try again shortly.", {
+          "retry-after": "30",
+        });
+      }
+      // A token issued for another server, or not current, never reaches the API.
+      if (check.status === "refused") {
+        return answer(response, 401, "The sign-in is not valid for this server.", {
+          "www-authenticate": challenge(oauth, "invalid_token"),
+        });
+      }
+      body = await readBody(request, response);
+      if (body === unreadable) return;
+      // A tool the connection holds no scope for: ask for it before anything runs (#3222).
+      const missing = missingToolScope(body, check.scopes);
+      if (missing !== undefined) {
+        return answer(
+          response,
+          403,
+          `This connection was not granted the ${missing} scope; sign in again to grant it.`,
+          { "www-authenticate": scopeChallenge(oauth, check.scopes, missing) },
+        );
+      }
       const lookup = await workspaceOf(options, token);
       if (lookup.outcome === "refused") {
         return answer(
@@ -285,14 +357,8 @@ export function createRemoteMcpHandler(
       }
       ({ workspaceId } = lookup);
     }
-    let body: unknown;
-    try {
-      body = await readJson(request);
-    } catch (error) {
-      return error instanceof RangeError
-        ? answer(response, 413, "The request is too large.")
-        : answer(response, 400, "The request is not JSON.");
-    }
+    if (body === unread) body = await readBody(request, response);
+    if (body === unreadable) return;
     const server = createDraftLoopMcpServer(
       {
         baseUrl: options.baseUrl,
