@@ -27,6 +27,10 @@ const service = {
   listApplications: async () => [
     {
       id: "app_1",
+      status: "in-review",
+      archivedAt: null,
+      updatedAt: "2026-11-17T10:00:00Z",
+      exports: [],
       runs: [
         {
           id: "run_old",
@@ -191,6 +195,25 @@ describe("the support routes (#2882)", () => {
       },
     ]);
     expect(requests[0]?.systemPrompt).toContain("DraftLoop user guide");
+  });
+
+  it("tell the assistant the member's next step as the screens name it", async () => {
+    const { builder, requests } = scriptedRoute([
+      { step: "tool", tool: "get_next_step", query: null, run_id: null, summary: null },
+      {
+        step: "answer",
+        answer: "Read the draft, decide each finding, then approve it.",
+        section_ids: ["review"],
+        outcome: "answered",
+      },
+    ]);
+    const api = await start({}, builder);
+    const response = await ask(api, "What should I do next?");
+
+    expect(response.statusCode).toBe(200);
+    const next = (requests[1]?.input.tool_results as { result: unknown }[] | undefined)?.[0]
+      ?.result;
+    expect(next).toEqual({ application_id: "app_1", stage: "reviewing" });
   });
 
   it("answer with guide search when the switch is off, without calling the route", async () => {
