@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { type ApplicationService, catalogModelPricing } from "@draft-loop/application";
+import {
+  type ApplicationStatus,
+  applicationStage,
+  runEndedBeforeApproval,
+} from "@draft-loop/domain/application";
 import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { prepareCallsPerCreditedApplication } from "@draft-loop/schemas/entitlements";
 import {
@@ -286,6 +291,25 @@ export function registerSupportRoutes(
               limit: balance.unlimited ? null : prepareCallsPerCreditedApplication,
             },
           ],
+        };
+      },
+      nextStep: async () => {
+        // The application the member worked on last, as Home and the agent channel follow it.
+        const followed = (await options.service.listApplications({ root }))
+          .filter((application) => application.archivedAt === null && !application.jobMissing)
+          .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0];
+        if (followed === undefined) return { application_id: null, stage: "job" };
+        const newest = [...followed.runs].sort((left, right) =>
+          right.startedAt.localeCompare(left.startedAt),
+        )[0];
+        return {
+          application_id: followed.id,
+          stage: applicationStage({
+            status: followed.status as ApplicationStatus,
+            runCount: followed.runs.length,
+            exportCount: followed.exports.length,
+            newestRunEnded: runEndedBeforeApproval(newest?.state ?? ""),
+          }),
         };
       },
       recentRuns: async (limit) => {

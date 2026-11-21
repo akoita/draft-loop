@@ -140,6 +140,7 @@ const account = {
     credits: 3,
     counters: [{ name: "prepare_calls", used: 2, limit: 20 }],
   }),
+  nextStep: async () => ({ application_id: "app_fixture_1", stage: "review-ended" }),
   recentRuns: async (limit: number) => runs.slice(0, limit),
   runStatus: async (runId: string) => runs.find((run) => run.run_id === runId) ?? null,
   serviceStatus: async () => ({ state: "operational" as const, codes: [] }),

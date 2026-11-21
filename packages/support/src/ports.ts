@@ -44,8 +44,19 @@ export interface SupportServiceStatus {
 }
 
 /** The member's own account, already bound to them by the host. */
+/**
+ * The member's next step, as DraftLoop's screens name it (#3227): the application they worked on
+ * last and its stage code, or `job` when they have none.
+ */
+export interface SupportNextStep {
+  readonly application_id: string | null;
+  /** `job`, or an application stage: start-review, drafting, reviewing, review-ended, export, done. */
+  readonly stage: string;
+}
+
 export interface SupportAccountPort {
   accountSummary(): Promise<SupportAccountSummary>;
+  nextStep(): Promise<SupportNextStep>;
   recentRuns(limit: number): Promise<readonly SupportRunStatus[]>;
   /** `null` when the run does not exist or belongs to someone else. */
   runStatus(runId: string): Promise<SupportRunStatus | null>;

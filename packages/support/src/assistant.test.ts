@@ -35,6 +35,7 @@ const account: SupportAccountPort = {
     credits: 3,
     counters: [{ name: "prepare_runs", used: 4, limit: 20 }],
   }),
+  nextStep: async () => ({ application_id: "app_1", stage: "review-ended" }),
   recentRuns: async () => [
     {
       run_id: "run_1",
@@ -193,6 +194,19 @@ describe("the support assistant (#2882)", () => {
     await assistant.answer(ask("Is DraftLoop down?"));
     const last = requests[1]?.input as { tool_results: { result: unknown }[] };
     expect(last.tool_results[0]?.result).toEqual({ state: "operational", codes: [] });
+  });
+
+  it("reads the member's next step as the screens name it", async () => {
+    const { assistant, requests } = harness([
+      toolStep("get_next_step"),
+      answerStep("Open Run details and start a new review.", ["draft"]),
+    ]);
+    await assistant.answer(ask("What should I do now?"));
+    const last = requests[1]?.input as { tool_results: { result: unknown }[] };
+    expect(last.tool_results[0]?.result).toEqual({
+      application_id: "app_1",
+      stage: "review-ended",
+    });
   });
 
   it("turns a failing tool into an error code the model can read", async () => {
