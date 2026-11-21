@@ -242,6 +242,22 @@ describe("a new tab of a browser that signed in before", () => {
     expect(context.lasting.getItem("draft-loop.signed-in-before")).toBe("1");
   });
 
+  it("asks for the whole sign-in again to renew an operator's second step", async () => {
+    const context = setup([tokens("access-1", "refresh-1"), tokens("access-2", "refresh-2")]);
+    await signIn(context);
+    const session = context.make();
+
+    const url = new URL(await session.begin({ again: true }));
+    expect(url.searchParams.get("prompt")).toBe("login");
+    const returned = context.make();
+
+    expect(await returned.complete(`?code=code-2&state=${url.searchParams.get("state")}`)).toBe(
+      true,
+    );
+    expect(await returned.accessToken()).toBe("access-2");
+    expect(new URL(await session.begin()).searchParams.get("prompt")).toBeNull();
+  });
+
   it("ends quietly when the provider holds no session, and does not ask the next tab", async () => {
     const context = setup([tokens("access-1", "refresh-1")]);
     await signIn(context);

@@ -2486,6 +2486,10 @@ msgstr "Confirm a fact"
 msgid "Confirm as evidence"
 msgstr "Confirm as evidence"
 
+#: apps/web/src/operator-confirm.tsx
+msgid "Confirm operator access"
+msgstr "Confirm operator access"
+
 #: apps/web/src/sources-model.ts
 msgid "Confirm that runs may combine these knowledge bases."
 msgstr "Confirm that runs may combine these knowledge bases."
@@ -6408,6 +6412,10 @@ msgstr "Opening your documents…"
 msgid "Operator"
 msgstr "Operator"
 
+#: apps/web/src/operator-confirm.tsx
+msgid "Operator controls need a recent code or passkey. Sign in again to get them back."
+msgstr "Operator controls need a recent code or passkey. Sign in again to get them back."
+
 #: apps/web/src/operator.tsx
 msgid "Operator sections"
 msgstr "Operator sections"
@@ -10040,6 +10048,10 @@ msgstr "The service could not be reached. Check your connection and try again."
 #: packages/ui/src/provider-sign-in-readiness.ts
 msgid "The service provides the models"
 msgstr "The service provides the models"
+
+#: apps/web/src/operator-confirm.tsx
+msgid "The sign-in page did not answer. Try again in a moment."
+msgstr "The sign-in page did not answer. Try again in a moment."
 
 #: apps/web/src/oidc-sign-in.tsx
 msgid "The sign-in service is waking up. After a quiet spell this can take up to a minute."

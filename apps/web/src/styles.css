@@ -516,6 +516,19 @@ button.link:where(:not(.shared-screens *)) {
   justify-self: start;
 }
 
+/* Operator access whose second step aged out: the button to sign in again and why. */
+.operator-confirm {
+  display: grid;
+  gap: 0.375rem;
+  justify-items: start;
+}
+
+.operator-confirm .account-menu-hint {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.8125rem;
+}
+
 /* The legal pages, a quiet line under sign-out, as on the landing page. */
 .account-menu-legal {
   margin: 0;

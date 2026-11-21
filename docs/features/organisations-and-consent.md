@@ -136,6 +136,12 @@ operator finds it in the account menu; owner-token mode shows it in the top
 bar. Nobody else sees it: the screen offers it only when `GET /v1/me` answers
 `kind: owner` or `operator: true`.
 
+A named operator's second step (code or passkey) counts for operator routes
+for 12 hours, while their session can last 7 days. Once it ages out, `GET
+/v1/me` answers `operatorRole: true` without `operator: true`, and the menu
+shows **Confirm operator access** in place of **Operator**. It asks for the
+whole sign-in again (`prompt=login`), and the controls come back.
+
 The page shows one section at a time; its buttons count the new notes, the
 people waiting and the unused invites. Each list reads 50 rows at a time with
 **Show more**, and has a search, so it stays usable with hundreds of rows.

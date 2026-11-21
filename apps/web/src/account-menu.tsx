@@ -6,6 +6,7 @@ import type { ApiSchemas } from "./api-client.js";
 import { LegalLinks } from "./landing.js";
 import { useFoldingMenu } from "./menu-fold.js";
 import { OperatorButton } from "./operator.js";
+import { ConfirmOperatorButton, needsOperatorConfirm } from "./operator-confirm.js";
 import { canOperate } from "./operator-model.js";
 import { accountLabel } from "./records-model.js";
 import { SignOutButton } from "./shell-actions.js";
@@ -28,6 +29,11 @@ export interface AccountMenuProps {
   readonly signInSecurity?: string | undefined;
   /** Opens the operator page; offered only when `/v1/me` says the caller may operate (#2829). */
   readonly onOperator?: (() => void) | undefined;
+  /**
+   * Asks for the sign-in again when the caller holds the operator role but their second step is
+   * too old for operator routes; offered in place of the Operator entry.
+   */
+  readonly onConfirmOperator?: (() => Promise<void>) | undefined;
   /** Feedback notes waiting in New, shown on the Operator entry and the menu (#3002). */
   readonly newNotes?: number | undefined;
   /** Phone layout: the button shows the person's initial, and the menu opens across the window. */
@@ -55,6 +61,7 @@ export function AccountMenu({
   onSignOut,
   signInSecurity,
   onOperator,
+  onConfirmOperator,
   newNotes,
   compact = false,
   shellActions,
@@ -114,6 +121,9 @@ export function AccountMenu({
               onOperator();
             }}
           />
+        ) : null}
+        {onConfirmOperator !== undefined && needsOperatorConfirm(me) ? (
+          <ConfirmOperatorButton onConfirm={onConfirmOperator} />
         ) : null}
         <SignOutButton onSignOut={onSignOut} />
         <p className="account-menu-legal">

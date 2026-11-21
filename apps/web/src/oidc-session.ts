@@ -80,8 +80,10 @@ export interface OidcSession {
   /**
    * Starts an attempt and returns the provider's sign-in page to go to. `silent` asks the provider
    * to answer from its own session without showing a page; a refusal then ends quietly.
+   * `again` asks for the whole sign-in, second step included, though the session is still live:
+   * an operator's second step counts for a limited time, and this renews it.
    */
-  begin(options?: { readonly silent?: boolean }): Promise<string>;
+  begin(options?: { readonly silent?: boolean; readonly again?: boolean }): Promise<string>;
   /**
    * Finishes the attempt the provider answered at the screen's address with `search`. Resolves
    * `false` when `search` is no answer; throws {@link SignInEndedError} when the answer is refused.
@@ -273,6 +275,7 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
         codeChallenge: challenge,
         ...(uiLocale === undefined ? {} : { uiLocale }),
         ...(silent ? { prompt: "none" as const } : {}),
+        ...(!silent && beginOptions?.again === true ? { prompt: "login" as const } : {}),
       });
     },
 
