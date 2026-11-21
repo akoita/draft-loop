@@ -27,12 +27,12 @@ the same command to rewrite it.
 
 ## Baseline on 2026-11-21
 
-| Check                                   | Result                                                                                                   | Follow-up                              |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Grounding: supported claims rejected    | 3 of 13: "Advanced Life Support" for ALS, "Key Stage 2" for KS2, "QTS" for Qualified Teacher Status      | #3089                                  |
-| Grounding: contradicted claims accepted | 3 of 7: "two years" for six months, a crew of "eight" for three, "17th Edition" for 18th                 | The critic must catch these; see below |
-| Retrieval recall                        | Today's picks 0.656, BM25 0.719; both miss ALS, complex deals, Key Stage 2 and special educational needs | Semantic arm, #3088                    |
-| Required-section evidence               | 10 of 10 lines recognised since #3088 (1 of 10 before)                                                   | Done                                   |
+| Check                                   | Result                                                                                                                     | Follow-up                              |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Grounding: supported claims rejected    | 0 of 13 since #3089 (3 before: "Advanced Life Support" for ALS, "Key Stage 2" for KS2, "QTS" for Qualified Teacher Status) | Done                                   |
+| Grounding: contradicted claims accepted | 3 of 7: "two years" for six months, a crew of "eight" for three, "17th Edition" for 18th                                   | The critic must catch these; see below |
+| Retrieval recall                        | Today's picks 0.656, BM25 0.719; both miss ALS, complex deals, Key Stage 2 and special educational needs                   | Semantic arm, #3088                    |
+| Required-section evidence               | 10 of 10 lines recognised since #3088 (1 of 10 before)                                                                     | Done                                   |
 
 The section matcher used to recognise an experience line through words such
 as "engineer", so a software line passed and a nurse's or teacher's line did
