@@ -338,6 +338,26 @@ describe("provider application planner", () => {
     expect(execution.output.leads.coreAreas).toEqual(plan.leads.coreAreas);
   });
 
+  it("makes a theme's gap flag agree with its evidence, reading the plan's leads", async () => {
+    const mixed = aliased({
+      ...plan,
+      themes: [
+        plan.themes[0],
+        theme("Payments", [otherChunkId], true),
+        theme("Kubernetes", [], false),
+        theme("Hiring", [chunkId], true),
+      ],
+    } as ApplicationPlan);
+    const { planner, context } = plannerWith([mixed]);
+    const execution = await planner.plan(request(context));
+    expect(execution.output.themes.slice(1)).toEqual([
+      theme("Payments", [otherChunkId], false),
+      theme("Kubernetes", [], true),
+      theme("Hiring", [], true),
+    ]);
+    expect(execution.output.leads).toEqual(plan.leads);
+  });
+
   it("caps the plan at its own budget, or at the selected profile's budget", async () => {
     const legacy = plannerWith([aliased(plan)]);
     await legacy.planner.plan(request(legacy.context));
