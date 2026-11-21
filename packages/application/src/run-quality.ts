@@ -1,4 +1,4 @@
-import { isContentFreeSpanValue } from "@draft-loop/domain/run-span";
+import { isContentFreeSpanValue, type RunSpanAttributes } from "@draft-loop/domain/run-span";
 import type { Critique, ExecutionRecord, RunSnapshot } from "@draft-loop/orchestrator";
 
 /**
@@ -146,5 +146,54 @@ export function runQuality(run: RunQualityInput): RunQuality {
       ).size,
     },
     estimatedUsd: Math.round(finite(run.totalCostUsd) * 1_000_000) / 1_000_000,
+  };
+}
+
+/** States where the critic's last verdict stands, so the run's quality is worth recording. */
+const qualityStates: ReadonlySet<string> = new Set([
+  "awaiting-approval",
+  "budget-exhausted",
+  "stopped",
+]);
+
+/**
+ * Whether a job brought the run to a state where its draft waits or stops: the moment its quality
+ * is recorded, once per arrival.
+ */
+export function reachedQualityState(
+  after: Pick<RunQualityInput, "state" | "round">,
+  before?: Pick<RunQualityInput, "state" | "round">,
+): boolean {
+  if (!qualityStates.has(after.state)) return false;
+  return before === undefined || before.state !== after.state || before.round !== after.round;
+}
+
+/** The mean of the readiness dimension scores, to four decimals; `null` without readiness. */
+export function meanReadiness(quality: RunQuality): number | null {
+  const scores = Object.values(quality.readiness?.scores ?? {});
+  if (scores.length === 0) return null;
+  const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+  return Math.round(mean * 10_000) / 10_000;
+}
+
+/** The quality record as `evaluate_run` span attributes, for the span store and the digest. */
+export function runQualitySpanAttributes(quality: RunQuality): RunSpanAttributes {
+  const readiness = meanReadiness(quality);
+  return {
+    "gen_ai.operation.name": "evaluate_run",
+    ...(quality.criticModel === null ? {} : { "gen_ai.request.model": quality.criticModel }),
+    ...(quality.authorModel === null
+      ? {}
+      : { "draftloop.quality.author_model": quality.authorModel }),
+    "draftloop.round": quality.round,
+    "draftloop.estimated_usd": quality.estimatedUsd,
+    "draftloop.quality.state": quality.state,
+    "draftloop.quality.ready": quality.readiness?.ready === true,
+    ...(quality.readiness === null
+      ? {}
+      : { "draftloop.quality.stop_reason": quality.readiness.stopReason }),
+    ...(readiness === null ? {} : { "draftloop.quality.readiness": readiness }),
+    "draftloop.quality.uncovered": quality.coverage.uncovered,
+    "draftloop.quality.error_findings": quality.findings.errors,
   };
 }

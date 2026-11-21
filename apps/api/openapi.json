@@ -7655,7 +7655,8 @@
             "enum": [
               "invoke_workflow",
               "invoke_agent",
-              "retrieve_evidence"
+              "retrieve_evidence",
+              "evaluate_run"
             ]
           },
           "started_at": {
@@ -7707,7 +7708,14 @@
                 "draftloop.retrieved_sources",
                 "draftloop.revision.mode",
                 "draftloop.revision.patch_rejection",
-                "draftloop.revision.dropped_edits"
+                "draftloop.revision.dropped_edits",
+                "draftloop.quality.state",
+                "draftloop.quality.ready",
+                "draftloop.quality.stop_reason",
+                "draftloop.quality.readiness",
+                "draftloop.quality.uncovered",
+                "draftloop.quality.error_findings",
+                "draftloop.quality.author_model"
               ]
             },
             "additionalProperties": {
@@ -17371,7 +17379,8 @@
             "enum": [
               "invoke_workflow",
               "invoke_agent",
-              "retrieve_evidence"
+              "retrieve_evidence",
+              "evaluate_run"
             ]
           },
           "started_at": {
@@ -17423,7 +17432,14 @@
                 "draftloop.retrieved_sources",
                 "draftloop.revision.mode",
                 "draftloop.revision.patch_rejection",
-                "draftloop.revision.dropped_edits"
+                "draftloop.revision.dropped_edits",
+                "draftloop.quality.state",
+                "draftloop.quality.ready",
+                "draftloop.quality.stop_reason",
+                "draftloop.quality.readiness",
+                "draftloop.quality.uncovered",
+                "draftloop.quality.error_findings",
+                "draftloop.quality.author_model"
               ]
             },
             "additionalProperties": {

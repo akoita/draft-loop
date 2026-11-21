@@ -6,7 +6,12 @@
  * thrown, and never touches a run.
  */
 
-import { buildQualityDigest, type QualityDigest } from "@draft-loop/application/quality-digest";
+import {
+  buildQualityDigest,
+  type DigestQuality,
+  type QualityDigest,
+  qualityTrend,
+} from "@draft-loop/application/quality-digest";
 import { insightObservations, nextQualityInsights } from "@draft-loop/application/quality-insights";
 import { createPostgresQualityDigests, type QualityDigests } from "@draft-loop/storage-postgres";
 
@@ -21,6 +26,7 @@ export type QualityDigestPorts = Pick<
   QualityDigests,
   | "claimDay"
   | "save"
+  | "digestsBetween"
   | "organisationsActiveSince"
   | "spansBetween"
   | "listInsights"
@@ -46,13 +52,24 @@ export async function sweepQualityDigest(
   }
   const digest = buildQualityDigest({ day, organisations: organisations.length, spans });
   await ports.save(day, digest as unknown as Record<string, unknown>);
-  ports.log("quality digest", { ...digest });
+  // This week against the week before, per model pair (#3240); older digests have no quality.
+  const since = new Date(from.getTime() - 13 * dayMs).toISOString().slice(0, 10);
+  const earlier = (await ports.digestsBetween(since, day)).filter((saved) => saved.day !== day);
+  const trend = qualityTrend(day, [
+    ...earlier.map((saved) =>
+      saved.digest.quality === undefined
+        ? { day: saved.day }
+        : { day: saved.day, quality: saved.digest.quality as DigestQuality },
+    ),
+    { day, quality: digest.quality },
+  ]);
+  ports.log("quality digest", { ...digest, trend });
 
   // The insight ledger (#2917): new, recurring, resolved and dismissed patterns.
   const { insights, changes } = nextQualityInsights({
     day,
     existing: await ports.listInsights(),
-    observations: insightObservations(digest),
+    observations: insightObservations(digest, trend),
   });
   await ports.saveInsights(insights);
   const open = (await ports.listInsights()).filter(
@@ -77,6 +94,7 @@ export async function runQualityDigest(wiring: {
       {
         claimDay: digests.claimDay,
         save: digests.save,
+        digestsBetween: digests.digestsBetween,
         organisationsActiveSince: digests.organisationsActiveSince,
         spansBetween: digests.spansBetween,
         listInsights: digests.listInsights,

@@ -134,6 +134,46 @@ describe("run job handler", () => {
     expect(flushed).toEqual(["run-1", "run-1"]);
   });
 
+  it("records the critic's verdict as an evaluate_run span when a draft reaches review (#3240)", async () => {
+    const end = vi.fn();
+    const tracer = { startSpan: vi.fn(() => ({ setAttributes: vi.fn(), end })) };
+    const reviewed = {
+      ...snapshot("awaiting-approval"),
+      round: 1,
+      findings: [],
+      executionHistory: [],
+      latestEvaluation: null,
+      totalCostUsd: 0.2,
+    } as RunSnapshot;
+    const service = {
+      status: vi.fn<Service["status"]>(async () => snapshot("drafting")),
+      resume: vi.fn<Service["resume"]>(async () => reviewed),
+    };
+    const handler = createRunJobHandler({
+      serviceFor: () => service,
+      workspaceRoot: () => root,
+      allowProviderData: true,
+      budgetCeiling,
+      spansFor: () => ({ tracer, flush: async () => undefined }),
+    });
+
+    await handler(job, { requeue: async () => undefined });
+    expect(tracer.startSpan).toHaveBeenCalledWith(
+      "evaluate_run",
+      expect.objectContaining({
+        "draftloop.quality.state": "awaiting-approval",
+        "draftloop.quality.ready": false,
+        "draftloop.estimated_usd": 0.2,
+      }),
+    );
+    expect(end).toHaveBeenCalledWith("ok");
+
+    service.status.mockResolvedValueOnce(reviewed);
+    tracer.startSpan.mockClear();
+    await handler(job, { requeue: async () => undefined });
+    expect(tracer.startSpan).not.toHaveBeenCalled();
+  });
+
   it("drafts the next round of a run the person sent back for revision", async () => {
     const { service, outcome } = await handle(snapshot("revising"), snapshot("awaiting-approval"));
 

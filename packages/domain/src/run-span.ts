@@ -5,7 +5,16 @@
  * it.
  */
 
-export const runSpanNames = ["invoke_workflow", "invoke_agent", "retrieve_evidence"] as const;
+/**
+ * `evaluate_run` records the critic's verdict when a run reaches review or stops (#3237, #3240):
+ * the online evaluation, as scores and codes only.
+ */
+export const runSpanNames = [
+  "invoke_workflow",
+  "invoke_agent",
+  "retrieve_evidence",
+  "evaluate_run",
+] as const;
 export type RunSpanName = (typeof runSpanNames)[number];
 
 /** The only attribute names a run span may carry. */
@@ -31,6 +40,13 @@ export const runSpanAttributeNames = [
   "draftloop.revision.mode",
   "draftloop.revision.patch_rejection",
   "draftloop.revision.dropped_edits",
+  "draftloop.quality.state",
+  "draftloop.quality.ready",
+  "draftloop.quality.stop_reason",
+  "draftloop.quality.readiness",
+  "draftloop.quality.uncovered",
+  "draftloop.quality.error_findings",
+  "draftloop.quality.author_model",
 ] as const;
 export type RunSpanAttributeName = (typeof runSpanAttributeNames)[number];
 

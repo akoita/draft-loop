@@ -1,7 +1,10 @@
 import {
   type ApplicationService,
   type RunBudgetCeiling,
+  reachedQualityState,
   runBudgetCeilingViolation,
+  runQuality,
+  runQualitySpanAttributes,
 } from "@draft-loop/application";
 import type { RunCriticFallback } from "@draft-loop/application/critic-fallback";
 import type { RunSpanRecorder } from "@draft-loop/application/run-span-recorder";
@@ -235,6 +238,17 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
         ...(spans === undefined ? {} : { tracer: spans.tracer }),
         ...(criticFallback === undefined ? {} : { criticFallback }),
       });
+      // The critic's verdict as the run's online evaluation (#3240), once per arrival at review.
+      // Like every span, it must never fail the run.
+      if (spans !== undefined && reachedQualityState(advanced, snapshot)) {
+        try {
+          spans.tracer
+            .startSpan("evaluate_run", runQualitySpanAttributes(runQuality(advanced)))
+            .end("ok");
+        } catch {
+          // An unreadable snapshot leaves the run without its quality span, nothing more.
+        }
+      }
     } finally {
       // Also after a throw: the spans of a failed step are the ones worth reading.
       await spans?.flush();

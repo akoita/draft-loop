@@ -19,6 +19,11 @@ export interface QualityDigests {
   /** Claims a day's digest; true for the one caller that inserted the day's row. */
   readonly claimDay: (day: string, now: Date) => Promise<boolean>;
   readonly save: (day: string, digest: Readonly<Record<string, unknown>>) => Promise<void>;
+  /** The saved digests of the days in [from, to], oldest first, for the weekly quality trend. */
+  readonly digestsBetween: (
+    from: string,
+    to: string,
+  ) => Promise<readonly { readonly day: string; readonly digest: Record<string, unknown> }[]>;
   /** Organisations a member used since `since`, at most `limit`. */
   readonly organisationsActiveSince: (since: Date, limit: number) => Promise<readonly string[]>;
   /** One organisation's spans that started in [from, to). */
@@ -70,6 +75,20 @@ export function createPostgresQualityDigests(options: PostgresSchemaOptions): Qu
         requireDay(day),
         JSON.stringify(digest),
       ]);
+    },
+    digestsBetween: async (from, to) => {
+      const rows = await pool.query(
+        `SELECT day, digest FROM quality_digests
+            WHERE day >= $1 AND day <= $2 AND digest IS NOT NULL ORDER BY day LIMIT 31`,
+        [requireDay(from), requireDay(to)],
+      );
+      return rows.map((row) => ({
+        day: String(row.day),
+        digest: (typeof row.digest === "string" ? JSON.parse(row.digest) : row.digest) as Record<
+          string,
+          unknown
+        >,
+      }));
     },
     organisationsActiveSince: async (since, limit) => {
       if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000) {
