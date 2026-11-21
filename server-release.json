@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "A plan's gap themes no longer stop the writer",
+  "releaseName": "Operator access asks for a fresh second step instead of vanishing",
   "stageIssue": 1359,
   "milestone": 110,
-  "summary": "The writer's application plan no longer fails when a theme is marked as a gap but still cites evidence, or cites none without being marked a gap. A core area built on the theme means the writer found support, so it stays supported with its citations; otherwise it becomes a gap that cites nothing. Cited evidence is still checked against the run's approved evidence. Before, a Haiku writer that mixed the two failed every plan attempt and the run stopped.",
+  "summary": "A named operator's code or passkey counts for operator routes for 12 hours, while a session lasts up to 7 days. Once it ages out, the account menu now shows Confirm operator access in place of Operator; it asks for the sign-in again, second step included, and the controls come back. Before, the Operator entry vanished without a word until the next full sign-in. This release also exports run spans to Cloud Trace with no content (off unless the deployment turns it on), lets Error Reporting group API and worker errors, and shows output quality with its weekly trend in the daily digest.",
   "knownLimitations": "Inviting people to a team still goes through the API or an operator; the account menu does not list the team's people yet. Starting from a conversation needs the server's interviewer model. Agents cannot add text evidence yet (#2751). Credit packs sell only where the operator has set up Stripe; staging uses Stripe test mode. Self-service sign-up needs an invite. The interview guide's paid walk is partial (#2623). The dating of relative source ages is not yet checked against a live search (#2579). Claude runs on the direct Claude API, outside the EU, until Claude on Vertex AI is available (#1564). French is beta until the French quality gate (milestone 83) runs. The legal pages show placeholder publisher details until the deployment sets them. Deleting an account from the screen works only for a person alone in their organisation; a team owner asks an operator. The readable copy does not yet include the career interview or research briefs."
 }
