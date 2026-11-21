@@ -8,7 +8,9 @@
 
 import {
   buildQualityDigest,
+  type DigestLatency,
   type DigestQuality,
+  latencyTrend,
   type QualityDigest,
   qualityTrend,
 } from "@draft-loop/application/quality-digest";
@@ -63,13 +65,21 @@ export async function sweepQualityDigest(
     ),
     { day, quality: digest.quality },
   ]);
-  ports.log("quality digest", { ...digest, trend });
+  const latency = latencyTrend(day, [
+    ...earlier.map((saved) =>
+      Array.isArray(saved.digest.latency)
+        ? { day: saved.day, latency: saved.digest.latency as DigestLatency[] }
+        : { day: saved.day },
+    ),
+    { day, latency: digest.latency },
+  ]);
+  ports.log("quality digest", { ...digest, trend, latencyTrend: latency });
 
   // The insight ledger (#2917): new, recurring, resolved and dismissed patterns.
   const { insights, changes } = nextQualityInsights({
     day,
     existing: await ports.listInsights(),
-    observations: insightObservations(digest, trend),
+    observations: insightObservations(digest, trend, latency),
   });
   await ports.saveInsights(insights);
   const open = (await ports.listInsights()).filter(

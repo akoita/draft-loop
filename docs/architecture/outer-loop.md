@@ -37,7 +37,7 @@ flowchart TB
 | Part      | What it does                                                                             | Where                                                 |
 | --------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | Signals   | Spans per author, critic, revision and retrieval call; one log line per finding decision | [Run traces](runtime-and-trust.md#run-traces)         |
-| Digest    | Reduces one UTC day of spans to counts, codes, model ids and sample run ids, plus output quality by model pair and a week-over-week trend | `packages/application/src/quality-digest.ts`          |
+| Digest    | Reduces one UTC day of spans to counts, codes, model ids and sample run ids, plus output quality by model pair, step latency, and week-over-week trends for both | `packages/application/src/quality-digest.ts`          |
 | Ledger    | Tracks each pattern's status across days                                                 | `packages/application/src/quality-insights.ts`        |
 | Sweep     | Builds the digest, updates the ledger, logs both                                         | `apps/worker/src/quality-digest-sweep.ts`             |
 | Storage   | `quality_digests` and `quality_insights`, deployment-wide, content-free                  | `packages/storage-postgres/src/quality-digests.ts`    |
@@ -86,6 +86,11 @@ Each pattern is keyed by its mechanism, for example
 A quality drop is `quality-drop:<ready-rate|readiness>:<author model>:<critic
 model>`: the last seven days fell more than 5% against the seven before, with
 at least five evaluated runs in each week.
+
+A latency rise is `latency-rise:<operation>:<step>:<model>`: the step's p95
+duration over the last seven days rose more than 25% against the seven before,
+with at least ten finished spans in each week. The weekly p95 is the
+span-weighted mean of the daily p95s, so it is an approximation.
 
 ```mermaid
 stateDiagram-v2

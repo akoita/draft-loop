@@ -1,3 +1,4 @@
+import type { LatencyTrend } from "./latency-trend.js";
 import type { QualityDigest } from "./quality-digest.js";
 import type { QualityTrend } from "./quality-trend.js";
 
@@ -56,6 +57,7 @@ interface Observation {
 export function insightObservations(
   digest: QualityDigest,
   trend?: QualityTrend,
+  latency?: LatencyTrend,
 ): readonly Observation[] {
   const observations: Observation[] = digest.failures.map((failure) => ({
     key: [
@@ -94,6 +96,15 @@ export function insightObservations(
         runIds: [],
       });
     }
+  }
+  // A step whose weekly p95 rose against the week before (#3251).
+  for (const row of latency?.rows ?? []) {
+    if (!row.rose) continue;
+    observations.push({
+      key: `latency-rise:${row.operation}:${row.step}:${row.model}`,
+      occurrences: row.current.spans,
+      runIds: [],
+    });
   }
   return observations;
 }

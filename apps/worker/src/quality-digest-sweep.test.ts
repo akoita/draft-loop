@@ -46,7 +46,11 @@ describe("the daily quality digest sweep (#2916)", () => {
     expect(lines).toEqual([
       {
         message: "quality digest",
-        fields: { ...digest, trend: { through: "2026-11-16", pairs: [] } },
+        fields: {
+          ...digest,
+          trend: { through: "2026-11-16", pairs: [] },
+          latencyTrend: { through: "2026-11-16", rows: [] },
+        },
       },
       {
         message: "quality insights",
