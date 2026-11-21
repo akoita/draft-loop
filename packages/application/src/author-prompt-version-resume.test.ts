@@ -67,7 +67,7 @@ it.each([
   { recorded: "cli-author-v15", structuredGuidance: true, budget: 32_768, patchFirst: true },
   { recorded: "cli-author-v16", structuredGuidance: true, budget: 32_768, patchFirst: true },
 ])(
-  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v20",
+  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v21",
   async ({ recorded, structuredGuidance, budget, patchFirst }) => {
     const resumedCalls = patchFirst === true ? 3 : 2;
     const root = await mkdtemp(join(tmpdir(), "author-prompt-version-"));
@@ -239,11 +239,11 @@ it.each([
       const fresh = await driver.start({ root, allowProviderData: true }, io);
       expect(fresh.state, JSON.stringify(fresh.lastError)).toBe("awaiting-approval");
       const current = await contextModels(root, fresh.contextSnapshotId);
-      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v20");
-      expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v11");
+      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v21");
+      expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v12");
       expect(systemPrompts).toHaveLength(resumedCalls + 1);
       expect(systemPrompts[resumedCalls]).toBe(
-        `${createAuthorAdjudicationPrompt("cli-author-v20", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+        `${createAuthorAdjudicationPrompt("cli-author-v21", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
       expect(systemPrompts[resumedCalls]).toContain(
         "Bullet markers should be several lines apart; never stack short bullets.",
@@ -267,7 +267,7 @@ it.each([
       );
       expect(budgets[resumedCalls]).toEqual({ env: "32768", input: { maxOutputTokens: 32_768 } });
       expect(criticSystemPrompts[2]).toBe(
-        `${criticSystemInstructionsPrefix}${createCriticAdjudicationPrompt("cli-critic-v11")}${criticInputSeparator}`,
+        `${criticSystemInstructionsPrefix}${createCriticAdjudicationPrompt("cli-critic-v12")}${criticInputSeparator}`,
       );
     } finally {
       await rm(root, { recursive: true, force: true });

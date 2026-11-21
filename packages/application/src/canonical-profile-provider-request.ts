@@ -10,9 +10,10 @@ import { isDeepInfraGLMAuthorProfile, isDeepInfraGLMModel } from "./glm-developm
 import { isDeepInfraGLMExtractionProfile } from "./glm-extraction-profile.js";
 import { isMistralAuthorProfile, isMistralModel } from "./mistral-development-profile.js";
 import { isMistralExtractionProfile } from "./mistral-extraction-profile.js";
+import { roleNeutralProfileEntryRule } from "./role-neutral-prompts.js";
 
 export type CanonicalProfileAnthropicAuthMode = "api-key" | "user-session";
-export const promptVersion = "canonical-candidate-profile-extraction-v9" as const;
+export const promptVersion = "canonical-candidate-profile-extraction-v10" as const;
 
 export interface CanonicalProfileProviderRequestContract {
   readonly systemPrompt: string;
@@ -32,7 +33,9 @@ const canonicalCandidateProfileExtractionSystemPrompt = [
   `Supported fact categories are ${canonicalCandidateProfileFactCategories.join(", ")}.`,
   "Inspect every supplied source and extract all distinct entries explicitly supported in these categories as entry-level facts, within the existing output-schema bounds; do not return only highlights or tailor the profile to a job description.",
   "Facts are entry-level: emit exactly one fact per source entry, where an entry is one achievement or responsibility bullet, one degree, one certification, one language, one project description, or one skill or skill group as the source lists it. Do not atomise an entry.",
-  "Keep the entry's numbers, scope, technologies, and outcome together in one fact value, worded as close to the source as possible, and never drop its numbers. Do not split one entry into separate facts for its project, metric, technology, employer, date, or result.",
+  roleNeutralProfileEntryRule(
+    "Keep the entry's numbers, scope, technologies, and outcome together in one fact value, worded as close to the source as possible, and never drop its numbers. Do not split one entry into separate facts for its project, metric, technology, employer, date, or result.",
+  ),
   "Make the evidence quote the exact contiguous source text of that entry, or the minimal contiguous span that contains everything the fact states.",
   "Use category achievement for a bullet or sentence that describes work done or an outcome, project only for a named project's own description entry, skill only for a skill or skill-group entry, and education, certification, or language for those entries; use the role, employer, and date categories for the employment metadata. Do not repeat employer, role title, or dates in each achievement fact, and do not emit separate employer, date, or skill facts derived from an achievement bullet.",
   "When there are no bullets or lines, treat each prose sentence that states a distinct accomplishment, role, or credential as one entry.",

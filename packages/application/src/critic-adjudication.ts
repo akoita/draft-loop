@@ -12,6 +12,7 @@ import {
   compactEvidenceReferenceTableInstructions,
   evidenceReferenceTableInstructions,
 } from "./provider-artifact-input.js";
+import { roleNeutralCriticGapRule } from "./role-neutral-prompts.js";
 
 export const maximumCritiqueFindings = 16;
 export const maximumCritiqueMessageCharacters = 400;
@@ -112,6 +113,10 @@ export function createCriticAdjudicationPrompt(templateVersion: string): string 
       findingTargetInstructions,
     );
   }
+  // v12 keeps v11 with a role-neutral example in the employment-gap rule (#3090).
+  if (templateVersion === "cli-critic-v12") {
+    return roleNeutralCriticGapRule(createCriticAdjudicationPrompt("cli-critic-v11"));
+  }
   throw new Error(`Unsupported critic prompt template version "${templateVersion}".`);
 }
 
@@ -122,11 +127,12 @@ const compactEvidenceTableVersions: ReadonlySet<string> = new Set([
   "cli-critic-v9",
   "cli-critic-v10",
   "cli-critic-v11",
+  "cli-critic-v12",
 ]);
 
 /** Whether a critic prompt version asks for each finding's target in its own fields. */
 export function criticReportsFindingTargets(templateVersion: string): boolean {
-  return templateVersion === "cli-critic-v11";
+  return templateVersion === "cli-critic-v11" || templateVersion === "cli-critic-v12";
 }
 
 /** Whether a critic prompt version reads the compact evidence table. */
