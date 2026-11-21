@@ -110,7 +110,7 @@ describe("the Getting started steps", () => {
       applications: { status: "ready", applications: [finished, stopped] },
     });
     const review = steps.find((step) => step.key === "review");
-    expect(review).toMatchObject({ done: false, reviewState: "ended" });
+    expect(review).toMatchObject({ done: false, stage: "review-ended" });
     expect(review?.application?.id).toBe("dilitrust");
     expect(steps.find((step) => step.key === "download")?.application?.id).toBe("dilitrust");
   });
@@ -120,10 +120,10 @@ describe("the Getting started steps", () => {
       gettingStartedSteps({
         ...empty,
         applications: { status: "ready", applications: [application(overrides)] },
-      }).find((step) => step.key === "review")?.reviewState;
-    expect(state({})).toBe("not-started");
-    expect(state({ runCount: 1, status: "in-review" })).toBe("ongoing");
-    expect(state({ runCount: 1, status: "in-review", latestRunEnded: true })).toBe("ended");
+      }).find((step) => step.key === "review")?.stage;
+    expect(state({})).toBe("start-review");
+    expect(state({ runCount: 1, status: "in-review" })).toBe("reviewing");
+    expect(state({ runCount: 1, status: "in-review", latestRunEnded: true })).toBe("review-ended");
   });
 });
 
@@ -205,8 +205,7 @@ describe("the guide on Home", () => {
 
   it("folds to one line once hidden", () => {
     const html = render("guided", true);
-    expect(html).toContain("Step 1 of 5");
-    expect(html).toContain("Tell us about your career");
+    expect(html).toContain("Step 1 of 5: Add a CV or other documents in Career evidence");
     expect(html).toContain(">Show the guide</button>");
     expect(html).not.toContain("<ol");
   });

@@ -88,7 +88,7 @@ describe("Home once every Getting started step is done", () => {
       true,
     );
     expect(guided).toContain('<p class="screen-hint">');
-    expect(guided).toContain("Open an application to review or download its CV");
+    expect(guided).toContain("The CV is downloaded. Select New application for your next job.");
     expect(
       withMode("standard", <GettingStarted inputs={onboarded} actions={actions} />, true),
     ).toBe("");
