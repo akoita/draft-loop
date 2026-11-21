@@ -33,7 +33,7 @@ describe("the Send feedback dialog (#2844, #2876)", () => {
     expect(html).toContain(`maxLength="${maximumFeedbackLength}"`);
     expect(html).toContain('placeholder="What happened? What did you expect?"');
     expect(html).toContain("Kind of note (optional)");
-    expect(html).toContain("<legend class=\"feedback-label\">Kind of note (optional)</legend>");
+    expect(html).toContain('<legend class="feedback-label">Kind of note (optional)</legend>');
     expect(html).not.toContain("<select");
     for (const kind of ["Something is broken", "An idea", "Something else"]) {
       expect(html).toContain(
