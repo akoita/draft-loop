@@ -4,6 +4,12 @@ import {
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
 import { choosableModelProfileEfforts } from "@draft-loop/application/model-profile-catalog";
+import {
+  type ApplicationStatus,
+  applicationStage,
+  applicationStages,
+  runEndedBeforeApproval,
+} from "@draft-loop/domain/application";
 import { type RunSnapshot, runFailureStages } from "@draft-loop/orchestrator";
 import { opportunityBriefSchema } from "@draft-loop/schemas";
 import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
@@ -139,6 +145,11 @@ export const applicationViewSchema = z
       .nullable()
       .describe("A name read from the newest brief's role and employer, until one is chosen."),
     exportCount: z.number().int(),
+    nextStage: z
+      .enum(applicationStages)
+      .describe(
+        "Where the application stands for the candidate: start-review (no run), drafting, reviewing (a draft waits for decisions), review-ended (the newest run stopped or ran out of budget before an approval), export (approved, not downloaded) or done.",
+      ),
     modelProfiles: z
       .object({
         author: profileReferenceViewSchema,
@@ -152,6 +163,14 @@ export const applicationViewSchema = z
       .describe("The application's own document language; null uses the workspace's."),
   })
   .meta({ id: "Application" });
+
+/** The run started last, which the review opens on. */
+function newestRun<T extends { readonly startedAt: string }>(runs: readonly T[]): T | undefined {
+  return runs.reduce<T | undefined>(
+    (newest, run) => (newest === undefined || run.startedAt >= newest.startedAt ? run : newest),
+    undefined,
+  );
+}
 
 export function applicationView(view: ApplicationView): z.infer<typeof applicationViewSchema> {
   return {
@@ -181,6 +200,12 @@ export function applicationView(view: ApplicationView): z.infer<typeof applicati
     jobSourceKind: view.jobSource.kind === "stored-text" ? "pasted-text" : view.jobSource.kind,
     suggestedName: view.suggestedName,
     exportCount: view.exports.length,
+    nextStage: applicationStage({
+      status: view.status as ApplicationStatus,
+      runCount: view.runs.length,
+      exportCount: view.exports.length,
+      newestRunEnded: runEndedBeforeApproval(newestRun(view.runs)?.state ?? ""),
+    }),
     modelProfiles: view.modelProfiles,
     language: view.language ?? null,
   };

@@ -52,3 +52,46 @@ export function deriveApplicationStatus(
   if (runs.some((run) => !draftingRunStates.has(run.state))) return "in-review";
   return runs.length === 0 ? "collecting" : "drafting";
 }
+
+/**
+ * Whether a run ended before an approval: it stopped or ran out of budget, so the candidate starts
+ * a new review instead of resuming it.
+ */
+export function runEndedBeforeApproval(state: string): boolean {
+  return state === "stopped" || state === "budget-exhausted";
+}
+
+/**
+ * Where one application stands for the candidate, the stage every guidance surface names (#3223):
+ * the screens, the agent channel and the support assistant read this one function.
+ *
+ * - `start-review`: no run yet.
+ * - `drafting`: its review is writing the first draft.
+ * - `reviewing`: a draft waits for the candidate's decisions and approval.
+ * - `review-ended`: its newest run stopped or ran out of budget before an approval.
+ * - `export`: approved and not downloaded yet.
+ * - `done`: downloaded.
+ */
+export const applicationStages = [
+  "start-review",
+  "drafting",
+  "reviewing",
+  "review-ended",
+  "export",
+  "done",
+] as const;
+export type ApplicationStage = (typeof applicationStages)[number];
+
+export function applicationStage(application: {
+  readonly status: ApplicationStatus;
+  readonly runCount: number;
+  readonly exportCount: number;
+  /** Whether the newest run ended before an approval (see `runEndedBeforeApproval`). */
+  readonly newestRunEnded: boolean;
+}): ApplicationStage {
+  if (application.status === "exported" || application.exportCount > 0) return "done";
+  if (application.status === "approved") return "export";
+  if (application.runCount === 0) return "start-review";
+  if (application.newestRunEnded) return "review-ended";
+  return application.status === "in-review" ? "reviewing" : "drafting";
+}

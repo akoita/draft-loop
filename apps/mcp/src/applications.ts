@@ -23,6 +23,8 @@ export interface AgentApplication {
   readonly latest_run: { readonly run_id: string; readonly state: string } | null;
   readonly run_count: number;
   readonly export_count: number;
+  /** Where the application stands and what the candidate does next, as DraftLoop's screens say. */
+  readonly next_step: { readonly stage: string; readonly action: string };
 }
 
 export interface AgentRunStatus {
@@ -76,6 +78,7 @@ interface ApplicationBody {
     readonly updatedAt: string;
   }[];
   readonly exportCount: number;
+  readonly nextStage: string;
 }
 
 interface RunBody {
@@ -103,7 +106,31 @@ function applicationOf(body: ApplicationBody): AgentApplication {
     latest_run: latest === undefined ? null : { run_id: latest.id, state: latest.state },
     run_count: body.runs.length,
     export_count: body.exportCount,
+    next_step: { stage: body.nextStage, action: applicationNextAction(body.nextStage) },
   };
+}
+
+/**
+ * The candidate's next step on an application, from the API's stage (#3228), in the words the
+ * screens use; the agent never decides it.
+ */
+export function applicationNextAction(stage: string): string {
+  switch (stage) {
+    case "start-review":
+      return "No run yet: the candidate starts the review in DraftLoop to get a first draft.";
+    case "drafting":
+      return "The first draft is being written; nothing waits for the candidate yet.";
+    case "reviewing":
+      return "A draft waits for the candidate: they read it, decide each finding and approve it in DraftLoop.";
+    case "review-ended":
+      return "The last review stopped before an approval: the candidate starts a new review from Run details in DraftLoop.";
+    case "export":
+      return "The CV is approved: the candidate picks a template and exports it in DraftLoop.";
+    case "done":
+      return "The CV is exported; a new application is the next job.";
+    default:
+      return "Open the application in DraftLoop to see what comes next.";
+  }
 }
 
 /** What the candidate does next in DraftLoop, from a run's state; the agent never decides it. */

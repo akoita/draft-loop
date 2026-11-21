@@ -1,3 +1,7 @@
+import {
+  type ApplicationStage,
+  applicationStage as domainApplicationStage,
+} from "@draft-loop/domain/application";
 import { t } from "@lingui/core/macro";
 
 import type { ApplicationSummaryView } from "./application-contract.js";
@@ -23,19 +27,10 @@ import {
  * - `export`: its CV is approved and not downloaded yet.
  * - `done`: its CV is downloaded.
  */
-export type NextStepStage =
-  | "career"
-  | "profile"
-  | "job"
-  | "start-review"
-  | "drafting"
-  | "reviewing"
-  | "review-ended"
-  | "export"
-  | "done";
+export type NextStepStage = "career" | "profile" | "job" | ApplicationStage;
 
 /** The stages of an application, once the record holds its career inputs and a job. */
-export type ApplicationStage = Exclude<NextStepStage, "career" | "profile" | "job">;
+export type { ApplicationStage };
 
 export interface NextStepInputs {
   readonly evidence: CareerEvidenceStatus;
@@ -78,11 +73,12 @@ export function hasCareerEvidence(inputs: NextStepInputs): boolean {
 
 /** One application's stage, from its saved status and its newest run. */
 export function applicationStage(application: ApplicationSummaryView): ApplicationStage {
-  if (application.status === "exported" || application.exportCount > 0) return "done";
-  if (application.status === "approved") return "export";
-  if (application.runCount === 0) return "start-review";
-  if (application.latestRunEnded === true) return "review-ended";
-  return application.status === "in-review" ? "reviewing" : "drafting";
+  return domainApplicationStage({
+    status: application.status,
+    runCount: application.runCount,
+    exportCount: application.exportCount,
+    newestRunEnded: application.latestRunEnded === true,
+  });
 }
 
 /**

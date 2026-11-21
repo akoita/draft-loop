@@ -83,6 +83,7 @@ describe("application lifecycle", () => {
       id: "app-platform",
       jobSourceKind: "pasted-text",
       exportCount: 0,
+      nextStage: "drafting",
       modelProfiles: null,
       suggestedName: null,
     });

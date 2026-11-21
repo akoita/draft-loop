@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applicationNameMaxLength,
+  applicationStage,
   deriveApplicationStatus,
   normalizeApplicationName,
 } from "./application.js";
@@ -64,5 +65,18 @@ describe("deriveApplicationStatus", () => {
     );
     expect(deriveApplicationStatus([{ state: "approved" }], true)).toBe("exported");
     expect(deriveApplicationStatus([{ state: "exported" }], false)).toBe("exported");
+  });
+});
+
+describe("application stage", () => {
+  const base = { status: "in-review", runCount: 2, exportCount: 0, newestRunEnded: false } as const;
+
+  it("names where an application stands for the candidate", () => {
+    expect(applicationStage({ ...base, status: "collecting", runCount: 0 })).toBe("start-review");
+    expect(applicationStage({ ...base, status: "drafting" })).toBe("drafting");
+    expect(applicationStage(base)).toBe("reviewing");
+    expect(applicationStage({ ...base, newestRunEnded: true })).toBe("review-ended");
+    expect(applicationStage({ ...base, status: "approved", newestRunEnded: true })).toBe("export");
+    expect(applicationStage({ ...base, exportCount: 1 })).toBe("done");
   });
 });

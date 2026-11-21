@@ -35,10 +35,5 @@ export function chosenApplicationRun(
   return index < 0 ? undefined : { runId: chosenRunId, runNumber: index + 1 };
 }
 
-/**
- * Whether a run ended before an approval: it stopped or ran out of budget, so the person starts a
- * new review instead of resuming it. Every guidance surface reads ended runs through this.
- */
-export function runEndedBeforeApproval(state: string): boolean {
-  return state === "stopped" || state === "budget-exhausted";
-}
+/** Whether a run ended before an approval; the domain's test, shared by every host. */
+export { runEndedBeforeApproval } from "@draft-loop/domain/application";

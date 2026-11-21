@@ -29,6 +29,7 @@ const moved: ApiSchemas["Application"] = {
   jobSourceKind: "pasted-text",
   suggestedName: null,
   exportCount: 0,
+  nextStage: "start-review",
   modelProfiles: null,
   language: null,
 };
