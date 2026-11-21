@@ -2,7 +2,7 @@ import type { RunSpan, RunTracer } from "@draft-loop/orchestrator";
 import { InMemorySpanExporter } from "@opentelemetry/sdk-trace-base";
 import { describe, expect, it, vi } from "vitest";
 
-import { createTraceExport, traceExportConfig } from "./trace-export.js";
+import { createTraceExport, remoteParent, traceExportConfig } from "./trace-export.js";
 
 /** Synthetic text standing in for anything a person might send or a model might write. */
 const marker = "SYNTHETIC CANDIDATE TEXT, with spaces";
@@ -99,5 +99,41 @@ describe("mirrored run spans (#3238)", () => {
     recorder.tracer.startSpan("invoke_workflow", {}).end("ok");
     await expect(recorder.flush()).resolves.toBeUndefined();
     await expect(traces.shutdown()).resolves.toBeUndefined();
+  });
+});
+
+describe("a run continues the queuing request's trace (#3238)", () => {
+  const traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+  const requestSpanId = "00f067aa0ba902b7";
+
+  it("nests the run's top span under the request span, sampled even when the request was not", async () => {
+    const exporter = new InMemorySpanExporter();
+    const traces = createTraceExport(
+      { projectId: "draft-loop-test", serviceName: "worker" },
+      { exporter },
+    );
+    const recorder = traces.wrap(
+      { tracer: recordingTracer().tracer, flush: async () => undefined },
+      `00-${traceId}-${requestSpanId}-00`,
+    );
+    const run = recorder.tracer.startSpan("invoke_workflow", {});
+    recorder.tracer.startSpan("invoke_agent", {}, run).end("ok");
+    run.end("ok");
+    await recorder.flush();
+
+    const spans = exporter.getFinishedSpans();
+    expect(spans).toHaveLength(2);
+    expect(spans.every((span) => span.spanContext().traceId === traceId)).toBe(true);
+    const workflow = spans.find((span) => span.name === "invoke_workflow");
+    expect(workflow?.parentSpanContext?.spanId).toBe(requestSpanId);
+    expect(workflow?.parentSpanContext?.isRemote).toBe(true);
+    await traces.shutdown();
+  });
+
+  it("starts a trace of its own without a usable traceparent", () => {
+    expect(remoteParent(undefined)).toBeUndefined();
+    expect(remoteParent("garbage")).toBeUndefined();
+    expect(remoteParent(`00-${"0".repeat(32)}-${requestSpanId}-01`)).toBeUndefined();
+    expect(remoteParent(`00-${traceId}-${"0".repeat(16)}-01`)).toBeUndefined();
   });
 });

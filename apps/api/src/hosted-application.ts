@@ -37,7 +37,7 @@ import type { OperatorTenantFor } from "./operator-plan-routes.js";
 import { createPostgresIdempotencyStore } from "./postgres-idempotency.js";
 import type { ProfileDerivations } from "./profile-routes.js";
 import { apiProviderOptions } from "./provider-boundary.js";
-import { currentRequestId } from "./request-trace.js";
+import { currentRequestId, currentTraceparent } from "./request-trace.js";
 import type { ResearchRuns } from "./research-runs.js";
 import type { TenantApplication, TenantApplications } from "./tenant-context.js";
 import { enqueueThenWake, noWake, type WakeWorker } from "./worker-wake.js";
@@ -238,11 +238,13 @@ export async function openHostedTenants(
             enqueueRun: enqueueThenWake(
               (workspaceId, runId) => {
                 const requestId = currentRequestId();
+                const traceparent = currentTraceparent();
                 return queue.enqueue({
                   tenantId,
                   workspaceId,
                   runId,
                   ...(requestId === undefined ? {} : { requestId }),
+                  ...(traceparent === undefined ? {} : { traceparent }),
                 });
               },
               worker.wake,

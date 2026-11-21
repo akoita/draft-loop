@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 
 import type { FastifyInstance } from "fastify";
 
@@ -31,11 +31,38 @@ export function traceFields(
     : { "logging.googleapis.com/trace": `projects/${project}/traces/${requestId}` };
 }
 
-const currentRequest = new AsyncLocalStorage<string>();
+const zeroSpanId = "0".repeat(16);
+const fullTraceparentPattern = /^00-([\da-f]{32})-([\da-f]{16})-[\da-f]{2}$/u;
+
+/**
+ * The `traceparent` the request's queued work continues (#3238): the incoming header when it names
+ * this request's trace, or a new parent span in it. Version 00 only, lowercase.
+ */
+export function traceparentFor(requestId: string, header: unknown): string | undefined {
+  if (!/^[\da-f]{32}$/u.test(requestId) || requestId === zeroTraceId) return undefined;
+  if (typeof header === "string") {
+    const value = header.trim().toLowerCase();
+    const match = fullTraceparentPattern.exec(value);
+    if (match?.[1] === requestId && match[2] !== zeroSpanId) return value;
+  }
+  return `00-${requestId}-${randomBytes(8).toString("hex")}-01`;
+}
+
+interface RequestTrace {
+  readonly id: string;
+  readonly traceparent: string | undefined;
+}
+
+const currentRequest = new AsyncLocalStorage<RequestTrace>();
 
 /** The id of the request whose work is running; undefined outside a request. */
 export function currentRequestId(): string | undefined {
-  return currentRequest.getStore();
+  return currentRequest.getStore()?.id;
+}
+
+/** The `traceparent` of the request whose work is running; undefined outside a request. */
+export function currentTraceparent(): string | undefined {
+  return currentRequest.getStore()?.traceparent;
 }
 
 /**
@@ -44,6 +71,9 @@ export function currentRequestId(): string | undefined {
  */
 export function registerRequestTrace(app: FastifyInstance): void {
   app.addHook("onRequest", (request, _reply, done) => {
-    currentRequest.run(request.id, done);
+    currentRequest.run(
+      { id: request.id, traceparent: traceparentFor(request.id, request.headers.traceparent) },
+      done,
+    );
   });
 }
