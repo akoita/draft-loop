@@ -110,7 +110,7 @@ describe("nextStepLine", () => {
       "Next: resume the review",
     );
     expect(next({ ...reviewed, state: "stopped", reviewComplete: false }).line).toBe(
-      "Next: start a new review",
+      "Next: start a new review from Run details",
     );
     expect(next({ ...reviewed, reviewComplete: false }).line).toBe(
       "Next: resume or retry the review",

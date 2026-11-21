@@ -437,7 +437,7 @@ describe("what stays outside the drawer", () => {
   it("leads the Next line to the drawer when starting a new review is the next step", () => {
     const html = render(stopped);
     expect(html).toContain(
-      '<button class="next-step-action" type="button">Next: start a new review</button>',
+      '<button class="next-step-action" type="button">Next: start a new review from Run details</button>',
     );
     expect(nextStepOpensRunDetails(stopped, footerBlocker(stopped, null, null))).toBe(true);
     expect(nextStepOpensRunDetails(fixture, footerBlocker(fixture, null, null))).toBe(false);

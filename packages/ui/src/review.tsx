@@ -115,6 +115,7 @@ import {
   ReviewFooter,
   revisionUnavailableReason,
 } from "./review-footer.js";
+import { noDraftGuidance } from "./review-no-draft.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
   canStartNewReview,
@@ -1094,7 +1095,7 @@ export function ReviewWorkspace({
   const validationLabel = reviewWorking
     ? (runStatusLine?.label ?? "")
     : !hasArtifact
-      ? t`No draft artifact available`
+      ? noDraftGuidance(state.state).label
       : knownGapOverride !== null && state.approval !== "approved"
         ? t`Final CV checks fail only on known gaps`
         : approvalReadiness?.applicationReady === false && state.approval !== "approved"
@@ -3053,7 +3054,7 @@ export function ReviewWorkspace({
               {reviewWorking
                 ? runStatusLine?.detail
                 : !hasArtifact
-                  ? t`Complete or recover the author step before reviewing findings or approving an artifact.`
+                  ? noDraftGuidance(state.state).detail
                   : roundLimitRecovery
                     ? t`Round ${state.round} exceeded the ${maximumRounds}-round limit before any provider work began. Return to reviewed Round ${state.round - 1}; its draft and critique remain intact.`
                     : approvalReadiness?.applicationReady === false &&

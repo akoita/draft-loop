@@ -2464,10 +2464,6 @@ msgstr "Comparaison d’exécutions · lecture seule"
 msgid "Comparison saved"
 msgstr "Comparaison enregistrée"
 
-#: packages/ui/src/review.tsx
-msgid "Complete or recover the author step before reviewing findings or approving an artifact."
-msgstr "Terminez ou récupérez l’étape du rédacteur avant de relire les constats ou d’approuver un document."
-
 #: packages/ui/src/run-details.tsx
 msgid "Compress"
 msgstr "Compresser"
@@ -5605,10 +5601,11 @@ msgstr "Étape suivante : demander une révision"
 msgid "Next: resume or retry the review"
 msgstr "Étape suivante : reprendre ou relancer la relecture"
 
-#: packages/ui/src/review-work-tabs.tsx
+#: packages/ui/src/review-no-draft.ts
 msgid "Next: resume or start a review to get a draft"
 msgstr "Étape suivante : reprendre ou lancer une relecture pour obtenir une ébauche"
 
+#: packages/ui/src/review-no-draft.ts
 #: packages/ui/src/review-work-tabs.tsx
 msgid "Next: resume the review"
 msgstr "Étape suivante : reprendre la relecture"
@@ -5618,9 +5615,10 @@ msgstr "Étape suivante : reprendre la relecture"
 msgid "Next: return to reviewed Round {0}"
 msgstr "Étape suivante : revenir au tour relu {0}"
 
+#: packages/ui/src/review-no-draft.ts
 #: packages/ui/src/review-work-tabs.tsx
-msgid "Next: start a new review"
-msgstr "Étape suivante : lancer une nouvelle relecture"
+msgid "Next: start a new review from Run details"
+msgstr "Étape suivante : démarrer une nouvelle relecture depuis Détails de l’exécution"
 
 #: packages/ui/src/review-work-tabs.tsx
 msgid "Next: wait for the review"
@@ -5684,16 +5682,24 @@ msgid "No CV needed. An interviewer asks about your work, in writing or out loud
 msgstr "Pas besoin de CV. Un intervieweur vous pose des questions sur votre travail, par écrit ou à voix haute."
 
 #: packages/ui/src/review.tsx
-msgid "No draft artifact available"
-msgstr "Aucune ébauche disponible"
-
-#: packages/ui/src/review.tsx
 msgid "No draft artifact available yet."
 msgstr "Aucune ébauche disponible pour l’instant."
+
+#: packages/ui/src/review-no-draft.ts
+msgid "No draft yet"
+msgstr "Pas encore de brouillon"
 
 #: packages/ui/src/review-footer.tsx
 msgid "No draft yet: approval opens once the author produces a valid draft"
 msgstr "Pas encore d’ébauche : l’approbation s’ouvre dès que le rédacteur produit une ébauche valide"
+
+#: packages/ui/src/review-no-draft.ts
+msgid "No draft yet: the review is paused"
+msgstr "Pas encore de brouillon : la relecture est en pause"
+
+#: packages/ui/src/review-no-draft.ts
+msgid "No draft: this review stopped"
+msgstr "Pas de brouillon : cette relecture s’est arrêtée"
 
 #: packages/ui/src/review.tsx
 msgid "no duration cap"
@@ -7609,6 +7615,10 @@ msgstr "Reprendre la relecture"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Resume the conversation"
 msgstr "Reprendre la conversation"
+
+#: packages/ui/src/review-no-draft.ts
+msgid "Resume the review from Run details to get a draft."
+msgstr "Reprenez la relecture depuis Détails de l’exécution pour obtenir un brouillon."
 
 #: packages/ui/src/review-run-status.ts
 msgid "Resume the review so the critic can check it. Approval and export need a finished critique."
@@ -9884,6 +9894,10 @@ msgstr "L’action de relecture n’a pas pu aboutir."
 msgid "The review could not continue:"
 msgstr "La relecture n’a pas pu continuer :"
 
+#: packages/ui/src/review-no-draft.ts
+msgid "The review has not written a draft yet. Resume or retry it from Run details."
+msgstr "La relecture n’a pas encore écrit de brouillon. Reprenez-la ou relancez-la depuis Détails de l’exécution."
+
 #: packages/ui/src/review-run-status.ts
 msgid "The review is running."
 msgstr "La relecture est en cours."
@@ -10392,6 +10406,10 @@ msgstr "Cette reprise n’est pas encore disponible sur le service hébergé. Ar
 #: packages/ui/src/review-footer.tsx
 msgid "This review has ended. Start a new review from Run details to revise again."
 msgstr "Cette relecture est terminée. Lancez une nouvelle relecture depuis Détails de l’exécution pour réviser de nouveau."
+
+#: packages/ui/src/review-no-draft.ts
+msgid "This review stopped before it wrote a draft. Start a new review from Run details."
+msgstr "Cette relecture s’est arrêtée avant d’écrire un brouillon. Démarrez une nouvelle relecture depuis Détails de l’exécution."
 
 #: packages/ui/src/review.tsx
 msgid "This review was interrupted when the previous app session ended. Resume it to continue from the durable step, or stop it without losing history."

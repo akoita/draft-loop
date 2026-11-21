@@ -13,6 +13,7 @@ import { t } from "@lingui/core/macro";
  */
 
 import { type JSX, type KeyboardEvent, useCallback, useRef, useState } from "react";
+import { runEndedBeforeApproval } from "./application-run-order.js";
 import type { ApprovalReadiness, ApprovalReadinessBlocker } from "./approval-readiness.js";
 import { countedNouns } from "./counted-nouns.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
@@ -28,6 +29,7 @@ import {
   compactReadinessBlockerGroup,
   type FooterBlocker,
 } from "./review-footer.js";
+import { noDraftGuidance } from "./review-no-draft.js";
 import { reviewInProgress } from "./review-run-status.js";
 
 export type ReviewWorkTabId = "findings" | "coverage" | "job";
@@ -63,7 +65,7 @@ export function nextStepLine(
     case "no-artifact":
       return reviewInProgress(state)
         ? t`Next: wait for the review`
-        : t`Next: resume or start a review to get a draft`;
+        : noDraftGuidance(state.state).next;
     case "exported":
       return state.exportPath === null
         ? t`Next: export again to save a new copy`
@@ -77,7 +79,8 @@ export function nextStepLine(
       if (reviewInProgress(state)) return t`Next: wait for the review`;
       if (!state.reviewComplete) {
         if (state.state === "paused") return t`Next: resume the review`;
-        if (state.state === "stopped") return t`Next: start a new review`;
+        if (runEndedBeforeApproval(state.state))
+          return t`Next: start a new review from Run details`;
         return t`Next: resume or retry the review`;
       }
       return t`Next: recover from the provider error`;

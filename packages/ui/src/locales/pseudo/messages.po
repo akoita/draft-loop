@@ -2470,10 +2470,6 @@ msgstr ""
 msgid "Comparison saved"
 msgstr ""
 
-#: packages/ui/src/review.tsx
-msgid "Complete or recover the author step before reviewing findings or approving an artifact."
-msgstr ""
-
 #: packages/ui/src/run-details.tsx
 msgid "Compress"
 msgstr ""
@@ -5610,10 +5606,11 @@ msgstr ""
 msgid "Next: resume or retry the review"
 msgstr ""
 
-#: packages/ui/src/review-work-tabs.tsx
+#: packages/ui/src/review-no-draft.ts
 msgid "Next: resume or start a review to get a draft"
 msgstr ""
 
+#: packages/ui/src/review-no-draft.ts
 #: packages/ui/src/review-work-tabs.tsx
 msgid "Next: resume the review"
 msgstr ""
@@ -5623,8 +5620,9 @@ msgstr ""
 msgid "Next: return to reviewed Round {0}"
 msgstr ""
 
+#: packages/ui/src/review-no-draft.ts
 #: packages/ui/src/review-work-tabs.tsx
-msgid "Next: start a new review"
+msgid "Next: start a new review from Run details"
 msgstr ""
 
 #: packages/ui/src/review-work-tabs.tsx
@@ -5689,15 +5687,23 @@ msgid "No CV needed. An interviewer asks about your work, in writing or out loud
 msgstr ""
 
 #: packages/ui/src/review.tsx
-msgid "No draft artifact available"
+msgid "No draft artifact available yet."
 msgstr ""
 
-#: packages/ui/src/review.tsx
-msgid "No draft artifact available yet."
+#: packages/ui/src/review-no-draft.ts
+msgid "No draft yet"
 msgstr ""
 
 #: packages/ui/src/review-footer.tsx
 msgid "No draft yet: approval opens once the author produces a valid draft"
+msgstr ""
+
+#: packages/ui/src/review-no-draft.ts
+msgid "No draft yet: the review is paused"
+msgstr ""
+
+#: packages/ui/src/review-no-draft.ts
+msgid "No draft: this review stopped"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -7613,6 +7619,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Resume the conversation"
+msgstr ""
+
+#: packages/ui/src/review-no-draft.ts
+msgid "Resume the review from Run details to get a draft."
 msgstr ""
 
 #: packages/ui/src/review-run-status.ts
@@ -9889,6 +9899,10 @@ msgstr ""
 msgid "The review could not continue:"
 msgstr ""
 
+#: packages/ui/src/review-no-draft.ts
+msgid "The review has not written a draft yet. Resume or retry it from Run details."
+msgstr ""
+
 #: packages/ui/src/review-run-status.ts
 msgid "The review is running."
 msgstr ""
@@ -10396,6 +10410,10 @@ msgstr ""
 
 #: packages/ui/src/review-footer.tsx
 msgid "This review has ended. Start a new review from Run details to revise again."
+msgstr ""
+
+#: packages/ui/src/review-no-draft.ts
+msgid "This review stopped before it wrote a draft. Start a new review from Run details."
 msgstr ""
 
 #: packages/ui/src/review.tsx
