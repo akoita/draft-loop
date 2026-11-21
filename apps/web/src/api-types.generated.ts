@@ -1336,7 +1336,7 @@ export interface ApiSchemas {
   "RunSpan": {
     readonly span_id: string;
     readonly parent_span_id: string | null;
-    readonly name: "invoke_workflow" | "invoke_agent" | "retrieve_evidence";
+    readonly name: "invoke_workflow" | "invoke_agent" | "retrieve_evidence" | "evaluate_run";
     readonly started_at: string;
     readonly ended_at: string | null;
     readonly status: "ok" | "error" | null;

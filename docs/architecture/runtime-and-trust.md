@@ -404,6 +404,7 @@ nothing.
 | `invoke_workflow`   | Each advance of a run                   | Run id, last round                                                                                  |
 | `invoke_agent`      | Each author, critic or revision attempt | Step, round, attempt, provider, model, tokens, estimated cost, error type, failure stage and reason |
 | `retrieve_evidence` | Retrieval inside an attempt             | Chunk count, distinct source count                                                                  |
+| `evaluate_run`      | A run reaching review, budget exhausted or stopped | The critic's verdict: ready, stop reason, mean readiness, uncovered requirements, error findings, author and critic models, run cost |
 
 - **Failure reason.** A failed attempt also carries the first diagnostic code
   in `draftloop.failure_reason`, such as `max_tokens`, so an output-limit stop

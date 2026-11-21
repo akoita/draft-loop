@@ -1,4 +1,5 @@
 import type { QualityDigest } from "./quality-digest.js";
+import type { QualityTrend } from "./quality-trend.js";
 
 /**
  * The outer loop's insight ledger (#2917): each recurring pattern in the daily quality digests,
@@ -52,7 +53,10 @@ interface Observation {
 }
 
 /** The patterns one digest shows. */
-export function insightObservations(digest: QualityDigest): readonly Observation[] {
+export function insightObservations(
+  digest: QualityDigest,
+  trend?: QualityTrend,
+): readonly Observation[] {
   const observations: Observation[] = digest.failures.map((failure) => ({
     key: [
       "failure",
@@ -80,6 +84,16 @@ export function insightObservations(digest: QualityDigest): readonly Observation
       occurrences: digest.retrieval.singleSource,
       runIds: [],
     });
+  }
+  // A week whose quality fell against the week before (#3240), per model pair and metric.
+  for (const pair of trend?.pairs ?? []) {
+    for (const metric of pair.drops) {
+      observations.push({
+        key: `quality-drop:${metric}:${pair.authorModel}:${pair.criticModel}`,
+        occurrences: pair.current.runs,
+        runIds: [],
+      });
+    }
   }
   return observations;
 }

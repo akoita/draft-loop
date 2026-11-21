@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { maximumRunQualityCodes, type RunQualityInput, runQuality } from "./run-quality.js";
+import {
+  maximumRunQualityCodes,
+  meanReadiness,
+  type RunQualityInput,
+  reachedQualityState,
+  runQuality,
+  runQualitySpanAttributes,
+} from "./run-quality.js";
 
 const secret = "Led the Zephyr migration at Acme, saving 40%";
 
@@ -148,5 +155,33 @@ describe("runQuality", () => {
       runQuality(run({ executionHistory: history } as unknown as Partial<RunQualityInput>))
         .criticFallback,
     ).toBe(true);
+  });
+});
+
+describe("the evaluate_run span (#3240)", () => {
+  it("carries the verdict as scores and codes", () => {
+    const quality = runQuality(run());
+    expect(meanReadiness(quality)).toBe(0.85);
+    expect(runQualitySpanAttributes(quality)).toEqual({
+      "gen_ai.operation.name": "evaluate_run",
+      "gen_ai.request.model": "gpt-terra",
+      "draftloop.quality.author_model": "claude-sonnet-5-5",
+      "draftloop.round": 2,
+      "draftloop.estimated_usd": 0.123457,
+      "draftloop.quality.state": "awaiting-approval",
+      "draftloop.quality.ready": false,
+      "draftloop.quality.stop_reason": "max-rounds",
+      "draftloop.quality.readiness": 0.85,
+      "draftloop.quality.uncovered": 1,
+      "draftloop.quality.error_findings": 2,
+    });
+  });
+
+  it("is recorded once per arrival at review", () => {
+    const at = { state: "awaiting-approval", round: 1 } as const;
+    expect(reachedQualityState(at, { state: "reviewing", round: 1 } as never)).toBe(true);
+    expect(reachedQualityState(at, at)).toBe(false);
+    expect(reachedQualityState({ ...at, round: 2 }, at)).toBe(true);
+    expect(reachedQualityState({ state: "revising", round: 1 } as never)).toBe(false);
   });
 });

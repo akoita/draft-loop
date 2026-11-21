@@ -1,5 +1,9 @@
 import type { RunSpanAttributes, RunSpanName, RunSpanStatus } from "@draft-loop/domain/run-span";
 
+import { type DigestQuality, digestQuality } from "./quality-trend.js";
+
+export * from "./quality-trend.js";
+
 /**
  * The daily quality digest (#2916): one day's run spans across every organisation, reduced to
  * counts and run ids for the outer loop's diagnosis (#2914). Spans are content-free by
@@ -56,6 +60,8 @@ export interface QualityDigest {
     readonly singleSource: number;
     readonly medianChunks: number;
   };
+  /** Output quality from the day's `evaluate_run` spans (#3240). */
+  readonly quality: DigestQuality;
 }
 
 /** The most failure patterns one digest lists, the most frequent first. */
@@ -168,5 +174,6 @@ export function buildQualityDigest(input: {
       singleSource,
       medianChunks: median(chunkCounts),
     },
+    quality: digestQuality(input.spans),
   };
 }

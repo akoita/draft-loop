@@ -1161,13 +1161,16 @@ export { currentRoundCoverageJudgement } from "./run-output.js";
 export { type ReleasePauseCommand, releaseRunPause } from "./run-pause-release.js";
 export {
   maximumRunQualityCodes,
+  meanReadiness,
   type RunQuality,
   type RunQualityCount,
   type RunQualityCoverage,
   type RunQualityFindings,
   type RunQualityInput,
   type RunQualityReadiness,
+  reachedQualityState,
   runQuality,
+  runQualitySpanAttributes,
 } from "./run-quality.js";
 export {
   readRunRequirementEvidence,
