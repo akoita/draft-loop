@@ -190,6 +190,7 @@ const app = await buildApi({
         // The waitlist and the public landing page exist only while the beta is open (#2567).
         ...(betaAccountCap > 0 ? { betaWaitlist: directory.betaWaitlist } : {}),
         organisationActivity: directory.organisationActivity,
+        usageFunnel: directory.usageFunnel,
         supportUsage: directory.supportUsage,
         liveVoiceUsage: directory.liveVoiceUsage,
       }),

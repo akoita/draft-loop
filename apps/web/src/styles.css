@@ -1126,6 +1126,35 @@ form button[type="submit"]:where(:not(.button)) {
   background: rgba(0, 0, 0, 0.5);
 }
 
+/* The operator's usage funnel (#2834): compact number tables; the weekly one scrolls sideways
+   on a phone instead of squeezing its columns. */
+.operator-funnel h2 {
+  font-size: 1.05rem;
+  margin: var(--space-4) 0 var(--space-1);
+}
+
+.operator-funnel-scroll {
+  overflow-x: auto;
+}
+
+.operator-funnel-table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.operator-funnel-table th,
+.operator-funnel-table td {
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  text-align: end;
+  white-space: nowrap;
+}
+
+.operator-funnel-table th[scope="row"],
+.operator-funnel-table thead th:first-child {
+  text-align: start;
+}
+
 /* The operator's replies under a note (#2878): a quiet list, newest last. */
 .operator-replies h4 {
   margin: var(--space-3) 0 var(--space-1);

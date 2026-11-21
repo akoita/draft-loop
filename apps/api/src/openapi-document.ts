@@ -3,6 +3,7 @@ import type {
   HostedKnowledgeIntake,
   HostedSensitivityRules,
 } from "@draft-loop/application";
+import type { UsageFunnelSource } from "@draft-loop/application/usage-funnel";
 import type { AgentConnectionCapStore } from "@draft-loop/storage/agent-connection-caps";
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { CandidateRecordAccess } from "@draft-loop/storage/candidate-records";
@@ -69,6 +70,7 @@ export async function generateOpenApiDocument(): Promise<string> {
     },
     betaWaitlist: {} as BetaWaitlist,
     feedback: {} as FeedbackStore,
+    usageFunnel: {} as UsageFunnelSource,
     support: readSupportSettings({}),
     paymentEvents: {} as PaymentEventsPort,
   });

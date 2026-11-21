@@ -183,4 +183,10 @@ export {
   type PostgresTenantDirectory,
 } from "./tenant-directory.js";
 export type { MonthUsageRow } from "./usage.js";
+export {
+  createUsageFunnelReads,
+  type OrganisationMilestonesRow,
+  type UsageFunnelReads,
+  type UsageFunnelStepName,
+} from "./usage-funnel-reads.js";
 export { createWorkJournalNoteStore } from "./work-journal-notes.js";

@@ -39,6 +39,10 @@
       "types": "./src/quality-digest.ts",
       "import": "./src/quality-digest.ts"
     },
+    "./usage-funnel": {
+      "types": "./src/usage-funnel.ts",
+      "import": "./src/usage-funnel.ts"
+    },
     "./quality-insights": {
       "types": "./src/quality-insights.ts",
       "import": "./src/quality-insights.ts"

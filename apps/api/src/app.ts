@@ -151,6 +151,7 @@ import {
   type TenantApplications,
   TenantContextMissingError,
 } from "./tenant-context.js";
+import { registerUsageFunnelRoutes, type UsageFunnelRoutesOptions } from "./usage-funnel-routes.js";
 import { registerUsageRoutes } from "./usage-routes.js";
 import type { WaitlistConfirmMailer } from "./waitlist-confirm-mail.js";
 import { contentSecurityPolicy, registerWebScreen } from "./web-screen.js";
@@ -272,6 +273,8 @@ export interface ApiOptions {
   readonly inviteMailer?: InviteMailer;
   /** Emails each waitlist sign-up a confirmation link; absent where the deployment sets no sender. */
   readonly waitlistConfirmMailer?: WaitlistConfirmMailer;
+  /** The operator's usage funnel reads (#2834); without them the funnel route is absent. */
+  readonly usageFunnel?: UsageFunnelRoutesOptions["source"];
   /** Emails the operator's reply to a feedback note (#2878); absent where no sender is set. */
   readonly feedbackReplyMailer?: FeedbackReplyMailer;
   /** The support assistant's switch and limits (#2882); without it the support routes are absent. */
@@ -1130,6 +1133,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
               (member) => member.memberId === memberId,
             )?.email,
     });
+  }
+  if (options.usageFunnel !== undefined) {
+    registerUsageFunnelRoutes(app, { source: options.usageFunnel });
   }
   registerHelpRoutes(app);
   registerLegalPages(
