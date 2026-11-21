@@ -50,6 +50,23 @@ export function errorFields(error: unknown): Record<string, unknown> {
   };
 }
 
+/**
+ * Error Reporting groups a structured line by a `stack_trace` it can parse (#3239). The trace is
+ * rebuilt from the error's type, code and frames, never from its message, which may quote what a
+ * person sent. An error with no frames gets nothing.
+ */
+export function errorReportFields(err: unknown): Record<string, unknown> {
+  if (typeof err !== "object" || err === null) return {};
+  const { type, code, frames } = err as { type?: unknown; code?: unknown; frames?: unknown };
+  const lines = Array.isArray(frames)
+    ? frames.filter((frame): frame is string => typeof frame === "string")
+    : [];
+  if (lines.length === 0) return {};
+  const name = typeof type === "string" && /^[A-Za-z][A-Za-z0-9_]*$/u.test(type) ? type : "Error";
+  const label = typeof code === "string" && /^[A-Za-z0-9_.-]{1,64}$/u.test(code) ? code : "error";
+  return { stack_trace: [`${name}: ${label}`, ...lines.map((frame) => `    ${frame}`)].join("\n") };
+}
+
 type LoggerOptions = Exclude<
   FastifyServerOptions["logger"],
   boolean | FastifyBaseLogger | undefined
@@ -69,6 +86,8 @@ export function cloudLoggingOptions(
     base: null,
     formatters: {
       level: (label) => ({ severity: severities[label] ?? "DEFAULT" }),
+      // An error line carries a stack trace Error Reporting can group (#3239).
+      log: (fields) => ({ ...fields, ...errorReportFields(fields.err) }),
     },
     // A request's child logger is bound to its id; each of its lines gets the trace field.
     mixin: (_merge: object, _level: number, logger: { bindings: () => { reqId?: unknown } }) => {

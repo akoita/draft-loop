@@ -23,7 +23,30 @@ export function logLine(
   message: string,
   fields: Record<string, unknown> = {},
 ): string {
-  return JSON.stringify({ severity, message, ...requestFields(), ...fields });
+  return JSON.stringify({
+    severity,
+    message,
+    ...requestFields(),
+    ...fields,
+    ...(severity === "ERROR" ? errorReportFields(message, fields.err) : {}),
+  });
+}
+
+/**
+ * Error Reporting groups a structured line by a `stack_trace` it can parse (#3239). The trace is
+ * rebuilt from the error's type, the line's own fixed message and its frames, never from the
+ * error's message, which may quote any content. A line with no frames gets nothing.
+ */
+export function errorReportFields(message: string, err: unknown): Record<string, unknown> {
+  if (typeof err !== "object" || err === null) return {};
+  const { type, frames } = err as { type?: unknown; frames?: unknown };
+  if (!Array.isArray(frames) || frames.length === 0) return {};
+  const lines = frames.filter((frame): frame is string => typeof frame === "string");
+  if (lines.length === 0) return {};
+  const name = typeof type === "string" && /^[A-Za-z][A-Za-z0-9_]*$/u.test(type) ? type : "Error";
+  return {
+    stack_trace: [`${name}: ${message}`, ...lines.map((frame) => `    ${frame}`)].join("\n"),
+  };
 }
 
 /** An error's type, code and stack frames; its message is left out. */

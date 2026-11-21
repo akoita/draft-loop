@@ -2,7 +2,7 @@ import type { InjectOptions } from "fastify";
 import { describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
-import { cloudLoggingOptions, errorFields } from "./logging.js";
+import { cloudLoggingOptions, errorFields, errorReportFields } from "./logging.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
 /** Synthetic text standing in for anything a person might send. */
@@ -118,5 +118,28 @@ describe("errorFields", () => {
     expect((fields.frames as string[]).length).toBeGreaterThan(0);
     expect(JSON.stringify(fields)).not.toContain(marker);
     expect(errorFields("text")).toEqual({ type: "string" });
+  });
+});
+
+describe("errorReportFields (#3239)", () => {
+  it("gives an error line a stack trace Error Reporting can group, without the message", () => {
+    const fields = errorReportFields(
+      errorFields(Object.assign(new TypeError(`could not read ${marker}`), { code: "E_READ" })),
+    );
+    const trace = String(fields.stack_trace);
+    expect(trace.startsWith("TypeError: E_READ\n    at ")).toBe(true);
+    expect(trace).not.toContain(marker);
+  });
+
+  it("adds nothing without frames, and a pino error line carries the trace", () => {
+    expect(errorReportFields({ type: "Error", frames: [] })).toEqual({});
+    expect(errorReportFields("text")).toEqual({});
+    const lines: Record<string, unknown>[] = [];
+    const options = cloudLoggingOptions({ write: (line) => lines.push(JSON.parse(line)) });
+    const log = (options as { formatters: { log: (f: Record<string, unknown>) => object } })
+      .formatters.log;
+    expect(log({ err: { type: "Error", frames: ["at main (file.js:1:1)"] } })).toMatchObject({
+      stack_trace: "Error: error\n    at main (file.js:1:1)",
+    });
   });
 });

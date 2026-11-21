@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   errorFields,
+  errorReportFields,
   logLine,
   quarantineFields,
   runOutcomeFields,
   runQualityFields,
 } from "./logging.js";
+
 import { requestFields, withRequestId } from "./request-trace.js";
 
 /** Synthetic text standing in for anything a person might send or a model might write. */
@@ -180,5 +182,25 @@ describe("the run quality line (#3237)", () => {
         { ...ready, state: "reviewing" },
       ),
     ).toBeUndefined();
+  });
+});
+
+describe("error lines for Error Reporting (#3239)", () => {
+  it("rebuild a parseable stack trace from the type, the line's message and the frames", () => {
+    const line = JSON.parse(
+      logLine("ERROR", "run span not saved", {
+        err: errorFields(new RangeError(`bad ${marker}`)),
+      }),
+    ) as Record<string, unknown>;
+    const trace = String(line.stack_trace);
+    expect(trace.startsWith("RangeError: run span not saved\n    at ")).toBe(true);
+    expect(trace).not.toContain(marker);
+  });
+
+  it("leave warnings and errors without frames alone", () => {
+    expect(
+      JSON.parse(logLine("WARNING", "w", { err: errorFields(new Error("x")) })),
+    ).not.toHaveProperty("stack_trace");
+    expect(errorReportFields("m", { type: "Error", frames: [] })).toEqual({});
   });
 });
