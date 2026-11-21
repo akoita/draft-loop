@@ -25,6 +25,8 @@ import {
   runCreditsFields,
   runCreditsMessage,
   runOutcomeFields,
+  runQualityFields,
+  runQualityMessage,
 } from "./logging.js";
 import { readMailConfig } from "./mail.js";
 import { modelCallLog } from "./model-call-log.js";
@@ -173,6 +175,8 @@ const worker = await startWorker({
     onOutcome: (job, outcome, run, before) => {
       for (const line of failedCallLines(job, run, before)) console.error(line);
       console.info(logLine("INFO", "run job finished", runOutcomeFields(job, outcome, run)));
+      const quality = runQualityFields(job, outcome, run, before);
+      if (quality !== undefined) console.info(logLine("INFO", runQualityMessage, quality));
     },
   },
   // A live brief saved before screening is extracted here, once the API queues it (ADR 0011, D9).

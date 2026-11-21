@@ -1160,6 +1160,16 @@ export { type RunModelIdentity, type RunModels, readRunModels } from "./run-mode
 export { currentRoundCoverageJudgement } from "./run-output.js";
 export { type ReleasePauseCommand, releaseRunPause } from "./run-pause-release.js";
 export {
+  maximumRunQualityCodes,
+  type RunQuality,
+  type RunQualityCount,
+  type RunQualityCoverage,
+  type RunQualityFindings,
+  type RunQualityInput,
+  type RunQualityReadiness,
+  runQuality,
+} from "./run-quality.js";
+export {
   readRunRequirementEvidence,
   runRequirementEvidence,
 } from "./run-requirement-evidence-read.js";
