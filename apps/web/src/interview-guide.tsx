@@ -119,7 +119,7 @@ export function InterviewGuideForm(props: InterviewGuideFormProps) {
           className="input"
           maxLength={120}
           value={form.interviewerRole}
-          placeholder={t`For example: recruiter, or engineering manager`}
+          placeholder={t`For example: recruiter, or hiring manager`}
           onChange={(event) => set({ interviewerRole: event.currentTarget.value })}
         />
       </label>

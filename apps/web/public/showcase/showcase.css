@@ -848,6 +848,19 @@ del {
   margin-right: 6px;
 }
 
+/* Other fields */
+.fields {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.fields .sheet.mini {
+  max-width: none;
+  margin: 0;
+}
+
 /* Values */
 .values {
   display: grid;
@@ -1007,6 +1020,10 @@ del {
   .values,
   .swatches {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .fields {
+    grid-template-columns: 1fr;
   }
 
   .type {

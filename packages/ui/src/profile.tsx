@@ -1514,7 +1514,7 @@ export function ProfileWorkspace({
                 autoComplete="off"
                 disabled={busy}
                 aria-label={t`Profile name`}
-                placeholder={t`e.g. senior-data-engineer-cv`}
+                placeholder={t`e.g. account-executive-cv`}
                 aria-describedby="profile-id-hint"
                 onChange={(event) => {
                   const next = event.target.value;
