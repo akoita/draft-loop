@@ -1,0 +1,262 @@
+{
+  "schemaVersion": 1,
+  "id": "non-tech-grounding",
+  "provenance": {
+    "kind": "synthetic",
+    "basis": "Fictional source-claim cases with the vocabulary of four roles outside software",
+    "containsRealCandidateRecord": false,
+    "providerRunPerformed": false,
+    "realApplicationOutcome": null
+  },
+  "scenarios": [
+    {
+      "id": "nurse-registration",
+      "role": "nurse",
+      "sourceChunks": [
+        {
+          "id": "n01",
+          "text": "Registered Nurse (Adult), NMC PIN 12A3456E, revalidated in March 2025."
+        }
+      ],
+      "claims": [
+        {
+          "id": "literal",
+          "text": "Registered Nurse (Adult) with NMC registration, revalidated in March 2025.",
+          "evidenceChunkIds": ["n01"],
+          "expectedSourceSupport": "supported",
+          "rationale": "n01 names the registration, the NMC and the revalidation date."
+        },
+        {
+          "id": "wrong-date",
+          "text": "Registered Nurse (Adult) with NMC registration, revalidated in March 2023.",
+          "evidenceChunkIds": ["n01"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "n01 gives March 2025, not 2023."
+        }
+      ]
+    },
+    {
+      "id": "nurse-resuscitation",
+      "role": "nurse",
+      "sourceChunks": [
+        {
+          "id": "n04",
+          "text": "Hold current ALS and BLS certificates from the Resuscitation Council UK."
+        }
+      ],
+      "claims": [
+        {
+          "id": "literal",
+          "text": "Current ALS and BLS certificates from the Resuscitation Council UK.",
+          "evidenceChunkIds": ["n04"],
+          "expectedSourceSupport": "supported",
+          "rationale": "n04 lists both certificates and the issuer."
+        },
+        {
+          "id": "acronym-spelled-out",
+          "text": "Current Advanced Life Support certificate from the Resuscitation Council UK.",
+          "evidenceChunkIds": ["n04"],
+          "expectedSourceSupport": "supported",
+          "rationale": "n04 says ALS, which is Advanced Life Support."
+        },
+        {
+          "id": "wrong-certificate",
+          "text": "Current PALS certificate from the Resuscitation Council UK.",
+          "evidenceChunkIds": ["n04"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "n04 names ALS and BLS, not PALS."
+        }
+      ]
+    },
+    {
+      "id": "nurse-icu",
+      "role": "nurse",
+      "sourceChunks": [
+        {
+          "id": "n06",
+          "text": "Six months in the ICU at Larkfield General caring for ventilated patients."
+        }
+      ],
+      "claims": [
+        {
+          "id": "acronym-spelled-out",
+          "text": "Six months in the intensive care unit at Larkfield General, caring for ventilated patients.",
+          "evidenceChunkIds": ["n06"],
+          "expectedSourceSupport": "supported",
+          "rationale": "n06 says ICU, which is the intensive care unit."
+        },
+        {
+          "id": "wrong-duration",
+          "text": "Two years in the ICU at Larkfield General caring for ventilated patients.",
+          "evidenceChunkIds": ["n06"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "n06 gives six months."
+        }
+      ]
+    },
+    {
+      "id": "sales-quota",
+      "role": "account-executive",
+      "sourceChunks": [
+        { "id": "s02", "text": "Closed 118% of a £900k annual quota in 2024 and 104% in 2023." }
+      ],
+      "claims": [
+        {
+          "id": "literal",
+          "text": "Closed 118% of a £900k annual quota in 2024.",
+          "evidenceChunkIds": ["s02"],
+          "expectedSourceSupport": "supported",
+          "rationale": "s02 gives 118% of £900k in 2024."
+        },
+        {
+          "id": "inflated-attainment",
+          "text": "Closed 138% of a £900k annual quota in 2024.",
+          "evidenceChunkIds": ["s02"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "s02 gives 118%, not 138%."
+        }
+      ]
+    },
+    {
+      "id": "sales-meddic",
+      "role": "account-executive",
+      "sourceChunks": [
+        {
+          "id": "s03",
+          "text": "Qualify every opportunity with MEDDIC and keep the forecast in Salesforce up to date each Friday."
+        }
+      ],
+      "claims": [
+        {
+          "id": "literal",
+          "text": "Qualified every opportunity with MEDDIC and kept the Salesforce forecast current each week.",
+          "evidenceChunkIds": ["s03"],
+          "expectedSourceSupport": "supported",
+          "rationale": "s03 names MEDDIC, Salesforce and a weekly update."
+        },
+        {
+          "id": "wrong-crm",
+          "text": "Qualified every opportunity with MEDDIC and kept the HubSpot forecast current each week.",
+          "evidenceChunkIds": ["s03"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "s03 names Salesforce, not HubSpot."
+        }
+      ]
+    },
+    {
+      "id": "teacher-key-stage",
+      "role": "primary-teacher",
+      "sourceChunks": [
+        {
+          "id": "t01",
+          "text": "Class teacher for Year 5 at Brookmere Primary School, KS2, since September 2020."
+        }
+      ],
+      "claims": [
+        {
+          "id": "literal",
+          "text": "Class teacher for Year 5 (KS2) at Brookmere Primary School since September 2020.",
+          "evidenceChunkIds": ["t01"],
+          "expectedSourceSupport": "supported",
+          "rationale": "t01 gives the year group, KS2, the school and the start date."
+        },
+        {
+          "id": "acronym-spelled-out",
+          "text": "Class teacher for Year 5, Key Stage 2, at Brookmere Primary School since September 2020.",
+          "evidenceChunkIds": ["t01"],
+          "expectedSourceSupport": "supported",
+          "rationale": "t01 says KS2, which is Key Stage 2."
+        },
+        {
+          "id": "wrong-year-group",
+          "text": "Class teacher for Year 2 at Brookmere Primary School, KS1, since September 2020.",
+          "evidenceChunkIds": ["t01"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "t01 gives Year 5 and KS2."
+        }
+      ]
+    },
+    {
+      "id": "teacher-qts",
+      "role": "primary-teacher",
+      "sourceChunks": [
+        {
+          "id": "t02",
+          "text": "Qualified Teacher Status awarded in 2019 after a PGCE in Primary Education."
+        }
+      ],
+      "claims": [
+        {
+          "id": "acronym-used",
+          "text": "QTS awarded in 2019 after a PGCE in Primary Education.",
+          "evidenceChunkIds": ["t02"],
+          "expectedSourceSupport": "supported",
+          "rationale": "t02 spells out Qualified Teacher Status, which is QTS."
+        },
+        {
+          "id": "wrong-qualification",
+          "text": "Qualified Teacher Status awarded in 2019 after a BEd in Primary Education.",
+          "evidenceChunkIds": ["t02"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "t02 names a PGCE, not a BEd."
+        }
+      ]
+    },
+    {
+      "id": "electrician-credentials",
+      "role": "electrician",
+      "sourceChunks": [
+        {
+          "id": "e01",
+          "text": "Approved Electrician, JIB Gold Card holder, NVQ Level 3 in Electrotechnical Services."
+        },
+        {
+          "id": "e02",
+          "text": "Qualified to the 18th Edition of BS 7671 and to inspection and testing (City & Guilds 2391-52)."
+        }
+      ],
+      "claims": [
+        {
+          "id": "literal",
+          "text": "JIB Gold Card holder, qualified to the 18th Edition of BS 7671.",
+          "evidenceChunkIds": ["e01", "e02"],
+          "expectedSourceSupport": "supported",
+          "rationale": "e01 names the Gold Card; e02 names the 18th Edition of BS 7671."
+        },
+        {
+          "id": "wrong-edition",
+          "text": "JIB Gold Card holder, qualified to the 17th Edition of BS 7671.",
+          "evidenceChunkIds": ["e01", "e02"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "e01 names the Gold Card, but e02 gives the 18th Edition, not the 17th."
+        }
+      ]
+    },
+    {
+      "id": "electrician-crew",
+      "role": "electrician",
+      "sourceChunks": [
+        {
+          "id": "e05",
+          "text": "Ran a crew of three on a 14-week school refurbishment, finished two days early."
+        }
+      ],
+      "claims": [
+        {
+          "id": "literal",
+          "text": "Led a crew of three on a 14-week school refurbishment that finished two days early.",
+          "evidenceChunkIds": ["e05"],
+          "expectedSourceSupport": "supported",
+          "rationale": "e05 gives the crew size, the length and the early finish."
+        },
+        {
+          "id": "inflated-crew",
+          "text": "Led a crew of eight on a 14-week school refurbishment that finished two days early.",
+          "evidenceChunkIds": ["e05"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "e05 gives a crew of three."
+        }
+      ]
+    }
+  ]
+}

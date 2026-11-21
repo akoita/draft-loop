@@ -1,0 +1,225 @@
+{
+  "description": "Invented career evidence for four fictional candidates outside software (a nurse, an account executive, a primary teacher and an electrician) and sixteen job requirements, four per role, labelled before any retriever ran. The four roles share one corpus, so each role's chunks are distractors for the others; four more chunks are general distractors.",
+  "corpus": [
+    {
+      "id": "n01",
+      "language": "en",
+      "text": "Registered Nurse (Adult), NMC PIN 12A3456E, revalidated in March 2025."
+    },
+    {
+      "id": "n02",
+      "language": "en",
+      "text": "Band 6 staff nurse on a 28-bed acute medical ward at Larkfield General Hospital, 2021 to present."
+    },
+    {
+      "id": "n03",
+      "language": "en",
+      "text": "Coordinate the ward on night shifts: allocate patients to four nurses and two healthcare assistants, and escalate deteriorating patients using NEWS2."
+    },
+    {
+      "id": "n04",
+      "language": "en",
+      "text": "Hold current ALS and BLS certificates from the Resuscitation Council UK."
+    },
+    {
+      "id": "n05",
+      "language": "en",
+      "text": "Practice supervisor and assessor for second-year student nurses on placement."
+    },
+    {
+      "id": "n06",
+      "language": "en",
+      "text": "Six months in the ICU at Larkfield General caring for ventilated patients."
+    },
+    {
+      "id": "s01",
+      "language": "en",
+      "text": "Account Executive at Orrin Fieldware, selling scheduling software to logistics firms with 200 to 2,000 staff."
+    },
+    {
+      "id": "s02",
+      "language": "en",
+      "text": "Closed 118% of a £900k annual quota in 2024 and 104% in 2023."
+    },
+    {
+      "id": "s03",
+      "language": "en",
+      "text": "Qualify every opportunity with MEDDIC and keep the forecast in Salesforce up to date each Friday."
+    },
+    {
+      "id": "s04",
+      "language": "en",
+      "text": "Booked my own first meetings through cold calls and LinkedIn outreach; no SDR support."
+    },
+    {
+      "id": "s05",
+      "language": "en",
+      "text": "Average deal cycle of 74 days, with buying committees of procurement, IT and operations."
+    },
+    {
+      "id": "t01",
+      "language": "en",
+      "text": "Class teacher for Year 5 at Brookmere Primary School, KS2, since September 2020."
+    },
+    {
+      "id": "t02",
+      "language": "en",
+      "text": "Qualified Teacher Status awarded in 2019 after a PGCE in Primary Education."
+    },
+    {
+      "id": "t03",
+      "language": "en",
+      "text": "Competencies: lesson planning, safeguarding, SEN support, phonics intervention."
+    },
+    {
+      "id": "t04",
+      "language": "en",
+      "text": "Maths lead for the school: rewrote the calculation policy and coached six colleagues."
+    },
+    {
+      "id": "t05",
+      "language": "en",
+      "text": "Designated deputy safeguarding lead; completed Level 3 training in 2024."
+    },
+    {
+      "id": "e01",
+      "language": "en",
+      "text": "Approved Electrician, JIB Gold Card holder, NVQ Level 3 in Electrotechnical Services."
+    },
+    {
+      "id": "e02",
+      "language": "en",
+      "text": "Qualified to the 18th Edition of BS 7671 and to inspection and testing (City & Guilds 2391-52)."
+    },
+    {
+      "id": "e03",
+      "language": "en",
+      "text": "Install and fault-find three-phase distribution boards on commercial fit-outs."
+    },
+    {
+      "id": "e04",
+      "language": "en",
+      "text": "Issue Electrical Installation Certificates and EICRs on completion of each job."
+    },
+    {
+      "id": "e05",
+      "language": "en",
+      "text": "Ran a crew of three on a 14-week school refurbishment, finished two days early."
+    },
+    {
+      "id": "e06",
+      "language": "en",
+      "text": "CSCS card and IPAF licence for mobile elevating work platforms."
+    },
+    {
+      "id": "x01",
+      "language": "en",
+      "text": "Volunteer coach for an under-11 football team on Saturdays."
+    },
+    {
+      "id": "x02",
+      "language": "en",
+      "text": "Enjoy cooking, hill walking and reading crime novels."
+    },
+    { "id": "x03", "language": "en", "text": "Full UK driving licence." },
+    { "id": "x04", "language": "en", "text": "Fluent in English and conversational Polish." }
+  ],
+  "cases": [
+    {
+      "id": "rn1",
+      "kind": "exact",
+      "requirement": "Current NMC registration as an adult nurse",
+      "groundTruthEvidenceIds": ["n01"]
+    },
+    {
+      "id": "rn2",
+      "kind": "paraphrase",
+      "requirement": "Experience leading a shift and recognising patients who are getting worse",
+      "groundTruthEvidenceIds": ["n03"]
+    },
+    {
+      "id": "rn3",
+      "kind": "synonym",
+      "requirement": "Advanced life support training",
+      "groundTruthEvidenceIds": ["n04"]
+    },
+    {
+      "id": "rn4",
+      "kind": "paraphrase",
+      "requirement": "Mentoring and assessing nursing students in practice",
+      "groundTruthEvidenceIds": ["n05"]
+    },
+    {
+      "id": "rs1",
+      "kind": "paraphrase",
+      "requirement": "A track record of beating your sales target",
+      "groundTruthEvidenceIds": ["s02"]
+    },
+    {
+      "id": "rs2",
+      "kind": "exact",
+      "requirement": "Uses a qualification framework such as MEDDIC",
+      "groundTruthEvidenceIds": ["s03"]
+    },
+    {
+      "id": "rs3",
+      "kind": "paraphrase",
+      "requirement": "Comfortable generating your own pipeline",
+      "groundTruthEvidenceIds": ["s04"]
+    },
+    {
+      "id": "rs4",
+      "kind": "paraphrase",
+      "requirement": "Experience selling complex deals to several stakeholders",
+      "groundTruthEvidenceIds": ["s05"]
+    },
+    {
+      "id": "rt1",
+      "kind": "synonym",
+      "requirement": "Qualified teacher with QTS",
+      "groundTruthEvidenceIds": ["t02"]
+    },
+    {
+      "id": "rt2",
+      "kind": "synonym",
+      "requirement": "Experience teaching Key Stage 2",
+      "groundTruthEvidenceIds": ["t01"]
+    },
+    {
+      "id": "rt3",
+      "kind": "paraphrase",
+      "requirement": "Supporting children with special educational needs",
+      "groundTruthEvidenceIds": ["t03"]
+    },
+    {
+      "id": "rt4",
+      "kind": "paraphrase",
+      "requirement": "Has led a subject across the school",
+      "groundTruthEvidenceIds": ["t04"]
+    },
+    {
+      "id": "re1",
+      "kind": "exact",
+      "requirement": "JIB Gold Card and 18th Edition",
+      "groundTruthEvidenceIds": ["e01", "e02"]
+    },
+    {
+      "id": "re2",
+      "kind": "paraphrase",
+      "requirement": "Commercial installation experience, including three-phase work",
+      "groundTruthEvidenceIds": ["e03"]
+    },
+    {
+      "id": "re3",
+      "kind": "paraphrase",
+      "requirement": "Able to complete testing and certification paperwork",
+      "groundTruthEvidenceIds": ["e02", "e04"]
+    },
+    {
+      "id": "re4",
+      "kind": "keyword-trap",
+      "requirement": "Holds a driving licence",
+      "groundTruthEvidenceIds": ["x03"]
+    }
+  ]
+}
