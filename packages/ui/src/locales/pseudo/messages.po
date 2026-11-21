@@ -763,6 +763,10 @@ msgstr ""
 msgid "{name}, lines {0}"
 msgstr ""
 
+#: packages/ui/src/getting-started.tsx
+msgid "{name}: {detail}"
+msgstr ""
+
 #: apps/web/src/credits-model.ts
 msgid "{needs}{has}. Ask the owner for more credits, or wait for the next period."
 msgstr ""
@@ -8804,6 +8808,10 @@ msgstr ""
 msgid "Start the review"
 msgstr ""
 
+#: packages/ui/src/getting-started.tsx
+msgid "Start the review to get a first draft."
+msgstr ""
+
 #: packages/ui/src/start-confirmation.tsx
 msgid "Start this review?"
 msgstr ""
@@ -9652,6 +9660,10 @@ msgstr ""
 
 #: packages/ui/src/profile-status.ts
 msgid "The last attempt saved no facts. Fix the cause below, then try again."
+msgstr ""
+
+#: packages/ui/src/getting-started.tsx
+msgid "The last review stopped before you approved a CV. Open it and start a new review from Run details."
 msgstr ""
 
 #. placeholder {0}: latest.authorModel

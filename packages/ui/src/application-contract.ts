@@ -42,6 +42,8 @@ export interface ApplicationSummaryView {
   readonly exportCount: number;
   /** The newest run, so the review can open on it; null before the first run. */
   readonly latestRunId: string | null;
+  /** True when the newest run stopped or ran out of budget, so a new review is the way on. */
+  readonly latestRunEnded?: boolean;
   /** When the application was archived; null while it is on the main list. */
   readonly archivedAt: string | null;
   /** The folder it sits in on Home; absent for no folder, or on a host without folders. */
@@ -291,6 +293,7 @@ const summaryKeys = exactKeys<ApplicationSummaryView>()([
   "briefCount",
   "exportCount",
   "latestRunId",
+  "latestRunEnded",
   "archivedAt",
   "folderId",
   "modelProfiles",
@@ -432,6 +435,7 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     status === undefined ||
     typeof raw.isDefault !== "boolean" ||
     (raw.jobMissing !== undefined && typeof raw.jobMissing !== "boolean") ||
+    (raw.latestRunEnded !== undefined && typeof raw.latestRunEnded !== "boolean") ||
     createdAt === undefined ||
     updatedAt === undefined ||
     runCount === undefined ||
@@ -458,6 +462,7 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     briefCount,
     exportCount,
     latestRunId,
+    ...(raw.latestRunEnded === true ? { latestRunEnded: true } : {}),
     archivedAt,
     ...(folderId === undefined ? {} : { folderId }),
     modelProfiles,

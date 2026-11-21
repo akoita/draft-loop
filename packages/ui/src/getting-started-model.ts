@@ -6,12 +6,20 @@ import type { HomeApplicationsState, HomeProfileStatus } from "./home-model.js";
 /** The Getting started steps on Home (#2791), from the career story to a downloaded CV. */
 export type GettingStartedStepKey = "career" | "profile" | "job" | "review" | "download";
 
+/**
+ * Where the followed application's review stands: no run yet, a review that stopped or ran out of
+ * budget before approval, or a review going on.
+ */
+export type GettingStartedReviewState = "not-started" | "ended" | "ongoing";
+
 export interface GettingStartedStep {
   readonly key: GettingStartedStepKey;
   /** Ticked from the record's real state; the person never ticks a step. */
   readonly done: boolean;
   /** The application a review or download step opens; null for the other steps. */
   readonly application: ApplicationSummaryView | null;
+  /** The followed application's review state, on the review step only. */
+  readonly reviewState?: GettingStartedReviewState;
 }
 
 export interface GettingStartedInputs {
@@ -56,19 +64,23 @@ function newest(applications: readonly ApplicationSummaryView[]): ApplicationSum
   );
 }
 
+function reviewState(application: ApplicationSummaryView | null): GettingStartedReviewState {
+  if (application === null || application.runCount === 0) return "not-started";
+  return application.latestRunEnded === true ? "ended" : "ongoing";
+}
+
 /**
- * The steps in order, each ticked from what the record holds. A host without a profile workflow
- * skips the profile step rather than show one the person cannot finish.
+ * The steps in order, each ticked from what the record holds. The review and download steps
+ * follow one application, the one the person worked on last, so an older finished application
+ * never ticks them for a newer one. A host without a profile workflow skips the profile step
+ * rather than show one the person cannot finish.
  */
 export function gettingStartedSteps(inputs: GettingStartedInputs): readonly GettingStartedStep[] {
   const applications = shownApplications(inputs.applications);
-  const approved = applications.filter(
-    (application) => application.status === "approved" || application.status === "exported",
-  );
-  const exported = applications.filter(
-    (application) => application.status === "exported" || application.exportCount > 0,
-  );
-  const reviewTarget = newest(applications.filter((application) => application.runCount > 0));
+  const followed = newest(applications);
+  const exported =
+    followed !== null && (followed.status === "exported" || followed.exportCount > 0);
+  const approved = followed !== null && (exported || followed.status === "approved");
   const steps: GettingStartedStep[] = [
     { key: "career", done: hasEvidence(inputs), application: null },
   ];
@@ -79,14 +91,11 @@ export function gettingStartedSteps(inputs: GettingStartedInputs): readonly Gett
     { key: "job", done: applications.length > 0, application: null },
     {
       key: "review",
-      done: approved.length > 0 || exported.length > 0,
-      application: reviewTarget ?? newest(applications),
+      done: approved,
+      application: followed,
+      reviewState: reviewState(followed),
     },
-    {
-      key: "download",
-      done: exported.length > 0,
-      application: newest(approved) ?? newest(applications),
-    },
+    { key: "download", done: exported, application: followed },
   );
   return steps;
 }

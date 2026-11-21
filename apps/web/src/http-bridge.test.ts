@@ -167,6 +167,24 @@ describe("the shared screens' commands over HTTP", () => {
       jobSourceKind: "pasted-text",
     });
     expect(result.value.applications[0]).not.toHaveProperty("chosenRun");
+    expect(result.value.applications[1]).not.toHaveProperty("latestRunEnded");
+  });
+
+  it("marks an application whose newest run stopped, so Home points to a new review", async () => {
+    const stopped = {
+      ...ledgerApplication,
+      runs: ledgerApplication.runs.map((run) =>
+        run.id === "run-2" ? { ...run, state: "stopped" } : run,
+      ),
+    };
+    const { port } = portOver({
+      "GET /v1/workspaces/{workspaceId}/applications": () => ({ applications: [stopped] }),
+    });
+
+    const result = await port.execute({ type: "application.list", input: { workspaceId } });
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.value.applications[0]).toMatchObject({ latestRunEnded: true });
   });
 
   it("creates an application from pasted text, or from a job page address with its approval", async () => {
