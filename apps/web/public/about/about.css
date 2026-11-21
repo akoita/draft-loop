@@ -10,6 +10,8 @@
   --teal: #0f7d6e;
   --teal-hover: #149c89;
   --teal-wash: rgba(15, 125, 110, 0.1);
+  /* Small teal text on the teal wash: --teal measures 4.4:1 there, under WCAG AA's 4.5:1. */
+  --teal-ink: #0b6458;
   --desk: #0f1319;
   --desk-surface: #161a21;
   --desk-border: rgba(255, 255, 255, 0.12);
@@ -172,7 +174,7 @@ a:focus-visible {
 }
 
 .lang a[aria-current="true"] {
-  color: var(--teal);
+  color: var(--teal-ink);
   background: var(--teal-wash);
 }
 
@@ -359,7 +361,7 @@ h3 {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--teal);
+  color: var(--teal-ink);
   background: var(--teal-wash);
   padding: 4px 10px;
   border-radius: 3px;
