@@ -6551,6 +6551,25 @@
               "null"
             ]
           },
+          "replies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "sentAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text",
+                "sentAt"
+              ]
+            },
+            "description": "The operator's replies, emailed to the member, oldest first."
+          },
           "sentAt": {
             "type": "string"
           }
@@ -6568,6 +6587,7 @@
           "status",
           "issueUrl",
           "triagedAt",
+          "replies",
           "sentAt"
         ]
       },
@@ -16256,6 +16276,26 @@
               "null"
             ]
           },
+          "replies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "sentAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text",
+                "sentAt"
+              ],
+              "additionalProperties": false
+            },
+            "description": "The operator's replies, emailed to the member, oldest first."
+          },
           "sentAt": {
             "type": "string"
           }
@@ -16273,6 +16313,7 @@
           "status",
           "issueUrl",
           "triagedAt",
+          "replies",
           "sentAt"
         ],
         "additionalProperties": false
@@ -35752,6 +35793,117 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/feedback/{noteId}/reply": {
+      "post": {
+        "summary": "Reply to the member who sent a feedback note",
+        "description": "Operator only. Emails the reply to the member who sent the note, in the language of their browser when known, and stores it with the note; the member's address stays on the server. A reply is an outward message: send it only on the operator's own action. 400 invalid_input for an empty reply, one over 2000 characters, or a note that already holds 20 replies; 404 not_found for an unknown note, member_gone once the member's account is gone; 502 mail_failed when the mail provider refuses it (nothing is stored); 503 mail_unavailable where the server sends no mail.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "maxLength": 4000,
+                    "description": "The reply, 2000 characters at most once trimmed."
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "in": "path",
+            "name": "noteId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackNote"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
             "description": "Default Response",
             "content": {
               "application/json": {

@@ -349,6 +349,7 @@ describe("handing a support conversation to a person (#2883)", () => {
           status: "new",
           issueUrl: null,
           triagedAt: null,
+          replies: [],
           sentAt: input.now.toISOString(),
         };
       },

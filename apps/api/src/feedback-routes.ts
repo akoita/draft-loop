@@ -34,7 +34,7 @@ export interface FeedbackRoutesOptions {
 
 const categorySchema = z.enum(feedbackCategories as unknown as [FeedbackCategory]);
 
-const noteSchema = z
+export const noteSchema = z
   .object({
     noteId: z.string(),
     kind: z
@@ -59,6 +59,9 @@ const noteSchema = z
     status: z.enum(feedbackStatuses),
     issueUrl: z.string().nullable().describe("The GitHub issue the note led to."),
     triagedAt: z.string().nullable(),
+    replies: z
+      .array(z.object({ text: z.string(), sentAt: z.string() }))
+      .describe("The operator's replies, emailed to the member, oldest first."),
     sentAt: z.string(),
   })
   .meta({ id: "FeedbackNote" });
@@ -89,9 +92,10 @@ const listQuery = operatorPageQuery.extend({
 
 const dayMs = 24 * 60 * 60 * 1000;
 
-const toResponse = (note: FeedbackNote) => ({
+export const toResponse = (note: FeedbackNote) => ({
   ...note,
   transcript: note.transcript === null ? null : [...note.transcript],
+  replies: [...note.replies],
 });
 
 /**

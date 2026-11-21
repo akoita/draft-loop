@@ -47,6 +47,16 @@ export const maximumSupportTranscriptTurnCharacters = 2_000;
 /** How long a support ticket and its transcript are kept after it was sent. */
 export const supportTicketKeepDays = 90;
 
+/** The longest operator reply, in characters, and the most replies one note keeps (#2878). */
+export const maximumFeedbackReplyCharacters = 2_000;
+export const maximumFeedbackReplies = 20;
+
+/** An operator's reply to a note, emailed to the member who sent it (#2878). */
+export interface FeedbackReply {
+  readonly text: string;
+  readonly sentAt: string;
+}
+
 export interface FeedbackNote {
   readonly noteId: string;
   readonly kind: FeedbackKind;
@@ -66,6 +76,8 @@ export interface FeedbackNote {
   readonly issueUrl: string | null;
   /** When the operator last triaged it; `null` while it is new. */
   readonly triagedAt: string | null;
+  /** The operator's replies, oldest first; empty until one is sent. */
+  readonly replies: readonly FeedbackReply[];
   readonly sentAt: string;
 }
 
@@ -135,6 +147,16 @@ export interface FeedbackStore {
    * Throws `TenantDirectoryError` `invalid_input` for status `issue` without a link.
    */
   readonly triage: (input: TriageFeedbackInput) => Promise<FeedbackNote | undefined>;
+  /**
+   * Records an operator reply that was emailed (#2878); resolves `undefined` for an unknown note.
+   * Throws `TenantDirectoryError` `invalid_input` for an empty or overlong reply, or once the note
+   * holds `maximumFeedbackReplies`.
+   */
+  readonly addReply: (input: {
+    readonly noteId: string;
+    readonly text: string;
+    readonly now: Date;
+  }) => Promise<FeedbackNote | undefined>;
   /** How many notes (not support tickets) one member of one organisation sent at or after `since`. */
   readonly notesSentSince: (input: {
     readonly organisationId: string;

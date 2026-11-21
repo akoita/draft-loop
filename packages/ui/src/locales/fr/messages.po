@@ -1936,6 +1936,7 @@ msgstr "Impossible de commencer pour l’instant : {0}"
 #: apps/web/src/application-material.tsx
 #: apps/web/src/danger-dialog.tsx
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator-feedback-reply.tsx
 #: apps/web/src/operator.tsx
 #: apps/web/src/records.tsx
 #: apps/web/src/research-brief.tsx
@@ -3282,6 +3283,10 @@ msgstr "DraftLoop ne peut pas encore chiffrer l’un des modèles de l’espace 
 msgid "DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out."
 msgstr "DraftLoop rédige un CV et une lettre de motivation pour chaque offre à partir de vos propres documents. Un modèle d'IA écrit, un modèle d'une autre entreprise vérifie chaque affirmation dans vos sources, et vous validez ce qui part."
 
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "DraftLoop emails this reply to the member who sent the note, in their language when known. Their address stays on the server."
+msgstr "DraftLoop envoie cette réponse par email au membre qui a écrit l’avis, dans sa langue si elle est connue. Son adresse reste sur le serveur."
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "DraftLoop is fetching the job page you approved. Its text then goes to {providerName} ({modelName}) to split into requirements."
 msgstr "DraftLoop récupère la page de l’offre que vous avez approuvée. Son texte est ensuite envoyé à {providerName} ({modelName}) pour être découpé en exigences."
@@ -3479,6 +3484,11 @@ msgstr "Écoulé"
 #: apps/web/src/landing.tsx
 msgid "Email address"
 msgstr "Adresse e-mail"
+
+#. placeholder {0}: when(reply.sentAt)
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Emailed {0}"
+msgstr "Envoyée par email {0}"
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Employer"
@@ -7409,6 +7419,14 @@ msgstr "Remplacer la politique"
 msgid "Replace the job description"
 msgstr "Remplacer l’offre d’emploi"
 
+#: apps/web/src/operator.tsx
+msgid "Reply by email"
+msgstr "Répondre par email"
+
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Reply to the member"
+msgstr "Réponse au membre"
+
 #. placeholder {0}: countedNouns.acceptedBlockingFinding(acceptedBlockingFindings.length)
 #: packages/ui/src/review.tsx
 msgid "Request a revision for {0}, or reject or override the finding if it does not apply."
@@ -8417,6 +8435,10 @@ msgstr "Envoyer seulement si autorisé"
 #: apps/web/src/sensitivity-model.ts
 msgid "Send only if the workspace allows:"
 msgstr "Envoyer seulement si l’espace de travail autorise :"
+
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Send reply"
+msgstr "Envoyer la réponse"
 
 #: packages/ui/src/help-ask.tsx
 msgid "Send the conversation"
@@ -11381,6 +11403,10 @@ msgstr "Écrire"
 msgid "Write a note first."
 msgstr "Écrivez d’abord votre avis."
 
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Write a reply first."
+msgstr "Écrivez d’abord une réponse."
+
 #: packages/ui/src/application-language.tsx
 msgid "Write in {label}"
 msgstr "Rédiger en {label}"
@@ -11809,6 +11835,10 @@ msgstr "Votre dossier ne dit rien entre {from} et {to}."
 #: apps/web/src/feedback.tsx
 msgid "Your reference:"
 msgstr "Votre référence :"
+
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Your replies"
+msgstr "Vos réponses"
 
 #: apps/web/src/oidc-session.ts
 msgid "Your sign-in has expired. Sign in again."

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
 import { feedbackReference } from "./feedback-model.js";
+import { FeedbackReplies, FeedbackReplyForm, replyToFeedback } from "./operator-feedback-reply.js";
 import { ListMore, ListSearch, useBackgroundRefresh, usePagedList } from "./operator-list.js";
 import {
   appendUnique,
@@ -389,6 +390,8 @@ interface FeedbackItemProps {
   readonly onTriage?: ((note: FeedbackNote, triage: FeedbackTriage) => void) | undefined;
   /** Opens the trace of the run the note names (#3134). */
   readonly onViewTrace?: ((target: RunTraceTarget) => void) | undefined;
+  /** Emails the operator's reply to the member (#2878); without it the note offers no reply. */
+  readonly onReply?: ((note: FeedbackNote, text: string) => void) | undefined;
 }
 
 /** One note: its kind, text, context and, for the operator, what to do with it. */
@@ -401,8 +404,10 @@ function FeedbackItem({
   onSelect,
   onTriage,
   onViewTrace,
+  onReply,
 }: FeedbackItemProps) {
   const [linking, setLinking] = useState(false);
+  const [replying, setReplying] = useState(false);
   const rows = contextRows(note);
   const triage = (next: FeedbackTriage) => onTriage?.(note, next);
   const kind = feedbackKindLabel(note);
@@ -472,7 +477,18 @@ function FeedbackItem({
           </ol>
         </details>
       )}
-      {onTriage === undefined ? null : linking ? (
+      <FeedbackReplies replies={note.replies} when={operatorTime} />
+      {onReply !== undefined && replying ? (
+        <FeedbackReplyForm
+          disabled={busy}
+          onSend={(text) => {
+            setReplying(false);
+            onReply(note, text);
+          }}
+          onCancel={() => setReplying(false)}
+        />
+      ) : null}
+      {onTriage === undefined || replying ? null : linking ? (
         <LinkIssueForm
           disabled={busy}
           onSave={(issueUrl) => {
@@ -522,6 +538,16 @@ function FeedbackItem({
               )}
             </>
           )}
+          {onReply === undefined ? null : (
+            <button
+              type="button"
+              className="secondary"
+              disabled={busy}
+              onClick={() => setReplying(true)}
+            >
+              {t`Reply by email`}
+            </button>
+          )}
         </footer>
       )}
     </article>
@@ -543,6 +569,8 @@ export interface FeedbackSectionProps {
   readonly onTriage?: ((note: FeedbackNote, triage: FeedbackTriage) => void) | undefined;
   /** Opens the trace of the run a note names (#3134). */
   readonly onViewTrace?: ((target: RunTraceTarget) => void) | undefined;
+  /** Emails the operator's reply to a note's member (#2878). */
+  readonly onReply?: ((note: FeedbackNote, text: string) => void) | undefined;
   /** Closes the selected notes at once. */
   readonly onCloseMany?: ((notes: readonly FeedbackNote[]) => void) | undefined;
   readonly query?: string | undefined;
@@ -566,6 +594,7 @@ export function FeedbackSection({
   problem,
   onTriage,
   onViewTrace,
+  onReply,
   onCloseMany,
   query = "",
   onSearch,
@@ -686,6 +715,7 @@ export function FeedbackSection({
                       }
                       onTriage={onTriage}
                       onViewTrace={onViewTrace}
+                      onReply={onReply}
                     />
                   </li>
                 ))}
@@ -845,6 +875,26 @@ export function OperatorPage({
     [client, updateFeedback],
   );
 
+  // The operator's own click sends the reply; the note stays in its tab with the reply listed.
+  const reply = useCallback(
+    async (note: FeedbackNote, text: string) => {
+      setTriageProblem(undefined);
+      setTriaging((previous) => new Set([...previous, note.noteId]));
+      const result = await replyToFeedback(client, note.noteId, text);
+      if (result.kind === "replied") {
+        updateFeedback((page) => ({
+          ...page,
+          notes: page.notes.map((each) => (each.noteId === note.noteId ? result.note : each)),
+        }));
+        setFocusNote((previous) => (previous?.noteId === note.noteId ? result.note : previous));
+      } else {
+        setTriageProblem(result.message);
+      }
+      setTriaging((previous) => new Set([...previous].filter((id) => id !== note.noteId)));
+    },
+    [client, updateFeedback],
+  );
+
   function requestInvite(entry: WaitlistEntry) {
     setOutcome(undefined);
     if (invites.state.kind === "ready" && inviteGoesPastCap(invites.state.value)) {
@@ -980,6 +1030,7 @@ export function OperatorPage({
           busy={triaging}
           problem={triageProblem}
           onTriage={(note, next) => void triage([note], next)}
+          onReply={(note, text) => void reply(note, text)}
           onViewTrace={(target) => {
             setTraceTarget({ ...target });
             setView("trace");

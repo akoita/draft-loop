@@ -1942,6 +1942,7 @@ msgstr ""
 #: apps/web/src/application-material.tsx
 #: apps/web/src/danger-dialog.tsx
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator-feedback-reply.tsx
 #: apps/web/src/operator.tsx
 #: apps/web/src/records.tsx
 #: apps/web/src/research-brief.tsx
@@ -3288,6 +3289,10 @@ msgstr ""
 msgid "DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out."
 msgstr ""
 
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "DraftLoop emails this reply to the member who sent the note, in their language when known. Their address stays on the server."
+msgstr ""
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "DraftLoop is fetching the job page you approved. Its text then goes to {providerName} ({modelName}) to split into requirements."
 msgstr ""
@@ -3484,6 +3489,11 @@ msgstr ""
 
 #: apps/web/src/landing.tsx
 msgid "Email address"
+msgstr ""
+
+#. placeholder {0}: when(reply.sentAt)
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Emailed {0}"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -7414,6 +7424,14 @@ msgstr ""
 msgid "Replace the job description"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Reply by email"
+msgstr ""
+
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Reply to the member"
+msgstr ""
+
 #. placeholder {0}: countedNouns.acceptedBlockingFinding(acceptedBlockingFindings.length)
 #: packages/ui/src/review.tsx
 msgid "Request a revision for {0}, or reject or override the finding if it does not apply."
@@ -8421,6 +8439,10 @@ msgstr ""
 
 #: apps/web/src/sensitivity-model.ts
 msgid "Send only if the workspace allows:"
+msgstr ""
+
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Send reply"
 msgstr ""
 
 #: packages/ui/src/help-ask.tsx
@@ -11386,6 +11408,10 @@ msgstr ""
 msgid "Write a note first."
 msgstr ""
 
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Write a reply first."
+msgstr ""
+
 #: packages/ui/src/application-language.tsx
 msgid "Write in {label}"
 msgstr ""
@@ -11813,6 +11839,10 @@ msgstr ""
 
 #: apps/web/src/feedback.tsx
 msgid "Your reference:"
+msgstr ""
+
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Your replies"
 msgstr ""
 
 #: apps/web/src/oidc-session.ts

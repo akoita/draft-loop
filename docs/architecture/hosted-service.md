@@ -772,6 +772,7 @@ The service sends a few plain emails through `@draft-loop/mail`
 | ------ | ----- | -------- |
 | API    | A new beta invite: a link, `/#invite=<code>`, that opens sign-up with the code filled in | `beta_invite` |
 | API    | A waitlist sign-up's confirmation link, `/#waitlist-confirm=<token>` | `waitlist_confirm` |
+| API    | The operator's reply to a feedback note, sent on their click and naming the note's `FB-` reference (#2878) | `feedback_reply` |
 | Worker | The warning before an inactive beta account is erased (#2463) | `beta_inactivity_warning` |
 
 - **Sender.** Brevo's transactional API, a French provider in the EU, as

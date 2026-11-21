@@ -665,6 +665,10 @@ export interface ApiSchemas {
     readonly status: "new" | "triaged" | "issue" | "closed";
     readonly issueUrl: string | null;
     readonly triagedAt: string | null;
+    readonly replies: readonly ({
+      readonly text: string;
+      readonly sentAt: string;
+    })[];
     readonly sentAt: string;
   };
   "FeedbackRecentError": {
@@ -3479,6 +3483,15 @@ export interface ApiOperations {
       readonly noteId: string;
     };
     readonly body: ApiSchemas["FeedbackTriageInput"];
+    readonly response: ApiSchemas["FeedbackNote"];
+  };
+  "POST /v1/operator/feedback/{noteId}/reply": {
+    readonly path: {
+      readonly noteId: string;
+    };
+    readonly body: {
+      readonly text: string;
+    };
     readonly response: ApiSchemas["FeedbackNote"];
   };
   "GET /v1/help": {
