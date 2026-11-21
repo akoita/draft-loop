@@ -55,7 +55,7 @@ async function createRuntimeFixture(
   const denseJobFacts = Array.from(
     { length: 32 },
     (_, index) =>
-      `Platform Engineer delivery workflow ${index + 1}: designed testing systems and build automation for engineering teams.`,
+      `Platform Engineer delivery workflow ${index + 1}, role held 2021 to present: designed testing systems and build automation for engineering teams.`,
   );
   await writeFile(
     sourcePath,
