@@ -768,7 +768,8 @@ not a second product.
     Streamable HTTP on one URL, forwarding each caller's own credential to
     the API and keeping none. In sign-in mode it is an OAuth protected
     resource (#2648): it publishes its metadata, and the identity provider
-    signs the person in for a client created per assistant.
+    signs the person in for a client created per assistant. It forwards
+    only a token it has checked was issued for its own URL (#3221).
 - **First tools: the work journal (decided 2026-11-01, #2018).**
   `record_work` lets the candidate's coding agent file a short note about
   notable work it just helped ship, and `list_work` lists those notes by
