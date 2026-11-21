@@ -2486,6 +2486,10 @@ msgstr ""
 msgid "Confirm as evidence"
 msgstr ""
 
+#: apps/web/src/operator-confirm.tsx
+msgid "Confirm operator access"
+msgstr ""
+
 #: apps/web/src/sources-model.ts
 msgid "Confirm that runs may combine these knowledge bases."
 msgstr ""
@@ -6407,6 +6411,10 @@ msgstr ""
 msgid "Operator"
 msgstr ""
 
+#: apps/web/src/operator-confirm.tsx
+msgid "Operator controls need a recent code or passkey. Sign in again to get them back."
+msgstr ""
+
 #: apps/web/src/operator.tsx
 msgid "Operator sections"
 msgstr ""
@@ -10038,6 +10046,10 @@ msgstr ""
 
 #: packages/ui/src/provider-sign-in-readiness.ts
 msgid "The service provides the models"
+msgstr ""
+
+#: apps/web/src/operator-confirm.tsx
+msgid "The sign-in page did not answer. Try again in a moment."
 msgstr ""
 
 #: apps/web/src/oidc-sign-in.tsx

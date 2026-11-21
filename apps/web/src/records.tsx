@@ -63,6 +63,11 @@ export interface RecordsProps {
   /** Opens the operator page from the account menu, for a caller who may operate (#2829). */
   readonly onOperator?: () => void;
   /**
+   * Asks for the sign-in again, second step included, for a person who holds the operator role
+   * but whose second step is too old for operator routes. Rejects when the provider is unreachable.
+   */
+  readonly onConfirmOperator?: (() => Promise<void>) | undefined;
+  /**
    * The screens for the chosen record; they call `onSaved` once they create or read the record.
    * `automaticSetup` is true on a one-person plan: a new record is created with the defaults,
    * with no setup screen, since that person has nothing to name or choose. `recordName` is what
@@ -89,6 +94,7 @@ export function Records({
   onAccountDeleted,
   signInSecurity,
   onOperator,
+  onConfirmOperator,
   children,
 }: RecordsProps) {
   const [state, setState] = useState<RecordsState>({ kind: "loading" });
@@ -262,6 +268,7 @@ export function Records({
             onSignOut={onSignOut}
             signInSecurity={signInSecurity}
             onOperator={onOperator}
+            onConfirmOperator={onConfirmOperator}
             newNotes={newNotes}
           />
         ),

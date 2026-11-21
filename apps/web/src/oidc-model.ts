@@ -94,9 +94,10 @@ export interface AuthorizationRequest {
   readonly uiLocale?: string;
   /**
    * `none` asks the provider to answer at once from its own session, without showing a page: a
-   * code when the person is still signed in there, `login_required` when not.
+   * code when the person is still signed in there, `login_required` when not. `login` asks for
+   * the whole sign-in again, second step included, even in a live session.
    */
-  readonly prompt?: "none";
+  readonly prompt?: "none" | "login";
 }
 
 /**

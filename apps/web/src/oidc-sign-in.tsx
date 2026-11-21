@@ -294,6 +294,10 @@ export function OidcApp({
         client={client.api}
         onSignOut={() => client.end(undefined, true)}
         {...(signInSecurity === undefined ? {} : { signInSecurity })}
+        // An operator's second step counts for a limited time; this asks for it again.
+        onConfirmOperator={() =>
+          session.begin({ again: true }).then((url) => navigation.assign(url))
+        }
         // The provider deleted the account and its sessions: leave without its sign-out page.
         onAccountDeleted={(notice) => client.end(notice, false)}
       />

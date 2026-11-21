@@ -109,4 +109,36 @@ describe("account menu (#2861)", () => {
     expect(accountInitial({ ...coach, email: " zoé@example.test" })).toBe("Z");
     expect(accountInitial({ kind: "owner" })).toBe("•");
   });
+
+  it("offers to confirm operator access once the second step aged out, not before", () => {
+    const confirm = () => Promise.resolve();
+    const aged = renderToStaticMarkup(
+      <AccountMenu
+        me={{ ...coach, operatorRole: true }}
+        onePerson={false}
+        onSignOut={() => {}}
+        onOperator={() => {}}
+        onConfirmOperator={confirm}
+      />,
+    );
+    expect(aged).toContain("Confirm operator access");
+    expect(aged).not.toContain(">Operator<");
+
+    const fresh = renderToStaticMarkup(
+      <AccountMenu
+        me={{ ...coach, operatorRole: true, operator: true }}
+        onePerson={false}
+        onSignOut={() => {}}
+        onOperator={() => {}}
+        onConfirmOperator={confirm}
+      />,
+    );
+    expect(fresh).toContain(">Operator<");
+    expect(fresh).not.toContain("Confirm operator access");
+
+    const member = renderToStaticMarkup(
+      <AccountMenu me={coach} onePerson={false} onSignOut={() => {}} onConfirmOperator={confirm} />,
+    );
+    expect(member).not.toContain("Confirm operator access");
+  });
 });

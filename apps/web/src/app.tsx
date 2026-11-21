@@ -95,6 +95,11 @@ export interface ShellProps {
   /** Sign-in mode: the provider's page where a person sets up a passkey or an authenticator app. */
   readonly signInSecurity?: string;
   /**
+   * Asks for the sign-in again, second step included, for a person who holds the operator role
+   * but whose second step is too old for operator routes. Rejects when the provider is unreachable.
+   */
+  readonly onConfirmOperator?: (() => Promise<void>) | undefined;
+  /**
    * Sign-in mode lists the caller's candidate records and switches between them; owner-token
    * mode keeps the owner's single workspace.
    */
@@ -113,6 +118,7 @@ export function Shell({
   onSignOut,
   onAccountDeleted,
   signInSecurity,
+  onConfirmOperator,
   mode = "owner",
   memory = recordMemory,
 }: ShellProps) {
@@ -197,6 +203,7 @@ export function Shell({
                 {...(onAccountDeleted === undefined ? {} : { onAccountDeleted })}
                 {...(signInSecurity === undefined ? {} : { signInSecurity })}
                 onOperator={openOperator}
+                {...(onConfirmOperator === undefined ? {} : { onConfirmOperator })}
               >
                 {(recordId, onSaved, automaticSetup, recordName) => (
                   <RecordScreens
