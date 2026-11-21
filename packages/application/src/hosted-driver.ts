@@ -3,6 +3,7 @@ import { importApplicationBundle } from "./application-bundle-import.js";
 import { recordApplicationJobPage } from "./application-job-page.js";
 import { CliUserError } from "./cli-user-error.js";
 import { previewRunExport } from "./export-preview.js";
+import { withPresetModelProfiles } from "./hosted-default-model-profiles.js";
 import type { ApplicationDriver } from "./index.js";
 import { type KnowledgeStoreOpener, withKnowledgeStoreOpener } from "./knowledge-store-opener.js";
 import { createLocalApplicationDriver, type LocalApplicationDriverOptions } from "./local.js";
@@ -129,6 +130,16 @@ export function createHostedApplicationDriver(
   const driver = Object.fromEntries(methods) as ApplicationDriver;
   return Object.freeze({
     ...driver,
+    // A run that names no profiles gets the preset of its workspace's models, so it never reaches
+    // a provider without its profile's output budget and effort.
+    begin: (command, io) =>
+      inHostedContext(async () =>
+        local.begin(await withPresetModelProfiles(command, local.readWorkspace), io),
+      ),
+    start: (command, io) =>
+      inHostedContext(async () =>
+        local.start(await withPresetModelProfiles(command, local.readWorkspace), io),
+      ),
     // Lifecycle actions change a run's state only: their engine has no agents, so none reaches a
     // provider, and the run's next step, if any, is the worker's.
     lifecycle: (command, io) =>
