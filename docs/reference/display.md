@@ -4,11 +4,11 @@ This page is for a candidate or coach who wants DraftLoop simpler or fuller.
 One **Display** choice in **Settings** on Home sets how much each
 screen shows at once.
 
-| Display         | What you see                                                                                  |
-| --------------- | --------------------------------------------------------------------------------------------- |
+| Display         | What you see                                                                                   |
+| --------------- | ---------------------------------------------------------------------------------------------- |
 | Simple          | The default. Each card shows the basic path; technical choices sit under **Advanced options**. |
-| Guided          | The simple view plus a **Getting started** list on Home that walks you to your first CV. |
-| Show everything | Every folded section starts open. You can still fold one.                                     |
+| Guided          | The simple view plus a **Getting started** list on Home that walks you to your first CV.       |
+| Show everything | Every folded section starts open. You can still fold one.                                      |
 
 Show everything adds nothing new to a screen. It only removes the click that
 opens each folded section: every **Advanced options**, the Prepare panel, and
@@ -36,10 +36,16 @@ the work is done:
 4. Review your CV and approve it.
 5. Download it.
 
+Steps 4 and 5 follow the application you worked on last and name it. An older
+approved application does not tick them for a newer one. When that
+application's last review stopped or ran out of budget, step 4 says to start a
+new review from **Run details**.
+
 The current step has one button that opens the right screen. **Hide the
 guide** folds the list to one line, and **Show the guide** brings it back.
-After your first download, the list becomes one line that says every step is
-done, with a **New application** button for the next job. Once you hide the
+Once the application you worked on last is downloaded, the list becomes one
+line that says every step is done, with a **New application** button for the
+next job. Once you hide the
 guide, Home keeps one hint line that says what to do next.
 
 Guided also puts one line at the top of Career evidence, Career profile, New

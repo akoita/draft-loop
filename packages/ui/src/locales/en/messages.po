@@ -763,6 +763,10 @@ msgstr "{name} ({role}), under US$0.01 a draft"
 msgid "{name}, lines {0}"
 msgstr "{name}, lines {0}"
 
+#: packages/ui/src/getting-started.tsx
+msgid "{name}: {detail}"
+msgstr "{name}: {detail}"
+
 #: apps/web/src/credits-model.ts
 msgid "{needs}{has}. Ask the owner for more credits, or wait for the next period."
 msgstr "{needs}{has}. Ask the owner for more credits, or wait for the next period."
@@ -8805,6 +8809,10 @@ msgstr "Start runs and drafts"
 msgid "Start the review"
 msgstr "Start the review"
 
+#: packages/ui/src/getting-started.tsx
+msgid "Start the review to get a first draft."
+msgstr "Start the review to get a first draft."
+
 #: packages/ui/src/start-confirmation.tsx
 msgid "Start this review?"
 msgstr "Start this review?"
@@ -9654,6 +9662,10 @@ msgstr "The language could not be saved."
 #: packages/ui/src/profile-status.ts
 msgid "The last attempt saved no facts. Fix the cause below, then try again."
 msgstr "The last attempt saved no facts. Fix the cause below, then try again."
+
+#: packages/ui/src/getting-started.tsx
+msgid "The last review stopped before you approved a CV. Open it and start a new review from Run details."
+msgstr "The last review stopped before you approved a CV. Open it and start a new review from Run details."
 
 #. placeholder {0}: latest.authorModel
 #. placeholder {1}: latest.criticModel

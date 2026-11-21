@@ -18,6 +18,24 @@ export interface GettingStartedActions {
   readonly onOpenApplication: (application: ApplicationSummaryView) => void;
 }
 
+function reviewDetail(step: GettingStartedStep): string {
+  switch (step.reviewState) {
+    case "not-started":
+      return t`Start the review to get a first draft.`;
+    case "ended":
+      return t`The last review stopped before you approved a CV. Open it and start a new review from Run details.`;
+    default:
+      return t`Read the draft, accept or reject each finding, then approve it.`;
+  }
+}
+
+/** The step's detail, led by the application's name when the step opens one. */
+function stepDetail(step: GettingStartedStep): string {
+  const detail = step.key === "review" ? reviewDetail(step) : stepText(step.key).detail;
+  const name = step.application?.name;
+  return name === undefined ? detail : t`${name}: ${detail}`;
+}
+
 function stepText(key: GettingStartedStepKey): { title: string; detail: string; action: string } {
   switch (key) {
     case "career":
@@ -75,7 +93,7 @@ function stepAction(
 /**
  * The Getting started guide at the top of Home (#2791). Guided people see one numbered list from
  * their career story to a downloaded CV, each step ticked from the record's real state, with one
- * button on the current step. People on the simple view get a one-line offer instead.
+ * button on the current step. The review and download steps name the application they follow. People on the simple view get a one-line offer instead.
  */
 export function GettingStarted({
   inputs,
@@ -187,7 +205,11 @@ export function GettingStarted({
               </span>
               <div className="getting-started-text">
                 <strong>{text.title}</strong>
-                {step.done ? <span className="sr-only"> ({t`done`})</span> : <p>{text.detail}</p>}
+                {step.done ? (
+                  <span className="sr-only"> ({t`done`})</span>
+                ) : (
+                  <p>{stepDetail(step)}</p>
+                )}
               </div>
               {action === undefined ? null : (
                 <button type="button" className="button button-primary" onClick={action}>

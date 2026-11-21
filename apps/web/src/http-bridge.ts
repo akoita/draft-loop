@@ -168,9 +168,14 @@ function apiProfileReference(reference: {
   return reference.effort === undefined ? exact : { ...exact, effort: reference.effort };
 }
 
+/** Run states a review cannot go on from: the person starts a new review instead. */
+const endedRunStates: ReadonlySet<string> = new Set(["stopped", "budget-exhausted"]);
+
 /** The API's application in the screens' summary, ordered as the desktop host orders runs. */
 export function applicationSummary(application: Application): ApplicationSummaryView {
   const chosenRun = chosenApplicationRun(application.runs, application.chosenRunId);
+  const latestRunId = newestApplicationRunId(application.runs);
+  const latestRun = application.runs.find((run) => run.id === latestRunId);
   return {
     id: application.id,
     name: application.name,
@@ -183,7 +188,10 @@ export function applicationSummary(application: Application): ApplicationSummary
     runCount: application.runs.length,
     briefCount: application.briefs.length,
     exportCount: application.exportCount,
-    latestRunId: newestApplicationRunId(application.runs),
+    latestRunId,
+    ...(latestRun !== undefined && endedRunStates.has(latestRun.state)
+      ? { latestRunEnded: true }
+      : {}),
     archivedAt: application.archivedAt,
     ...(application.folderId === null ? {} : { folderId: application.folderId }),
     modelProfiles: application.modelProfiles,

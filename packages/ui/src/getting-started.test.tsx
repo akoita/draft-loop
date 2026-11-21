@@ -90,15 +90,40 @@ describe("the Getting started steps", () => {
     expect(keys).toEqual(["career", "job", "review", "download"]);
   });
 
-  it("open the newest application that has a run for the review step", () => {
-    const older = application({ id: "old", runCount: 1, updatedAt: "2026-10-01T00:00:00.000Z" });
-    const newer = application({ id: "new", runCount: 1, updatedAt: "2026-10-05T00:00:00.000Z" });
-    const unrun = application({ id: "unrun", updatedAt: "2026-10-09T00:00:00.000Z" });
+  it("follow the application worked on last, not an older finished one", () => {
+    const finished = application({
+      id: "g2i",
+      status: "approved",
+      runCount: 1,
+      updatedAt: "2026-11-20T00:00:00.000Z",
+    });
+    const stopped = application({
+      id: "dilitrust",
+      name: "DiliTrust",
+      status: "in-review",
+      runCount: 3,
+      latestRunEnded: true,
+      updatedAt: "2026-11-21T00:00:00.000Z",
+    });
     const steps = gettingStartedSteps({
       ...empty,
-      applications: { status: "ready", applications: [older, unrun, newer] },
+      applications: { status: "ready", applications: [finished, stopped] },
     });
-    expect(steps.find((step) => step.key === "review")?.application?.id).toBe("new");
+    const review = steps.find((step) => step.key === "review");
+    expect(review).toMatchObject({ done: false, reviewState: "ended" });
+    expect(review?.application?.id).toBe("dilitrust");
+    expect(steps.find((step) => step.key === "download")?.application?.id).toBe("dilitrust");
+  });
+
+  it("say whether the followed review has not started, ended or is going on", () => {
+    const state = (overrides: Partial<ApplicationSummaryView>) =>
+      gettingStartedSteps({
+        ...empty,
+        applications: { status: "ready", applications: [application(overrides)] },
+      }).find((step) => step.key === "review")?.reviewState;
+    expect(state({})).toBe("not-started");
+    expect(state({ runCount: 1, status: "in-review" })).toBe("ongoing");
+    expect(state({ runCount: 1, status: "in-review", latestRunEnded: true })).toBe("ended");
   });
 });
 
@@ -191,6 +216,31 @@ describe("the guide on Home", () => {
     expect(offer).toContain(">Show me the steps</button>");
     expect(offer).toContain(">No thanks</button>");
     expect(render("everything")).toBe("");
+  });
+
+  it("names the followed application and points a stopped review to a new one", () => {
+    const html = render("guided", false, {
+      ...empty,
+      evidence: documents(1),
+      profile: { kind: "reviewed", version: 1 },
+      applications: {
+        status: "ready",
+        applications: [
+          application({ id: "g2i", status: "approved", runCount: 1 }),
+          application({
+            id: "dilitrust",
+            name: "DiliTrust",
+            status: "in-review",
+            runCount: 3,
+            latestRunEnded: true,
+            updatedAt: "2026-11-21T00:00:00.000Z",
+          }),
+        ],
+      },
+    });
+    expect(html).toContain("Step 4 of 5");
+    expect(html).toContain("DiliTrust: The last review stopped before you approved a CV.");
+    expect(html).toContain(">Open the application</button>");
   });
 
   it("is absent when the host keeps no preference", () => {

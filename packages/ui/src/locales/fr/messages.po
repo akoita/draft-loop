@@ -757,6 +757,10 @@ msgstr "{name} ({role}), moins de 0,01 US$ par brouillon"
 msgid "{name}, lines {0}"
 msgstr "{name}, lignes {0}"
 
+#: packages/ui/src/getting-started.tsx
+msgid "{name}: {detail}"
+msgstr "{name} : {detail}"
+
 #: apps/web/src/credits-model.ts
 msgid "{needs}{has}. Ask the owner for more credits, or wait for the next period."
 msgstr "{needs}{has}. Demandez plus de crédits au propriétaire, ou attendez la prochaine période."
@@ -8799,6 +8803,10 @@ msgstr "Lancer des exécutions et des brouillons"
 msgid "Start the review"
 msgstr "Démarrer la relecture"
 
+#: packages/ui/src/getting-started.tsx
+msgid "Start the review to get a first draft."
+msgstr "Démarrez la relecture pour obtenir un premier brouillon."
+
 #: packages/ui/src/start-confirmation.tsx
 msgid "Start this review?"
 msgstr "Démarrer cette relecture ?"
@@ -9648,6 +9656,10 @@ msgstr "La langue n’a pas pu être enregistrée."
 #: packages/ui/src/profile-status.ts
 msgid "The last attempt saved no facts. Fix the cause below, then try again."
 msgstr "La dernière tentative n’a enregistré aucun fait. Corrigez la cause ci-dessous, puis réessayez."
+
+#: packages/ui/src/getting-started.tsx
+msgid "The last review stopped before you approved a CV. Open it and start a new review from Run details."
+msgstr "La dernière relecture s’est arrêtée avant que vous approuviez un CV. Ouvrez la candidature et démarrez une nouvelle relecture depuis Détails de l’exécution."
 
 #. placeholder {0}: latest.authorModel
 #. placeholder {1}: latest.criticModel
