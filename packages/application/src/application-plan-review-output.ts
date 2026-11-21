@@ -53,24 +53,52 @@ export function normalizeApplicationPlanReviewOutput(
 }
 
 /**
- * Keeps an author's plan within the theme limit the provider's structured output drops. Themes come
- * most important first, so the extra ones are the least important; core areas that served only
- * those themes go with them. A Haiku author listing six themes failed every plan attempt on prod.
- * Anything else stays as returned, so the schema still rejects a malformed plan.
+ * Makes a theme's gap flag agree with its evidence. A gap that cites approved evidence is read by
+ * the plan's own leads: a core area built on it means the author found support, so it stops being a
+ * gap; otherwise it stays a gap and cites nothing. A theme that cites nothing is a gap. A Haiku
+ * author marked a theme as a gap yet cited chunks for it, which rejected every plan attempt on prod.
+ * The cited ids are still checked against the request afterwards.
+ */
+function consistentTheme(theme: unknown, servedByCoreArea: boolean): unknown {
+  if (!isRecord(theme) || !Array.isArray(theme.evidenceChunkIds)) return theme;
+  if (theme.gap === true && theme.evidenceChunkIds.length > 0) {
+    return servedByCoreArea ? { ...theme, gap: false } : { ...theme, evidenceChunkIds: [] };
+  }
+  if (theme.gap === false && theme.evidenceChunkIds.length === 0) {
+    return { ...theme, gap: true };
+  }
+  return theme;
+}
+
+/**
+ * Keeps an author's plan within the limits the provider's structured output drops. Themes come most
+ * important first, so past the theme limit the extra ones are the least important, and core areas
+ * that served only those themes go with them. A Haiku author listing six themes failed every plan
+ * attempt on prod. Each theme's gap flag is made to agree with its evidence. Anything else stays as
+ * returned, so the schema and the plan checks still reject a malformed plan.
  */
 export function normalizeApplicationPlanOutput(output: JsonObject): JsonObject {
-  if (!Array.isArray(output.themes) || output.themes.length <= maximumApplicationPlanThemes) {
-    return output;
-  }
-  const themes = output.themes.slice(0, maximumApplicationPlanThemes);
+  const returned = output.themes;
+  if (!Array.isArray(returned)) return output;
   const leads = output.leads;
-  if (!isRecord(leads) || !Array.isArray(leads.coreAreas)) return { ...output, themes };
-  const coreAreas = leads.coreAreas.filter(
-    (area) =>
-      !isRecord(area) ||
-      typeof area.themeRank !== "number" ||
-      area.themeRank <= maximumApplicationPlanThemes,
+  const coreAreas =
+    isRecord(leads) && Array.isArray(leads.coreAreas)
+      ? leads.coreAreas.filter(
+          (area) =>
+            !isRecord(area) ||
+            typeof area.themeRank !== "number" ||
+            area.themeRank <= maximumApplicationPlanThemes,
+        )
+      : undefined;
+  const servedRanks = new Set(
+    (coreAreas ?? []).flatMap((area) => (isRecord(area) ? [area.themeRank] : [])),
   );
+  const themes = returned
+    .slice(0, maximumApplicationPlanThemes)
+    .map((theme, index) => consistentTheme(theme, servedRanks.has(index + 1)));
+  const changed = themes.some((theme, index) => theme !== returned[index]);
+  if (!changed && returned.length <= maximumApplicationPlanThemes) return output;
+  if (!isRecord(leads) || coreAreas === undefined) return { ...output, themes } as JsonObject;
   return { ...output, themes, leads: { ...leads, coreAreas } } as JsonObject;
 }
 
