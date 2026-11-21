@@ -763,6 +763,10 @@ msgstr "{name} ({role}), under US$0.01 a draft"
 msgid "{name}, lines {0}"
 msgstr "{name}, lines {0}"
 
+#: packages/ui/src/next-step.ts
+msgid "{name}: {action}"
+msgstr "{name}: {action}"
+
 #: packages/ui/src/getting-started.tsx
 msgid "{name}: {detail}"
 msgstr "{name}: {detail}"
@@ -1171,6 +1175,10 @@ msgstr "Actual costs may differ. This excludes extra calls, retries, input growt
 #: apps/web/src/records.tsx
 msgid "Add a candidate"
 msgstr "Add a candidate"
+
+#: packages/ui/src/next-step.ts
+msgid "Add a CV or other documents in Career evidence, or tell your story in a conversation."
+msgstr "Add a CV or other documents in Career evidence, or tell your story in a conversation."
 
 #: packages/ui/src/getting-started.tsx
 msgid "Add a CV or other documents, or tell your story in a conversation."
@@ -7021,8 +7029,13 @@ msgid "Read the draft as it stands, without change marks"
 msgstr "Read the draft as it stands, without change marks"
 
 #: packages/ui/src/getting-started.tsx
+#: packages/ui/src/next-step.ts
 msgid "Read the draft, accept or reject each finding, then approve it."
 msgstr "Read the draft, accept or reject each finding, then approve it."
+
+#: packages/ui/src/next-step.ts
+msgid "Read the facts in Career profile, then confirm or fix them."
+msgstr "Read the facts in Career profile, then confirm or fix them."
 
 #: packages/ui/src/getting-started.tsx
 msgid "Read the facts taken from your documents, then confirm or fix them."
@@ -8334,6 +8347,10 @@ msgstr "Select all shown ({0})"
 msgid "Select an exact reviewed candidate profile before starting a review."
 msgstr "Select an exact reviewed candidate profile before starting a review."
 
+#: packages/ui/src/next-step.ts
+msgid "Select New application and paste the job you want."
+msgstr "Select New application and paste the job you want."
+
 #: apps/web/src/operator.tsx
 msgid "Select none"
 msgstr "Select none"
@@ -8809,7 +8826,7 @@ msgstr "Start runs and drafts"
 msgid "Start the review"
 msgstr "Start the review"
 
-#: packages/ui/src/getting-started.tsx
+#: packages/ui/src/next-step.ts
 msgid "Start the review to get a first draft."
 msgstr "Start the review to get a first draft."
 
@@ -9428,6 +9445,14 @@ msgstr "The critic's check did not finish, so your letter stands as drafted."
 msgid "The current model settings are unavailable."
 msgstr "The current model settings are unavailable."
 
+#: packages/ui/src/next-step.ts
+msgid "The CV is approved. Pick a template and export it."
+msgstr "The CV is approved. Pick a template and export it."
+
+#: packages/ui/src/next-step.ts
+msgid "The CV is downloaded. Select New application for your next job."
+msgstr "The CV is downloaded. Select New application for your next job."
+
 #: packages/ui/src/application-language.tsx
 msgid "The CV, cover letter and interview questions of new runs use this language."
 msgstr "The CV, cover letter and interview questions of new runs use this language."
@@ -9511,6 +9536,10 @@ msgstr "The final CV checks fail only on the gaps you marked as known. Approving
 #: packages/ui/src/app.tsx
 msgid "The finding decisions could not be completed."
 msgstr "The finding decisions could not be completed."
+
+#: packages/ui/src/next-step.ts
+msgid "The first draft is being written. Open the application to follow it."
+msgstr "The first draft is being written. Open the application to follow it."
 
 #: packages/ui/src/home-folders.tsx
 msgid "The folder could not be created. Try again."
@@ -9663,7 +9692,7 @@ msgstr "The language could not be saved."
 msgid "The last attempt saved no facts. Fix the cause below, then try again."
 msgstr "The last attempt saved no facts. Fix the cause below, then try again."
 
-#: packages/ui/src/getting-started.tsx
+#: packages/ui/src/next-step.ts
 msgid "The last review stopped before you approved a CV. Open it and start a new review from Run details."
 msgstr "The last review stopped before you approved a CV. Open it and start a new review from Run details."
 

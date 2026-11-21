@@ -33,17 +33,22 @@ function hintText(screen: HintedScreen): string {
  */
 export function ScreenHint({
   screen,
+  text,
   onOpenGuide,
 }: {
-  readonly screen: HintedScreen;
+  readonly screen?: HintedScreen;
+  /** A sentence worked out from the record, such as Home's next step, in place of the screen's. */
+  readonly text?: string;
   /** Opens Home, where the Getting started list is; absent where Home is not one step away. */
   readonly onOpenGuide?: (() => void) | undefined;
 }) {
   const { preference } = useDisplayPreference();
   if (preference.mode !== "guided") return null;
+  const sentence = text ?? (screen === undefined ? undefined : hintText(screen));
+  if (sentence === undefined) return null;
   return (
     <p className="screen-hint">
-      <span>{hintText(screen)}</span>
+      <span>{sentence}</span>
       {onOpenGuide === undefined ? null : (
         <button type="button" className="link-action" onClick={onOpenGuide}>
           {t`Back to Getting started`}
