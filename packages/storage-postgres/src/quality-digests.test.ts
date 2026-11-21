@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createPostgresQualityDigests } from "./quality-digests.js";
+import { createPostgresQualityDigests, spanDurationMs } from "./quality-digests.js";
 import { createTestSchema, runtimeRoleUrl } from "./test-schema.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
@@ -43,6 +43,7 @@ describe.runIf(connectionString !== undefined)("Postgres quality digests (#2916)
           name: "invoke_agent",
           status: "error",
           attributes: { "error.type": "provider-error" },
+          durationMs: null,
         },
       ]);
 
@@ -71,5 +72,14 @@ describe.runIf(connectionString !== undefined)("Postgres quality digests (#2916)
       await digests.close();
       await schema.drop();
     }
+  });
+});
+
+describe("spanDurationMs (#3251)", () => {
+  it("reads a finished span's duration and leaves an open or unreadable one out", () => {
+    expect(spanDurationMs("2026-11-16T10:00:00.000Z", "2026-11-16T10:00:01.250Z")).toBe(1250);
+    expect(spanDurationMs("2026-11-16T10:00:00.000Z", null)).toBeNull();
+    expect(spanDurationMs("2026-11-16T10:00:01.000Z", "2026-11-16T10:00:00.000Z")).toBeNull();
+    expect(spanDurationMs("bad", "2026-11-16T10:00:00.000Z")).toBeNull();
   });
 });

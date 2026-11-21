@@ -9,6 +9,8 @@ export interface QualitySweepSpan {
   readonly name: RunSpanName;
   readonly status: RunSpanStatus | null;
   readonly attributes: RunSpanAttributes;
+  /** Milliseconds from start to end; `null` while the span is open. */
+  readonly durationMs?: number | null;
 }
 
 /**
@@ -52,6 +54,13 @@ export interface QualityInsightRow {
 }
 
 const dayPattern = /^\d{4}-\d{2}-\d{2}$/u;
+
+/** A span's duration from its stored ISO times; `null` when open or unreadable. */
+export function spanDurationMs(startedAt: unknown, endedAt: unknown): number | null {
+  if (endedAt === null || endedAt === undefined) return null;
+  const ms = Date.parse(String(endedAt)) - Date.parse(String(startedAt));
+  return Number.isFinite(ms) && ms >= 0 ? ms : null;
+}
 
 function requireDay(day: string): string {
   if (!dayPattern.test(day)) throw new Error("A digest day is YYYY-MM-DD.");
@@ -103,7 +112,7 @@ export function createPostgresQualityDigests(options: PostgresSchemaOptions): Qu
     },
     spansBetween: async (organisationId, from, to) => {
       const rows = await pool.forTenant(requireTenantId(organisationId)).query(
-        `SELECT run_id, name, status, attributes FROM run_spans
+        `SELECT run_id, name, status, attributes, started_at, ended_at FROM run_spans
             WHERE started_at >= $1 AND started_at < $2`,
         [from.toISOString(), to.toISOString()],
       );
@@ -114,6 +123,7 @@ export function createPostgresQualityDigests(options: PostgresSchemaOptions): Qu
         attributes: (typeof row.attributes === "string"
           ? JSON.parse(row.attributes)
           : row.attributes) as RunSpanAttributes,
+        durationMs: spanDurationMs(row.started_at, row.ended_at),
       }));
     },
     listInsights: async () => {

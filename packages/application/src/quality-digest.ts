@@ -1,7 +1,9 @@
 import type { RunSpanAttributes, RunSpanName, RunSpanStatus } from "@draft-loop/domain/run-span";
 
+import { type DigestLatency, digestLatency } from "./latency-trend.js";
 import { type DigestQuality, digestQuality } from "./quality-trend.js";
 
+export * from "./latency-trend.js";
 export * from "./quality-trend.js";
 
 /**
@@ -17,6 +19,8 @@ export interface QualityDigestSpan {
   readonly name: RunSpanName;
   readonly status: RunSpanStatus | null;
   readonly attributes: RunSpanAttributes;
+  /** Milliseconds from start to end; `null` or absent while the span is open. */
+  readonly durationMs?: number | null;
 }
 
 export interface QualityDigestAttempts {
@@ -62,6 +66,8 @@ export interface QualityDigest {
   };
   /** Output quality from the day's `evaluate_run` spans (#3240). */
   readonly quality: DigestQuality;
+  /** Step latency from the day's finished spans (#3251). */
+  readonly latency: readonly DigestLatency[];
 }
 
 /** The most failure patterns one digest lists, the most frequent first. */
@@ -175,5 +181,6 @@ export function buildQualityDigest(input: {
       medianChunks: median(chunkCounts),
     },
     quality: digestQuality(input.spans),
+    latency: digestLatency(input.spans),
   };
 }
