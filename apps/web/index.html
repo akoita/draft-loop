@@ -26,17 +26,35 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="canonical" href="__SITE_ORIGIN__/" />
     <link rel="icon" href="/showcase/mark.svg" type="image/svg+xml" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "DraftLoop",
+        "url": "__SITE_ORIGIN__/",
+        "inLanguage": ["en", "fr"],
+        "description": "DraftLoop drafts a CV and a cover letter for each job from your own documents, and a second AI checks each claim."
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
-    <noscript>
-      <h1>DraftLoop</h1>
-      <p>
-        A CV and a cover letter for each job, drafted from your own documents and checked by a
-        second AI.
-      </p>
-      <p><a href="/about/">About DraftLoop</a> · <a href="/about/fr/">DraftLoop en français</a></p>
-    </noscript>
+    <!-- The landing page as plain HTML, so it paints and reads before the app's script runs;
+         the app replaces it on its first render. Keep it in step with src/landing.tsx. -->
+    <div id="root">
+      <div class="page-actions preferences-bar"></div>
+      <main class="sign-in landing">
+        <h1>DraftLoop</h1>
+        <p>
+          DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI
+          model writes, a model from another company checks each claim against your sources, and you
+          approve what goes out.
+        </p>
+        <footer>
+          <a href="/about/">About DraftLoop</a> · <a href="/about/fr/">DraftLoop en français</a> ·
+          <a href="/guide/">User guide</a>
+        </footer>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

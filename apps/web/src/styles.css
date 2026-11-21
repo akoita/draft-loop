@@ -639,6 +639,12 @@ a.help-menu-item[target="_blank"]::after {
   padding-inline: 1rem;
 }
 
+/* index.html's plain landing page holds the bar's place, so the page does not move when the app
+   renders the real bar. */
+.preferences-bar:empty {
+  min-height: 2rem;
+}
+
 .service-status {
   display: inline-flex;
   align-items: center;
