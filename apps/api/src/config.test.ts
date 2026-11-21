@@ -180,6 +180,8 @@ describe("readHostedStorageConfig", () => {
       databaseUrl: env.DRAFT_LOOP_DATABASE_URL,
       databaseSchema: "draft_loop",
       queueSchema: "draft_loop_queue",
+      databasePoolSize: 5,
+      queuePoolSize: 2,
       tenantId: "owner",
       blobs: { kind: "gcs", bucket: "draft-loop-local" },
     });

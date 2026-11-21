@@ -73,6 +73,7 @@ const cloudSql = await startConfiguredCloudSqlProxy(process.env, "iam");
 const tenancy = await openPostgresTenancy({
   connectionString: config.databaseUrl,
   schema: config.databaseSchema,
+  maxConnections: config.databasePoolSize,
 });
 const blobs = openTenantBlobs(config.blobs);
 // Claude on Vertex AI and OpenAI's EU endpoint with keys from Secret Manager, the self-hosted
@@ -123,6 +124,7 @@ const worker = await startWorker({
   queue: {
     connectionString: config.databaseUrl,
     schema: config.queueSchema,
+    maxConnections: config.queuePoolSize,
     onError: (error) =>
       console.error(logLine("ERROR", "run queue error", { err: errorFields(error) })),
   },

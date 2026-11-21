@@ -4,7 +4,7 @@ import {
   DeploymentAuthModeConfigError,
   readDeploymentAuthMode,
 } from "@draft-loop/application";
-import { readSpendPoolLimitUsd } from "@draft-loop/storage-postgres";
+import { readPoolSize, readSpendPoolLimitUsd } from "@draft-loop/storage-postgres";
 import { type BlobBackendConfig, readBlobBackend } from "./blob-backend.js";
 import { isProviderUrl, type OidcSettings } from "./oidc-sign-in.js";
 import { ownerTokenMinimumLength } from "./owner-access.js";
@@ -190,6 +190,9 @@ export interface HostedStorageConfig {
   readonly databaseUrl: string;
   readonly databaseSchema: string;
   readonly queueSchema: string;
+  /** Connections each instance may hold for storage and for the queue (`DRAFT_LOOP_*_POOL_SIZE`). */
+  readonly databasePoolSize: number;
+  readonly queuePoolSize: number;
   /**
    * The tenant the owner token acts in: required in owner mode, where it is the only tenant served,
    * and optional in sign-in mode, where each member acts in their own organisation.
@@ -201,6 +204,24 @@ export interface HostedStorageConfig {
   readonly maxSourceBytes?: number;
   /** The deployment's monthly model spend ceiling across organisations (#2459); none when unset. */
   readonly spendPoolUsd?: number;
+}
+
+/**
+ * An API instance's pools: storage serves each request in one short transaction and the queue only
+ * enqueues, so 5 and 2 connections leave room on the shared Cloud SQL instance for the worker and
+ * Keycloak.
+ */
+function apiPoolSizes(
+  env: NodeJS.ProcessEnv,
+): Pick<HostedStorageConfig, "databasePoolSize" | "queuePoolSize"> {
+  try {
+    return {
+      databasePoolSize: readPoolSize(env, "DRAFT_LOOP_DATABASE_POOL_SIZE", 5),
+      queuePoolSize: readPoolSize(env, "DRAFT_LOOP_QUEUE_POOL_SIZE", 2),
+    };
+  } catch (error) {
+    throw new ApiConfigError((error as Error).message);
+  }
 }
 
 function spendPoolLimit(env: NodeJS.ProcessEnv): number | undefined {
@@ -256,10 +277,12 @@ export function readHostedStorageConfig(
   }
   const maxSourceBytes = optionalSourceLimit(env);
   const spendPoolUsd = spendPoolLimit(env);
+  const pools = apiPoolSizes(env);
   return {
     databaseUrl: required(env, "DRAFT_LOOP_DATABASE_URL"),
     databaseSchema: schemaName(env, "DRAFT_LOOP_DATABASE_SCHEMA", "draft_loop"),
     queueSchema: schemaName(env, "DRAFT_LOOP_QUEUE_SCHEMA", "draft_loop_queue"),
+    ...pools,
     ...(tenantId === "" ? {} : { tenantId }),
     blobs: readBlobBackend(env),
     ...(maxSourceBytes === undefined ? {} : { maxSourceBytes }),

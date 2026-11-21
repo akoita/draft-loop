@@ -43,7 +43,17 @@ export interface CloudRunJobWakeOptions {
   /** The worker job's full name. */
   readonly jobName: string;
   readonly fetch?: typeof fetch;
+  /**
+   * After a started execution, wakes within this window start no other: the running worker claims
+   * the new job, since it stays up for its idle time (60 s) after its last job. A burst of queued
+   * jobs then opens one execution and one set of database connections, not one per job.
+   * 15 seconds by default.
+   */
+  readonly quietMs?: number;
+  readonly now?: () => number;
 }
+
+const defaultQuietMs = 15_000;
 
 /**
  * Starts one execution of the worker job through the Cloud Run Admin API, as the API's own service
@@ -54,7 +64,23 @@ export function cloudRunJobWake(options: CloudRunJobWakeOptions): WakeWorker {
     throw new WorkerWakeError("The worker job must be a full Cloud Run job name.");
   }
   const request = options.fetch ?? fetch;
+  const quietMs = options.quietMs ?? defaultQuietMs;
+  const now = options.now ?? Date.now;
+  let startedAt: number | undefined;
   return async () => {
+    if (startedAt !== undefined && now() - startedAt < quietMs) return;
+    // Claimed before the calls, so simultaneous wakes start one execution; a failure releases it.
+    const claimedAt = now();
+    startedAt = claimedAt;
+    try {
+      await start();
+    } catch (error) {
+      if (startedAt === claimedAt) startedAt = undefined;
+      throw error;
+    }
+  };
+
+  async function start(): Promise<void> {
     const tokenResponse = await request(metadataTokenUrl, {
       headers: { "Metadata-Flavor": "Google" },
     });
@@ -73,5 +99,5 @@ export function cloudRunJobWake(options: CloudRunJobWakeOptions): WakeWorker {
     if (!response.ok) {
       throw new WorkerWakeError(`Cloud Run refused to start the worker job: ${response.status}`);
     }
-  };
+  }
 }

@@ -105,6 +105,7 @@ export {
   type PlanAssignmentErrorCode,
   type PlanAssignmentInput,
 } from "./organisation-plans.js";
+export { PoolSizeError, readPoolSize } from "./pool-size.js";
 export {
   openPostgresCandidateKnowledgeStore,
   type PostgresCandidateKnowledgeStoreOptions,

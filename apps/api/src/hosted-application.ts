@@ -200,11 +200,13 @@ export async function openHostedTenants(
   const tenancy = await openPostgresTenancy({
     connectionString: config.databaseUrl,
     schema: config.databaseSchema,
+    maxConnections: config.databasePoolSize,
   });
   try {
     const queue = await openRunQueue({
       connectionString: config.databaseUrl,
       schema: config.queueSchema,
+      maxConnections: config.queuePoolSize,
     });
     const blobs = openTenantBlobs(config.blobs);
     return {

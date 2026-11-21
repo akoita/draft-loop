@@ -91,6 +91,8 @@ const directory =
     ? await createPostgresTenantDirectory({
         connectionString: storageConfig.databaseUrl,
         schema: storageConfig.databaseSchema,
+        // Sign-in lookups are one short query each; two connections keep the instance's total low.
+        maxConnections: 2,
       })
     : undefined;
 const auth: ApiAuthOptions =
