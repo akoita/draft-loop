@@ -22,6 +22,8 @@ describe("readWorkerConfig", () => {
       requireScreening: true,
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
       mode: { kind: "serve" },
+      databasePoolSize: 4,
+      queuePoolSize: 2,
     });
     expect(
       readWorkerConfig({ ...env, DRAFT_LOOP_ALLOW_PROVIDER_DATA: "true" }).allowProviderData,
@@ -182,5 +184,20 @@ describe("readMigrationConfig", () => {
         WorkerConfigError,
       );
     }
+  });
+});
+
+describe("worker pool sizes", () => {
+  it("takes the deployment's pool sizes and refuses one outside 1 to 50", () => {
+    expect(
+      readWorkerConfig({
+        ...env,
+        DRAFT_LOOP_DATABASE_POOL_SIZE: "3",
+        DRAFT_LOOP_QUEUE_POOL_SIZE: "1",
+      }),
+    ).toMatchObject({ databasePoolSize: 3, queuePoolSize: 1 });
+    expect(() => readWorkerConfig({ ...env, DRAFT_LOOP_QUEUE_POOL_SIZE: "0" })).toThrow(
+      WorkerConfigError,
+    );
   });
 });

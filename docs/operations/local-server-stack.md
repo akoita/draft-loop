@@ -260,6 +260,8 @@ local values; a deployment sets its own.
 | `DRAFT_LOOP_DATABASE_URL`           | API, worker   | The runtime role's connection                                                 |
 | `DRAFT_LOOP_DATABASE_SCHEMA`        | all           | Storage schema, default `draft_loop`                                          |
 | `DRAFT_LOOP_QUEUE_SCHEMA`           | all           | Run queue schema, default `draft_loop_queue`                                  |
+| `DRAFT_LOOP_DATABASE_POOL_SIZE`     | API, worker   | Storage connections per process, 1 to 50; default 5 (API), 4 (worker)         |
+| `DRAFT_LOOP_QUEUE_POOL_SIZE`        | API, worker   | Run queue connections per process, 1 to 50; default 2                         |
 | `DRAFT_LOOP_MIGRATION_DATABASE_URL` | migration job | The schema owner's connection                                                 |
 | `DRAFT_LOOP_RUNTIME_ROLE`           | migration job | The role the API and the worker connect as                                    |
 | `DRAFT_LOOP_RUNTIME_MEMBERS`        | migration job | Cloud SQL IAM users made members of the runtime role, comma-separated         |

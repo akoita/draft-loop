@@ -90,6 +90,41 @@ describe("cloudRunJobWake", () => {
     );
   });
 
+  it("starts one execution for a burst of wakes, and another once the quiet window passes", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) =>
+      String(input).startsWith("http://metadata.google.internal/")
+        ? Response.json({ access_token: "synthetic-token" })
+        : Response.json({ name: "operation" }),
+    );
+    let clock = 0;
+    const wake = cloudRunJobWake({ jobName, fetch, quietMs: 15_000, now: () => clock });
+    const starts = () => fetch.mock.calls.filter(([url]) => String(url).endsWith(":run")).length;
+
+    await Promise.all([wake(), wake(), wake()]);
+    clock = 14_999;
+    await wake();
+    expect(starts()).toBe(1);
+
+    clock = 15_000;
+    await wake();
+    expect(starts()).toBe(2);
+  });
+
+  it("lets the next wake try again after a refused start", async () => {
+    let refuse = true;
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) =>
+      String(input).startsWith("http://metadata.google.internal/")
+        ? Response.json({ access_token: "synthetic-token" })
+        : new Response("", { status: refuse ? 503 : 200 }),
+    );
+    const wake = cloudRunJobWake({ jobName, fetch, now: () => 0 });
+
+    await expect(wake()).rejects.toThrow(WorkerWakeError);
+    refuse = false;
+    await wake();
+    expect(fetch).toHaveBeenCalledTimes(4);
+  });
+
   it("accepts only a full Cloud Run job name", () => {
     expect(isCloudRunJobName(jobName)).toBe(true);
     for (const name of ["draft-loop-worker", "projects/x/jobs/y", `${jobName}/executions/e`]) {

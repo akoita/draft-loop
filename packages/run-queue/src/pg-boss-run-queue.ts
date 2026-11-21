@@ -35,6 +35,8 @@ export interface RunQueueOptions {
   readonly connectionString: string;
   /** The schema the queue's tables live in, apart from storage. Defaults to `draft_loop_queue`. */
   readonly schema?: string;
+  /** The queue's own connection pool; pg-boss opens 10 when unset. */
+  readonly maxConnections?: number;
 }
 
 export interface EnqueueRunOptions {
@@ -117,6 +119,7 @@ export function bossOptions(
   return {
     connectionString: options.connectionString,
     schema: queueSchema(options),
+    ...(options.maxConnections === undefined ? {} : { max: options.maxConnections }),
     schedule: false,
     registerInstance: false,
     ...overrides,

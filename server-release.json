@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Operator access asks for a fresh second step instead of vanishing",
+  "releaseName": "The database keeps room for everyone during busy moments",
   "stageIssue": 1359,
-  "milestone": 110,
-  "summary": "A named operator's code or passkey counts for operator routes for 12 hours, while a session lasts up to 7 days. Once it ages out, the account menu now shows Confirm operator access in place of Operator; it asks for the sign-in again, second step included, and the controls come back. Before, the Operator entry vanished without a word until the next full sign-in. This release also exports run spans to Cloud Trace with no content (off unless the deployment turns it on), lets Error Reporting group API and worker errors, and shows output quality with its weekly trend in the daily digest.",
+  "milestone": 111,
+  "summary": "The API, the worker and Keycloak now hold far fewer database connections, and a burst of queued work starts one worker instead of one per job, so the database no longer runs out of connections during deploys or busy moments. The API and the worker refuse a single-region Vertex AI location for current Claude models at startup, and the Claude adapter can retry a declined call once on a fallback model (off until a deployment turns it on).",
   "knownLimitations": "Inviting people to a team still goes through the API or an operator; the account menu does not list the team's people yet. Starting from a conversation needs the server's interviewer model. Agents cannot add text evidence yet (#2751). Credit packs sell only where the operator has set up Stripe; staging uses Stripe test mode. Self-service sign-up needs an invite. The interview guide's paid walk is partial (#2623). The dating of relative source ages is not yet checked against a live search (#2579). Claude runs on the direct Claude API, outside the EU, until Claude on Vertex AI is available (#1564). French is beta until the French quality gate (milestone 83) runs. The legal pages show placeholder publisher details until the deployment sets them. Deleting an account from the screen works only for a person alone in their organisation; a team owner asks an operator. The readable copy does not yet include the career interview or research briefs."
 }

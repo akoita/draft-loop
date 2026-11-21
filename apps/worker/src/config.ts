@@ -5,7 +5,7 @@ import {
   readDeploymentAuthMode,
   readRunBudgetCeiling,
 } from "@draft-loop/application";
-import { parseRuntimeRoleMembers } from "@draft-loop/storage-postgres";
+import { parseRuntimeRoleMembers, readPoolSize } from "@draft-loop/storage-postgres";
 
 import { type BlobBackendConfig, readBlobBackend } from "./blob-backend.js";
 import { WorkerConfigError } from "./config-error.js";
@@ -55,6 +55,9 @@ export interface WorkerConfig {
    * had no job for `idleMs`, for a worker that runs as a Cloud Run job.
    */
   readonly mode: { readonly kind: "serve" } | { readonly kind: "drain"; readonly idleMs: number };
+  /** Connections this process may hold for storage and for the queue (`DRAFT_LOOP_*_POOL_SIZE`). */
+  readonly databasePoolSize: number;
+  readonly queuePoolSize: number;
 }
 
 export interface MigrationConfig {
@@ -162,7 +165,25 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     ...(criticFallback === undefined ? {} : { criticFallback }),
     ...(readyFile === undefined ? {} : { readyFile }),
     mode: workerMode(env),
+    ...workerPoolSizes(env),
   };
+}
+
+/**
+ * The worker runs one job at a time, so 4 storage and 2 queue connections suffice, and two
+ * executions overlapping during a deploy still fit staging's 25 next to the API and Keycloak.
+ */
+function workerPoolSizes(
+  env: NodeJS.ProcessEnv,
+): Pick<WorkerConfig, "databasePoolSize" | "queuePoolSize"> {
+  try {
+    return {
+      databasePoolSize: readPoolSize(env, "DRAFT_LOOP_DATABASE_POOL_SIZE", 4),
+      queuePoolSize: readPoolSize(env, "DRAFT_LOOP_QUEUE_POOL_SIZE", 2),
+    };
+  } catch (error) {
+    throw new WorkerConfigError((error as Error).message);
+  }
 }
 
 const idleMsRange = { min: 1_000, max: 3_600_000, fallback: 60_000 };
