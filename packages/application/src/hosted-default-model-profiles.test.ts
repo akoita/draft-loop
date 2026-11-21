@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
-
-import type { StartRunCommand } from "./index.js";
-
 import {
   presetProfileReferencesFor,
   withPresetModelProfiles,
 } from "./hosted-default-model-profiles.js";
+import type { StartRunCommand } from "./index.js";
 import { getModelProfilePreset } from "./model-profile-catalog.js";
 import { defaultModelProfileRegistry } from "./model-profiles.js";
 import { resolveRequestedRunModelProfiles } from "./run-model-profiles.js";
