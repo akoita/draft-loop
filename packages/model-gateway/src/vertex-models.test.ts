@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { vertexBaseUrl, VertexLocationError } from "./vertex-location.js";
+import { VertexLocationError, vertexBaseUrl } from "./vertex-location.js";
 import {
   vertexClaudeLocation,
   vertexClaudeModelIds,
