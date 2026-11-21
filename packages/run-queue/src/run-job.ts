@@ -18,6 +18,14 @@ export const runJobSchema = z.strictObject({
     .string()
     .regex(/^[\da-f]{32}$/u)
     .optional(),
+  /**
+   * The W3C `traceparent` of the API request that queued the job (#3238), so the worker's exported
+   * spans continue that request's trace. Ids and flags only, like the rest of the payload.
+   */
+  traceparent: z
+    .string()
+    .regex(/^00-[\da-f]{32}-[\da-f]{16}-[\da-f]{2}$/u)
+    .optional(),
 });
 
 export type RunJob = z.infer<typeof runJobSchema>;

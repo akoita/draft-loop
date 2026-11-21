@@ -12,9 +12,11 @@ import { contentFreeSpanAttributes, type RunSpan, type RunTracer } from "@draft-
 import {
   type Context,
   context,
+  ROOT_CONTEXT,
   type Span,
   SpanKind,
   SpanStatusCode,
+  TraceFlags,
   type Tracer,
   trace,
 } from "@opentelemetry/api";
@@ -36,8 +38,11 @@ export interface TraceExportConfig {
 }
 
 export interface TraceExport {
-  /** The recorder with every span mirrored into the exported trace; flushing also exports. */
-  readonly wrap: (recorder: RunSpanRecorder) => RunSpanRecorder;
+  /**
+   * The recorder with every span mirrored into the exported trace; flushing also exports. With the
+   * queuing request's `traceparent`, the run's spans continue that request's trace.
+   */
+  readonly wrap: (recorder: RunSpanRecorder, traceparent?: string) => RunSpanRecorder;
   /** Exports what is queued and stops; never rejects. */
   readonly shutdown: () => Promise<void>;
 }
@@ -101,8 +106,8 @@ export function createTraceExport(
     }
   };
   return {
-    wrap: (recorder) => ({
-      tracer: mirroredTracer(recorder.tracer, tracer, options.onError),
+    wrap: (recorder, traceparent) => ({
+      tracer: mirroredTracer(recorder.tracer, tracer, options.onError, remoteParent(traceparent)),
       flush: async () => {
         await recorder.flush();
         await quietly(() => provider.forceFlush());
@@ -110,6 +115,26 @@ export function createTraceExport(
     }),
     shutdown: () => quietly(() => provider.shutdown()),
   };
+}
+
+const traceparentPattern = /^00-([\da-f]{32})-([\da-f]{16})-[\da-f]{2}$/u;
+
+/**
+ * The context of the queuing request's span, for the run's top spans to continue (#3238). It is
+ * marked sampled whatever the request's flag says, because every run is exported; an absent or
+ * malformed value starts a trace of its own.
+ */
+export function remoteParent(traceparent: string | undefined): Context | undefined {
+  const match = traceparent === undefined ? null : traceparentPattern.exec(traceparent);
+  if (match === null) return undefined;
+  const [, traceId = "", spanId = ""] = match;
+  if (/^0+$/u.test(traceId) || /^0+$/u.test(spanId)) return undefined;
+  return trace.setSpanContext(ROOT_CONTEXT, {
+    traceId,
+    spanId,
+    traceFlags: TraceFlags.SAMPLED,
+    isRemote: true,
+  });
 }
 
 /**
@@ -120,6 +145,7 @@ export function mirroredTracer(
   primary: RunTracer,
   otel: Tracer,
   onError?: (error: unknown) => void,
+  rootParent?: Context,
 ): RunTracer {
   const pairs = new WeakMap<RunSpan, { readonly primary: RunSpan; readonly otel?: Span }>();
   let reported = false;
@@ -145,7 +171,7 @@ export function mirroredTracer(
       const otelSpan = guard(() => {
         const parentContext: Context =
           parentPair?.otel === undefined
-            ? context.active()
+            ? (rootParent ?? context.active())
             : trace.setSpan(context.active(), parentPair.otel);
         return otel.startSpan(
           name,

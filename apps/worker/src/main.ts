@@ -144,7 +144,7 @@ const worker = await startWorker({
           console.error(logLine("ERROR", "run span not saved", { err: errorFields(error) })),
       });
       // The same spans in Cloud Trace when the deployment turns export on (#3238).
-      return traceExport === undefined ? recorder : traceExport.wrap(recorder);
+      return traceExport === undefined ? recorder : traceExport.wrap(recorder, job.traceparent);
     },
     ...(criticFallback === undefined
       ? {}

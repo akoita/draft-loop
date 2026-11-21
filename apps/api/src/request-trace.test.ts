@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   currentRequestId,
+  currentTraceparent,
   registerRequestTrace,
   requestIdFrom,
   traceFields,
+  traceparentFor,
 } from "./request-trace.js";
 
 describe("request ids", () => {
@@ -42,6 +44,40 @@ describe("request ids", () => {
     });
     expect((await app.inject({ method: "GET", url: "/" })).json()).toEqual({ id: "request-1" });
     expect(currentRequestId()).toBeUndefined();
+    await app.close();
+  });
+
+  it("keeps the incoming traceparent for queued work, or opens a span in the request's trace (#3238)", () => {
+    const traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+    const header = `00-${traceId}-00f067aa0ba902b7-00`;
+    expect(traceparentFor(traceId, header)).toBe(header);
+    expect(traceparentFor(traceId, header.toUpperCase())).toBe(header);
+    for (const other of [
+      undefined,
+      `00-${"1".repeat(32)}-00f067aa0ba902b7-01`,
+      `00-${traceId}-${"0".repeat(16)}-01`,
+      `01-${traceId}-00f067aa0ba902b7-01`,
+    ]) {
+      expect(traceparentFor(traceId, other)).toMatch(
+        new RegExp(`^00-${traceId}-[\\da-f]{16}-01$`, "u"),
+      );
+    }
+    expect(traceparentFor("request-1", header)).toBeUndefined();
+  });
+
+  it("gives everything the handler runs the request's traceparent (#3238)", async () => {
+    const traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+    const header = `00-${traceId}-00f067aa0ba902b7-01`;
+    const app = Fastify({ genReqId: (request) => requestIdFrom(request.headers.traceparent) });
+    registerRequestTrace(app);
+    app.get("/", async () => ({ traceparent: currentTraceparent() ?? null }));
+    const response = await app.inject({
+      method: "GET",
+      url: "/",
+      headers: { traceparent: header },
+    });
+    expect(response.json()).toEqual({ traceparent: header });
+    expect(currentTraceparent()).toBeUndefined();
     await app.close();
   });
 });
