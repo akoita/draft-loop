@@ -673,6 +673,14 @@ msgstr "{first} et {second}"
 msgid "{first}, {second} and {third}"
 msgstr "{first}, {second} et {third}"
 
+#: packages/ui/src/run-details.tsx
+msgid "{fromModel} declined the {stepName} call in round {round} ({category}), so {toModel} answered it."
+msgstr "{fromModel} a refusé l'appel de {stepName} au tour {round} ({category}), donc {toModel} y a répondu."
+
+#: packages/ui/src/run-details.tsx
+msgid "{fromModel} declined the {stepName} call in round {round}, so {toModel} answered it."
+msgstr "{fromModel} a refusé l'appel de {stepName} au tour {round}, donc {toModel} y a répondu."
+
 #: packages/ui/src/review-panels.tsx
 msgid "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
 msgstr "{hiddenCount, plural, one {Afficher # événement antérieur} other {Afficher # événements antérieurs}}"
@@ -2765,6 +2773,10 @@ msgstr "Scénario du relecteur"
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Critical"
 msgstr "Critique"
+
+#: packages/ui/src/run-details.tsx
+msgid "critique"
+msgstr "critique"
 
 #: packages/ui/src/run-stage-track.tsx
 msgid "Critique"
@@ -7977,6 +7989,10 @@ msgstr "relectures"
 msgid "Revise"
 msgstr "Réviser"
 
+#: packages/ui/src/run-details.tsx
+msgid "revision"
+msgstr "révision"
+
 #: packages/ui/src/run-steps.tsx
 msgid "Revision"
 msgstr "Révision"
@@ -11535,6 +11551,10 @@ msgstr "Raisonnement du rédacteur"
 #: packages/ui/src/model-preset-cards.tsx
 msgid "writes ·"
 msgstr "rédige ·"
+
+#: packages/ui/src/run-details.tsx
+msgid "writing"
+msgstr "rédaction"
 
 #: apps/web/src/application-material.tsx
 msgid "Writing check"

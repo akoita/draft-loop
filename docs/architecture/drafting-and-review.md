@@ -867,6 +867,19 @@ Run details then says which critic replaced which, the error class and the round
 warns when the fallback comes from the author's company, because the review is no
 longer cross-company.
 
+### Claude refusal fallback
+
+When Claude declines a call, the Anthropic adapter can retry it once on a fallback
+model with the same request. Claude may credit the declined call; the run's cost counts
+both calls at their own rates.
+
+Run details then names each declined call: its step and round, the model that declined,
+the model that answered and the refusal's category. The fallback's answer is the call's
+result, so the run needs nothing from the person.
+
+Planned (#3260): the server setting that turns it on, with its kill switch and cost cap.
+Until then no deployment uses it.
+
 ## Deterministic quality warnings
 
 Validators that need no model add these findings. They never block approval

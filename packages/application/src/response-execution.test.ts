@@ -42,6 +42,15 @@ describe("response execution", () => {
     expect(plain).not.toHaveProperty("cacheWriteInputTokens");
   });
 
+  it("records the model Claude's refusal fell back from, and nothing on a plain call (#3120)", () => {
+    const usage = { inputTokens: 1, outputTokens: 1, totalTokens: 2 };
+    const refusalFallback = { fromModel: "claude-sonnet-5-5", category: "cyber", credit: true };
+    expect(responseExecution({ ...response(usage), refusalFallback }, {}).refusalFallback).toEqual(
+      refusalFallback,
+    );
+    expect(responseExecution(response(usage), {})).not.toHaveProperty("refusalFallback");
+  });
+
   it("adds the cache counts of a patch attempt to the revision that followed it", () => {
     const added = withAddedUsage(
       response({ inputTokens: 100, outputTokens: 10, totalTokens: 110, cachedInputTokens: 90 }),

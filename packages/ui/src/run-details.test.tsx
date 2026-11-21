@@ -496,3 +496,36 @@ describe("the critic fallback on Run details (#3123)", () => {
     expect(html).toContain("critic-fallback-warning");
   });
 });
+
+describe("Claude's refusal fallback on Run details (#3120)", () => {
+  it("names each declined call and the model that answered it, and nothing otherwise", () => {
+    const html = drawerOf(
+      render({
+        ...fixture,
+        refusalFallbacks: [
+          {
+            step: "revision",
+            round: 2,
+            fromModel: "claude-sonnet-5-5",
+            toModel: "claude-sonnet-5",
+            category: "cyber",
+          },
+          {
+            step: "author",
+            round: 1,
+            fromModel: "claude-sonnet-5-5",
+            toModel: "claude-sonnet-5",
+            category: null,
+          },
+        ],
+      }),
+    );
+    expect(html).toContain(
+      "claude-sonnet-5-5 declined the revision call in round 2 (cyber), so claude-sonnet-5 answered it.",
+    );
+    expect(html).toContain(
+      "claude-sonnet-5-5 declined the writing call in round 1, so claude-sonnet-5 answered it.",
+    );
+    expect(drawerOf(render(fixture))).not.toContain("declined the");
+  });
+});

@@ -126,6 +126,9 @@ export async function saveTypedHistory(
         ...(executionRecord.criticFallback === undefined
           ? {}
           : { criticFallback: { ...executionRecord.criticFallback } }),
+        ...(executionRecord.refusalFallback === undefined
+          ? {}
+          : { refusalFallback: { ...executionRecord.refusalFallback } }),
       },
     });
   }

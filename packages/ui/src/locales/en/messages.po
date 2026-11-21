@@ -679,6 +679,14 @@ msgstr "{first} and {second}"
 msgid "{first}, {second} and {third}"
 msgstr "{first}, {second} and {third}"
 
+#: packages/ui/src/run-details.tsx
+msgid "{fromModel} declined the {stepName} call in round {round} ({category}), so {toModel} answered it."
+msgstr "{fromModel} declined the {stepName} call in round {round} ({category}), so {toModel} answered it."
+
+#: packages/ui/src/run-details.tsx
+msgid "{fromModel} declined the {stepName} call in round {round}, so {toModel} answered it."
+msgstr "{fromModel} declined the {stepName} call in round {round}, so {toModel} answered it."
+
 #: packages/ui/src/review-panels.tsx
 msgid "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
 msgstr "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
@@ -2771,6 +2779,10 @@ msgstr "Critic scenario"
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Critical"
 msgstr "Critical"
+
+#: packages/ui/src/run-details.tsx
+msgid "critique"
+msgstr "critique"
 
 #: packages/ui/src/run-stage-track.tsx
 msgid "Critique"
@@ -7983,6 +7995,10 @@ msgstr "reviews"
 msgid "Revise"
 msgstr "Revise"
 
+#: packages/ui/src/run-details.tsx
+msgid "revision"
+msgstr "revision"
+
 #: packages/ui/src/run-steps.tsx
 msgid "Revision"
 msgstr "Revision"
@@ -11541,6 +11557,10 @@ msgstr "Writer reasoning"
 #: packages/ui/src/model-preset-cards.tsx
 msgid "writes ·"
 msgstr "writes ·"
+
+#: packages/ui/src/run-details.tsx
+msgid "writing"
+msgstr "writing"
 
 #: apps/web/src/application-material.tsx
 msgid "Writing check"
