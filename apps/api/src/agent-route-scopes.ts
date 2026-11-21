@@ -137,6 +137,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "GET /v1/operator/feedback/:noteId",
   "GET /v1/operator/organisations/:organisationId/credits",
   "GET /v1/operator/organisations/:organisationId/runs/:runId/trace",
+  "GET /v1/operator/usage-funnel",
   "GET /v1/organisation/credits",
   "GET /v1/organisation/members",
   "GET /v1/service-notice",

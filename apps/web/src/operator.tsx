@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { ApiClient } from "./api-client.js";
 import { feedbackReference } from "./feedback-model.js";
 import { FeedbackReplies, FeedbackReplyForm, replyToFeedback } from "./operator-feedback-reply.js";
+import { UsageFunnelSection } from "./operator-funnel.js";
 import { ListMore, ListSearch, useBackgroundRefresh, usePagedList } from "./operator-list.js";
 import {
   appendUnique,
@@ -736,7 +737,7 @@ export function FeedbackSection({
 }
 
 /** The operator page's parts; one shows at a time, so a long list never hides the others. */
-export type OperatorView = "feedback" | "waitlist" | "invites" | "trace";
+export type OperatorView = "feedback" | "waitlist" | "invites" | "usage" | "trace";
 
 export interface OperatorPageProps {
   readonly client: ApiClient;
@@ -942,9 +943,10 @@ export function OperatorPage({
     feedback: t`Feedback`,
     waitlist: t`Waitlist`,
     invites: t`Invites`,
+    usage: t`Usage`,
     trace: t`Run trace`,
   };
-  const countLabel: Record<Exclude<OperatorView, "trace">, (count: number) => string> = {
+  const countLabel: Record<Exclude<OperatorView, "trace" | "usage">, (count: number) => string> = {
     feedback: (count) => t`${count} new`,
     waitlist: (count) => t`${count} waiting`,
     invites: (count) => t`${count} not used yet`,
@@ -974,8 +976,8 @@ export function OperatorPage({
         {t`What members tell you, the beta's waitlist, its invites and a run's trace. Each invite and trace read is written to the audit log. The lists update every 30 seconds.`}
       </p>
       <nav className="operator-views" aria-label={t`Operator sections`}>
-        {(["feedback", "waitlist", "invites", "trace"] as const).map((part) => {
-          const count = part === "trace" ? undefined : counts[part];
+        {(["feedback", "waitlist", "invites", "usage", "trace"] as const).map((part) => {
+          const count = part === "trace" || part === "usage" ? undefined : counts[part];
           return (
             <button
               key={part}
@@ -985,7 +987,7 @@ export function OperatorPage({
               onClick={() => setView(part)}
             >
               {viewLabel[part]}
-              {count === undefined || part === "trace" ? null : (
+              {count === undefined || part === "trace" || part === "usage" ? null : (
                 <span className="operator-view-count"> · {countLabel[part](count)}</span>
               )}
             </button>
@@ -1010,6 +1012,8 @@ export function OperatorPage({
         />
       ) : view === "trace" ? (
         <RunTraceSection client={client} target={traceTarget} />
+      ) : view === "usage" ? (
+        <UsageFunnelSection client={client} />
       ) : view === "invites" ? (
         <InvitesSection
           state={invites.state}

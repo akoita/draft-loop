@@ -27,6 +27,7 @@ import type { PostgresSchemaOptions } from "./postgres-storage.js";
 import { createSqlClient, type SqlClient, type SqlExecutor, type SqlRow } from "./sql-client.js";
 import { createSupportUsage, type SupportUsage } from "./support-usage.js";
 import { tenantDirectoryMigration } from "./tenant-directory-migration.js";
+import { createUsageFunnelReads, type UsageFunnelReads } from "./usage-funnel-reads.js";
 
 /** The tenant directory on Postgres, with the pool it opened and its members' settings. */
 export interface PostgresTenantDirectory extends TenantDirectory {
@@ -39,6 +40,8 @@ export interface PostgresTenantDirectory extends TenantDirectory {
   readonly feedback: FeedbackStore;
   /** When each organisation was last active, for the beta's retention (#2538). */
   readonly organisationActivity: OrganisationActivity;
+  /** The operator's content-free usage funnel reads (#2834). */
+  readonly usageFunnel: UsageFunnelReads;
   /** The support assistant's daily questions and spend, shared by every API instance. */
   readonly supportUsage: SupportUsage;
   readonly liveVoiceUsage: LiveVoiceUsage;
@@ -315,6 +318,7 @@ export async function createPostgresTenantDirectory(
     betaWaitlist: createBetaWaitlist(client),
     feedback: createPostgresFeedback(client),
     organisationActivity: createOrganisationActivity(client),
+    usageFunnel: createUsageFunnelReads(client),
     supportUsage: createSupportUsage(client),
     liveVoiceUsage: createLiveVoiceUsage(client),
     close: () => client.close(),

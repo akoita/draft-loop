@@ -8970,6 +8970,138 @@
           "ticket_id"
         ]
       },
+      "UsageFunnelInput": {
+        "type": "object",
+        "properties": {
+          "weeks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "weekStart": {
+                  "type": "string",
+                  "description": "Monday of the week, YYYY-MM-DD, UTC."
+                },
+                "signUps": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Members who first signed in that week."
+                },
+                "firsts": {
+                  "type": "object",
+                  "properties": {
+                    "signedIn": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "evidence": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "briefReviewed": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "draftFinished": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "approved": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "exported": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "prepared": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "signedIn",
+                    "evidence",
+                    "briefReviewed",
+                    "draftFinished",
+                    "approved",
+                    "exported",
+                    "prepared"
+                  ],
+                  "description": "Organisations that reached each step for the first time."
+                },
+                "activeOrganisations": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "weekStart",
+                "signUps",
+                "firsts",
+                "activeOrganisations"
+              ]
+            }
+          },
+          "cohort": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "step": {
+                  "type": "string",
+                  "enum": [
+                    "signedIn",
+                    "evidence",
+                    "briefReviewed",
+                    "draftFinished",
+                    "approved",
+                    "exported",
+                    "prepared"
+                  ]
+                },
+                "reached": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "fromPrevious": {
+                  "description": "Share of the previous step's organisations, 0 to 1; null for the first.",
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "step",
+                "reached",
+                "fromPrevious"
+              ]
+            },
+            "description": "Organisations first signed in during the window, and how far each got."
+          },
+          "organisations": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "weeks",
+          "cohort",
+          "organisations"
+        ]
+      },
       "UsageLineInput": {
         "type": "object",
         "properties": {
@@ -18748,6 +18880,142 @@
           "text",
           "sections",
           "ticket_id"
+        ],
+        "additionalProperties": false
+      },
+      "UsageFunnel": {
+        "type": "object",
+        "properties": {
+          "weeks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "weekStart": {
+                  "type": "string",
+                  "description": "Monday of the week, YYYY-MM-DD, UTC."
+                },
+                "signUps": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Members who first signed in that week."
+                },
+                "firsts": {
+                  "type": "object",
+                  "properties": {
+                    "signedIn": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "evidence": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "briefReviewed": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "draftFinished": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "approved": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "exported": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "prepared": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "signedIn",
+                    "evidence",
+                    "briefReviewed",
+                    "draftFinished",
+                    "approved",
+                    "exported",
+                    "prepared"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Organisations that reached each step for the first time."
+                },
+                "activeOrganisations": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "weekStart",
+                "signUps",
+                "firsts",
+                "activeOrganisations"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "cohort": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "step": {
+                  "type": "string",
+                  "enum": [
+                    "signedIn",
+                    "evidence",
+                    "briefReviewed",
+                    "draftFinished",
+                    "approved",
+                    "exported",
+                    "prepared"
+                  ]
+                },
+                "reached": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "fromPrevious": {
+                  "description": "Share of the previous step's organisations, 0 to 1; null for the first.",
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "step",
+                "reached",
+                "fromPrevious"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Organisations first signed in during the window, and how far each got."
+          },
+          "organisations": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "weeks",
+          "cohort",
+          "organisations"
         ],
         "additionalProperties": false
       },
@@ -35904,6 +36172,67 @@
             }
           },
           "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/usage-funnel": {
+      "get": {
+        "summary": "Read the usage funnel as the operator",
+        "description": "Operator only. For each of the last `weeks` weeks (Monday to Sunday, UTC, the current one last): members who first signed in, organisations that first added career evidence, reviewed a job brief, finished a draft, approved one, exported one and saved a Prepare item, and organisations active that week; then the window's sign-in cohort and its drop-off between steps. Counts only: no organisation is named or shown alone, and no candidate material is read.",
+        "parameters": [
+          {
+            "schema": {
+              "default": 8,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 26
+            },
+            "in": "query",
+            "name": "weeks",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageFunnel"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
             "description": "Default Response",
             "content": {
               "application/json": {

@@ -389,6 +389,11 @@ msgstr "{0} of {1} seats used, {2} invites not used yet, {3} left."
 msgid "{0} of {requirementTotal} covered · {1} of {responsibilityTotal} covered"
 msgstr "{0} of {requirementTotal} covered · {1} of {responsibilityTotal} covered"
 
+#. placeholder {0}: funnel.organisations
+#: apps/web/src/operator-funnel.tsx
+msgid "{0} organisations read in all."
+msgstr "{0} organisations read in all."
+
 #. placeholder {0}: role === "author" ? "Author" : "Critic"
 #: packages/ui/src/model-profile-picker.tsx
 msgid "{0} profile"
@@ -1166,6 +1171,7 @@ msgstr "Acknowledgement required"
 msgid "Actions"
 msgstr "Actions"
 
+#: apps/web/src/operator-funnel.tsx
 #: packages/ui/src/review.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/writing-policy-history.tsx
@@ -1305,6 +1311,10 @@ msgstr "Added {when}"
 #: packages/ui/src/career-evidence.ts
 msgid "Added a new version of that file to {displayName}."
 msgstr "Added a new version of that file to {displayName}."
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Added career evidence"
+msgstr "Added career evidence"
 
 #: packages/ui/src/career-evidence.ts
 msgid "Added to {displayName}."
@@ -1610,6 +1620,10 @@ msgstr "Approved"
 #: packages/ui/src/review-footer.tsx
 msgid "Approved · ready to export"
 msgstr "Approved · ready to export"
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Approved a draft"
+msgstr "Approved a draft"
 
 #. placeholder {0}: countedNouns.round(round)
 #: packages/ui/src/run-stage-track.tsx
@@ -2630,6 +2644,10 @@ msgstr "Could not load that reviewed profile version. Choose it again or load by
 #: packages/ui/src/profile.tsx
 msgid "Could not load that saved profile. Choose it again or load by name."
 msgstr "Could not load that saved profile. Choose it again or load by name."
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Counts only, from existing records: no organisation is named or shown alone, and no candidate material is read. Weeks run Monday to Sunday, UTC."
+msgstr "Counts only, from existing records: no organisation is named or shown alone, and no candidate material is read. Weeks run Monday to Sunday, UTC."
 
 #: apps/web/src/application-material-model.ts
 msgid "Cover letter"
@@ -3691,6 +3709,7 @@ msgstr "Export this file…"
 msgid "Export…"
 msgstr "Export…"
 
+#: apps/web/src/operator-funnel.tsx
 #: packages/ui/src/home-model.ts
 msgid "Exported"
 msgstr "Exported"
@@ -3936,6 +3955,10 @@ msgstr "Finish the workspace setup above."
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Finished"
 msgstr "Finished"
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Finished a draft"
+msgstr "Finished a draft"
 
 #: packages/ui/src/workspace-setup.tsx
 msgid "First steps"
@@ -5216,6 +5239,10 @@ msgstr "Medium"
 msgid "Member"
 msgstr "Member"
 
+#: apps/web/src/operator-funnel.tsx
+msgid "Members who first signed in, organisations reaching each step for the first time, and organisations active that week."
+msgstr "Members who first signed in, organisations reaching each step for the first time, and organisations active that week."
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Mentoring"
 msgstr "Mentoring"
@@ -6201,6 +6228,10 @@ msgstr "of {0}"
 msgid "of {0} and {1}"
 msgstr "of {0} and {1}"
 
+#: apps/web/src/operator-funnel.tsx
+msgid "Of the step before"
+msgstr "Of the step before"
+
 #: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/work-journal-intake.tsx
 #: packages/ui/src/workspace-setup.tsx
@@ -6471,6 +6502,14 @@ msgstr "Organisation"
 #: apps/web/src/operator-trace.tsx
 msgid "Organisation id"
 msgstr "Organisation id"
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Organisations"
+msgstr "Organisations"
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Organisations first signed in during the last 8 weeks, and how far each got."
+msgstr "Organisations first signed in during the last 8 weeks, and how far each got."
 
 #: packages/ui/src/home.tsx
 msgid "Original workspace job"
@@ -7154,6 +7193,7 @@ msgstr "Reading your knowledge bases…"
 msgid "Reading your reviewed career profiles…"
 msgstr "Reading your reviewed career profiles…"
 
+#: apps/web/src/operator-funnel.tsx
 #: apps/web/src/operator-list.tsx
 #: apps/web/src/operator-trace.tsx
 #: apps/web/src/operator.tsx
@@ -7871,6 +7911,10 @@ msgstr "Review your CV"
 msgid "Reviewed"
 msgstr "Reviewed"
 
+#: apps/web/src/operator-funnel.tsx
+msgid "Reviewed a job brief"
+msgstr "Reviewed a job brief"
+
 #. placeholder {0}: selected.version
 #: packages/ui/src/start-confirmation.tsx
 msgid "Reviewed brief v{0}"
@@ -8243,6 +8287,10 @@ msgstr "Save your issue decisions before marking the draft reviewed."
 #: packages/ui/src/profile-status.ts
 msgid "Save your issue decisions, then mark the profile reviewed."
 msgstr "Save your issue decisions, then mark the profile reviewed."
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Saved a Prepare item"
+msgstr "Saved a Prepare item"
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Saved as draft v{version}. Mark it reviewed when it is ready."
@@ -8696,6 +8744,11 @@ msgstr "Sign-in is on Home, under Settings."
 msgid "Sign-in security"
 msgstr "Sign-in security"
 
+#: apps/web/src/operator-funnel.tsx
+msgid "Sign-ups"
+msgstr "Sign-ups"
+
+#: apps/web/src/operator-funnel.tsx
 #: apps/web/src/records-model.ts
 msgid "Signed in"
 msgstr "Signed in"
@@ -8919,6 +8972,7 @@ msgstr "Status:"
 msgid "Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.{0}"
 msgstr "Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.{0}"
 
+#: apps/web/src/operator-funnel.tsx
 #: packages/ui/src/run-steps.tsx
 msgid "Step"
 msgstr "Step"
@@ -10157,6 +10211,10 @@ msgstr "The updated models require a new provider-transmission acknowledgement. 
 msgid "The URL could not be imported."
 msgstr "The URL could not be imported."
 
+#: apps/web/src/operator-funnel.tsx
+msgid "The usage funnel could not be read. Try Refresh."
+msgstr "The usage funnel could not be read. Try Refresh."
+
 #: apps/web/src/waitlist-model.ts
 msgid "The waitlist could not be reached. Try again in a few minutes."
 msgstr "The waitlist could not be reached. Try again in a few minutes."
@@ -10850,6 +10908,8 @@ msgstr "Uploaded {when}"
 msgid "US${0} of US${1} this month"
 msgstr "US${0} of US${1} this month"
 
+#: apps/web/src/operator-funnel.tsx
+#: apps/web/src/operator.tsx
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Usage"
 msgstr "Usage"
@@ -11189,6 +11249,14 @@ msgstr "Web pages can be wrong or out of date. Check a fact at its source before
 msgid "Web screen"
 msgstr "Web screen"
 
+#: apps/web/src/operator-funnel.tsx
+msgid "Week by week"
+msgstr "Week by week"
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Week of"
+msgstr "Week of"
+
 #: packages/ui/src/career-interview-model.ts
 msgid "what changed thanks to your work"
 msgstr "what changed thanks to your work"
@@ -11288,6 +11356,10 @@ msgstr "When"
 #: packages/ui/src/career-interview-model.ts
 msgid "when it happened"
 msgstr "when it happened"
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Where new organisations stop"
+msgstr "Where new organisations stop"
 
 #: apps/web/src/consent.tsx
 msgid "Where the agreement is kept"

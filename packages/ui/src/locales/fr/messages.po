@@ -383,6 +383,11 @@ msgstr "{0} places utilisées sur {1}, {2} invitations pas encore utilisées, {3
 msgid "{0} of {requirementTotal} covered · {1} of {responsibilityTotal} covered"
 msgstr "{0} sur {requirementTotal} couvertes · {1} sur {responsibilityTotal} couvertes"
 
+#. placeholder {0}: funnel.organisations
+#: apps/web/src/operator-funnel.tsx
+msgid "{0} organisations read in all."
+msgstr "{0} organisations lues en tout."
+
 #. placeholder {0}: role === "author" ? "Author" : "Critic"
 #: packages/ui/src/model-profile-picker.tsx
 msgid "{0} profile"
@@ -1160,6 +1165,7 @@ msgstr "Prise en compte requise"
 msgid "Actions"
 msgstr "Actions"
 
+#: apps/web/src/operator-funnel.tsx
 #: packages/ui/src/review.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/writing-policy-history.tsx
@@ -1299,6 +1305,10 @@ msgstr "Ajouté le {when}"
 #: packages/ui/src/career-evidence.ts
 msgid "Added a new version of that file to {displayName}."
 msgstr "Nouvelle version de ce fichier ajoutée à {displayName}."
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Added career evidence"
+msgstr "Ont ajouté des éléments de parcours"
 
 #: packages/ui/src/career-evidence.ts
 msgid "Added to {displayName}."
@@ -1604,6 +1614,10 @@ msgstr "Approuvée"
 #: packages/ui/src/review-footer.tsx
 msgid "Approved · ready to export"
 msgstr "Approuvé · prêt à exporter"
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Approved a draft"
+msgstr "Ont approuvé un brouillon"
 
 #. placeholder {0}: countedNouns.round(round)
 #: packages/ui/src/run-stage-track.tsx
@@ -2624,6 +2638,10 @@ msgstr "Impossible de charger cette version du profil relu. Choisissez-la de nou
 #: packages/ui/src/profile.tsx
 msgid "Could not load that saved profile. Choose it again or load by name."
 msgstr "Impossible de charger ce profil enregistré. Choisissez-le de nouveau ou chargez-le par son nom."
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Counts only, from existing records: no organisation is named or shown alone, and no candidate material is read. Weeks run Monday to Sunday, UTC."
+msgstr "Des comptes seulement, tirés des données existantes : aucune organisation n’est nommée ni montrée seule, et aucun contenu de candidat n’est lu. Les semaines vont du lundi au dimanche, en UTC."
 
 #: apps/web/src/application-material-model.ts
 msgid "Cover letter"
@@ -3685,6 +3703,7 @@ msgstr "Exporter ce fichier…"
 msgid "Export…"
 msgstr "Exporter…"
 
+#: apps/web/src/operator-funnel.tsx
 #: packages/ui/src/home-model.ts
 msgid "Exported"
 msgstr "Exportée"
@@ -3930,6 +3949,10 @@ msgstr "Terminez la configuration de l’espace de travail ci-dessus."
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Finished"
 msgstr "Terminé"
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Finished a draft"
+msgstr "Ont terminé un brouillon"
 
 #: packages/ui/src/workspace-setup.tsx
 msgid "First steps"
@@ -5210,6 +5233,10 @@ msgstr "Moyen"
 msgid "Member"
 msgstr "Membre"
 
+#: apps/web/src/operator-funnel.tsx
+msgid "Members who first signed in, organisations reaching each step for the first time, and organisations active that week."
+msgstr "Membres connectés pour la première fois, organisations atteignant chaque étape pour la première fois, et organisations actives cette semaine-là."
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Mentoring"
 msgstr "Mentorat"
@@ -6195,6 +6222,10 @@ msgstr "sur {0}"
 msgid "of {0} and {1}"
 msgstr "sur {0} et {1}"
 
+#: apps/web/src/operator-funnel.tsx
+msgid "Of the step before"
+msgstr "De l’étape précédente"
+
 #: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/work-journal-intake.tsx
 #: packages/ui/src/workspace-setup.tsx
@@ -6465,6 +6496,14 @@ msgstr "Organisation"
 #: apps/web/src/operator-trace.tsx
 msgid "Organisation id"
 msgstr "Identifiant d’organisation"
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Organisations"
+msgstr "Organisations"
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Organisations first signed in during the last 8 weeks, and how far each got."
+msgstr "Organisations connectées pour la première fois ces 8 dernières semaines, et jusqu’où chacune est allée."
 
 #: packages/ui/src/home.tsx
 msgid "Original workspace job"
@@ -7148,6 +7187,7 @@ msgstr "Lecture de vos bases de connaissances…"
 msgid "Reading your reviewed career profiles…"
 msgstr "Lecture de vos profils professionnels relus…"
 
+#: apps/web/src/operator-funnel.tsx
 #: apps/web/src/operator-list.tsx
 #: apps/web/src/operator-trace.tsx
 #: apps/web/src/operator.tsx
@@ -7865,6 +7905,10 @@ msgstr "Relisez votre CV"
 msgid "Reviewed"
 msgstr "Relu"
 
+#: apps/web/src/operator-funnel.tsx
+msgid "Reviewed a job brief"
+msgstr "Ont relu une fiche de poste"
+
 #. placeholder {0}: selected.version
 #: packages/ui/src/start-confirmation.tsx
 msgid "Reviewed brief v{0}"
@@ -8237,6 +8281,10 @@ msgstr "Enregistrez vos décisions sur les problèmes avant de marquer le brouil
 #: packages/ui/src/profile-status.ts
 msgid "Save your issue decisions, then mark the profile reviewed."
 msgstr "Enregistrez vos décisions sur les problèmes, puis marquez le profil comme relu."
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Saved a Prepare item"
+msgstr "Ont enregistré un élément Préparer"
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Saved as draft v{version}. Mark it reviewed when it is ready."
@@ -8690,6 +8738,11 @@ msgstr "La connexion se trouve dans Accueil, sous Réglages."
 msgid "Sign-in security"
 msgstr "Sécurité de connexion"
 
+#: apps/web/src/operator-funnel.tsx
+msgid "Sign-ups"
+msgstr "Inscriptions"
+
+#: apps/web/src/operator-funnel.tsx
 #: apps/web/src/records-model.ts
 msgid "Signed in"
 msgstr "Connecté"
@@ -8913,6 +8966,7 @@ msgstr "État :"
 msgid "Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.{0}"
 msgstr "Oriente la sélection et la présentation au prochain tour. Ce n’est pas un élément de parcours : le rédacteur n’utilise toujours que vos sources approuvées.{0}"
 
+#: apps/web/src/operator-funnel.tsx
 #: packages/ui/src/run-steps.tsx
 msgid "Step"
 msgstr "Étape"
@@ -10151,6 +10205,10 @@ msgstr "Les modèles mis à jour exigent une nouvelle acceptation de la transmis
 msgid "The URL could not be imported."
 msgstr "L’URL n’a pas pu être importée."
 
+#: apps/web/src/operator-funnel.tsx
+msgid "The usage funnel could not be read. Try Refresh."
+msgstr "L’entonnoir d’usage n’a pas pu être lu. Essayez Actualiser."
+
 #: apps/web/src/waitlist-model.ts
 msgid "The waitlist could not be reached. Try again in a few minutes."
 msgstr "La liste d'attente est injoignable. Réessayez dans quelques minutes."
@@ -10844,6 +10902,8 @@ msgstr "Ajouté le {when}"
 msgid "US${0} of US${1} this month"
 msgstr "{0} US$ sur {1} US$ ce mois-ci"
 
+#: apps/web/src/operator-funnel.tsx
+#: apps/web/src/operator.tsx
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Usage"
 msgstr "Utilisation"
@@ -11183,6 +11243,14 @@ msgstr "Une page web peut être fausse ou périmée. Vérifiez un fait à sa sou
 msgid "Web screen"
 msgstr "Écran web"
 
+#: apps/web/src/operator-funnel.tsx
+msgid "Week by week"
+msgstr "Semaine par semaine"
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Week of"
+msgstr "Semaine du"
+
 #: packages/ui/src/career-interview-model.ts
 msgid "what changed thanks to your work"
 msgstr "ce qui a changé grâce à votre travail"
@@ -11282,6 +11350,10 @@ msgstr "Quand"
 #: packages/ui/src/career-interview-model.ts
 msgid "when it happened"
 msgstr "quand cela s’est passé"
+
+#: apps/web/src/operator-funnel.tsx
+msgid "Where new organisations stop"
+msgstr "Où s’arrêtent les nouvelles organisations"
 
 #: apps/web/src/consent.tsx
 msgid "Where the agreement is kept"

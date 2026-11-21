@@ -1474,6 +1474,28 @@ export interface ApiSchemas {
     readonly sourceId: string;
     readonly sourceVersionId: string;
   };
+  "UsageFunnel": {
+    readonly weeks: readonly ({
+      readonly weekStart: string;
+      readonly signUps: number;
+      readonly firsts: {
+        readonly signedIn: number;
+        readonly evidence: number;
+        readonly briefReviewed: number;
+        readonly draftFinished: number;
+        readonly approved: number;
+        readonly exported: number;
+        readonly prepared: number;
+      };
+      readonly activeOrganisations: number;
+    })[];
+    readonly cohort: readonly ({
+      readonly step: "signedIn" | "evidence" | "briefReviewed" | "draftFinished" | "approved" | "exported" | "prepared";
+      readonly reached: number;
+      readonly fromPrevious: number | null;
+    })[];
+    readonly organisations: number;
+  };
   "UsageLine": {
     readonly company: string;
     readonly model: string;
@@ -3493,6 +3515,12 @@ export interface ApiOperations {
       readonly text: string;
     };
     readonly response: ApiSchemas["FeedbackNote"];
+  };
+  "GET /v1/operator/usage-funnel": {
+    readonly query?: {
+      readonly weeks?: number;
+    };
+    readonly response: ApiSchemas["UsageFunnel"];
   };
   "GET /v1/help": {
     readonly query?: {
