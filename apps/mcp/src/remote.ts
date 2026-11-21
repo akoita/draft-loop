@@ -23,6 +23,7 @@ import { remoteTokenChecker } from "./remote-token.js";
 import { createRunsApi } from "./runs.js";
 import { createWorkJournalMcpServer } from "./server.js";
 import { createServiceNoticeApi } from "./service-notice.js";
+import { missingToolScope } from "./tool-scopes.js";
 
 /**
  * The remote transport (ADR 0011 D17, #2647): the same tools over Streamable HTTP on one URL,
@@ -178,6 +179,23 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
+const unread = Symbol("unread");
+const unreadable = Symbol("unreadable");
+
+/** The JSON body, or `unreadable` once a `413` or `400` has answered. */
+async function readBody(
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<unknown | typeof unreadable> {
+  try {
+    return await readJson(request);
+  } catch (error) {
+    if (error instanceof RangeError) answer(response, 413, "The request is too large.");
+    else answer(response, 400, "The request is not JSON.");
+    return unreadable;
+  }
+}
+
 /** The metadata an assistant reads to find where to sign the person in (RFC 9728). */
 export function protectedResourceMetadata(oauth: RemoteOAuthOptions) {
   return {
@@ -197,6 +215,25 @@ function challenge(oauth: RemoteOAuthOptions | undefined, error?: string): strin
     `Bearer resource_metadata="${metadata}"`,
     `scope="${remoteDefaultScopes.join(" ")}"`,
     ...(error === undefined ? [] : [`error="${error}"`]),
+  ].join(", ");
+}
+
+/**
+ * The `403` scope challenge (MCP authorization, scope challenge handling): the scopes already
+ * granted plus the missing one, so signing in again keeps what the person granted before.
+ */
+function scopeChallenge(
+  oauth: RemoteOAuthOptions,
+  granted: readonly string[],
+  missing: string,
+): string {
+  const known: ReadonlySet<string> = new Set(remoteScopes);
+  const scopes = [...new Set([...granted.filter((scope) => known.has(scope)), missing])];
+  return [
+    `Bearer error="insufficient_scope"`,
+    `scope="${scopes.join(" ")}"`,
+    `resource_metadata="${new URL(oauth.resource).origin}${protectedResourcePath}"`,
+    `error_description="This tool needs the ${missing} scope."`,
   ].join(", ");
 }
 
@@ -281,6 +318,7 @@ export function createRemoteMcpHandler(
       });
     }
     let { workspaceId } = options;
+    let body: unknown = unread;
     if (oauth !== undefined && checkToken !== undefined) {
       let check: Awaited<ReturnType<typeof checkToken>>;
       try {
@@ -296,6 +334,18 @@ export function createRemoteMcpHandler(
           "www-authenticate": challenge(oauth, "invalid_token"),
         });
       }
+      body = await readBody(request, response);
+      if (body === unreadable) return;
+      // A tool the connection holds no scope for: ask for it before anything runs (#3222).
+      const missing = missingToolScope(body, check.scopes);
+      if (missing !== undefined) {
+        return answer(
+          response,
+          403,
+          `This connection was not granted the ${missing} scope; sign in again to grant it.`,
+          { "www-authenticate": scopeChallenge(oauth, check.scopes, missing) },
+        );
+      }
       const lookup = await workspaceOf(options, token);
       if (lookup.outcome === "refused") {
         return answer(
@@ -307,14 +357,8 @@ export function createRemoteMcpHandler(
       }
       ({ workspaceId } = lookup);
     }
-    let body: unknown;
-    try {
-      body = await readJson(request);
-    } catch (error) {
-      return error instanceof RangeError
-        ? answer(response, 413, "The request is too large.")
-        : answer(response, 400, "The request is not JSON.");
-    }
+    if (body === unread) body = await readBody(request, response);
+    if (body === unreadable) return;
     const server = createDraftLoopMcpServer(
       {
         baseUrl: options.baseUrl,
