@@ -1,5 +1,10 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import {
+  numberedNameSuffixPattern,
+  supportsAcronymOfSourcePhrase,
+  supportsSpelledOutAcronym,
+} from "./acronym-grounding.js";
+import {
   protectedSoftwareDescriptionParts,
   softwareObjectAppositivePattern,
 } from "./author-software-description-parts.js";
@@ -40,6 +45,8 @@ const protectedValuePatterns = [
   mixedCaseNamePattern,
 ] as const;
 
+const numberPatternIndex = protectedValuePatterns.indexOf(protectedNumberPattern);
+
 export interface AuthorGroundingGuideEntry {
   readonly evidenceChunkId: string;
   readonly protectedValues: readonly string[];
@@ -50,6 +57,8 @@ interface ProtectedValueMatch {
   readonly start: number;
   readonly patternIndex: number;
   readonly matchIndex: number;
+  /** Where a bare number this value took in, as in "Key Stage 2", starts in the text. */
+  readonly absorbsNumberAt?: number;
 }
 
 function normalizedIdentity(value: string): string {
@@ -131,10 +140,11 @@ export function supportsProtectedValue(evidence: string, protectedValue: string)
     if (source.replace(/\s+/gu, " ").includes(value.replace(/\s+/gu, " "))) return true;
     return (
       supportsInlineStrongMultiwordName(evidence, protectedValue) ||
-      supportsCompositionalMultiwordValue(evidence, protectedValue)
+      supportsCompositionalMultiwordValue(evidence, protectedValue) ||
+      supportsSpelledOutAcronym(evidence, protectedValue)
     );
   }
-  return source.includes(value);
+  return source.includes(value) || supportsAcronymOfSourcePhrase(evidence, protectedValue);
 }
 
 /** Keep wrapped identities within a chunk, but detect experience contradictions across chunks. */
@@ -192,6 +202,21 @@ export function extractProtectedValues(value: string): readonly string[] {
           ? withoutOpeningActionVerb(value, raw, start)
           : narrow;
       const captureOffset = match[0].indexOf(extracted);
+      const numbered =
+        pattern === multiWordNamePattern && raw.endsWith(extracted)
+          ? numberedNameSuffixPattern.exec(value.slice(start + raw.length))
+          : null;
+      if (numbered !== null) {
+        return [
+          {
+            value: `${extracted} ${numbered[1]}`,
+            start: start + Math.max(captureOffset, 0),
+            patternIndex,
+            matchIndex,
+            absorbsNumberAt: start + raw.length + numbered[0].indexOf(numbered[1] ?? ""),
+          },
+        ];
+      }
       return [
         {
           value: extracted,
@@ -209,9 +234,15 @@ export function extractProtectedValues(value: string): readonly string[] {
       left.matchIndex - right.matchIndex,
   );
 
+  const absorbedNumbers = new Set(
+    matches.flatMap(({ absorbsNumberAt }) =>
+      absorbsNumberAt === undefined ? [] : [absorbsNumberAt],
+    ),
+  );
   const seen = new Set<string>();
   const extracted: string[] = [];
   for (const match of matches) {
+    if (match.patternIndex === numberPatternIndex && absorbedNumbers.has(match.start)) continue;
     const identity = normalizedIdentity(match.value);
     if (seen.has(identity)) continue;
     seen.add(identity);

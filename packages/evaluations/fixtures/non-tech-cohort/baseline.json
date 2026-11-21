@@ -18,7 +18,7 @@
     {
       "id": "nurse-resuscitation/acronym-spelled-out",
       "expected": "supported",
-      "status": "rejected"
+      "status": "accepted"
     },
     {
       "id": "nurse-resuscitation/wrong-certificate",
@@ -63,7 +63,7 @@
     {
       "id": "teacher-key-stage/acronym-spelled-out",
       "expected": "supported",
-      "status": "rejected"
+      "status": "accepted"
     },
     {
       "id": "teacher-key-stage/wrong-year-group",
@@ -73,7 +73,7 @@
     {
       "id": "teacher-qts/acronym-used",
       "expected": "supported",
-      "status": "rejected"
+      "status": "accepted"
     },
     {
       "id": "teacher-qts/wrong-qualification",
@@ -103,7 +103,7 @@
   ],
   "groundingSummary": {
     "claims": 20,
-    "supportedRejected": 3,
+    "supportedRejected": 0,
     "contradictedAccepted": 3
   },
   "retrieval": {
