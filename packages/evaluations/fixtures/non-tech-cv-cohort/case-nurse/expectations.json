@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "caseId": "non-tech-cv-cohort-case-nurse",
+  "profileSource": "candidate-profile.md",
+  "opportunitySource": "job-description.md",
+  "mustCover": [
+    {
+      "id": "n-chronology",
+      "fact": "Keep the two nursing posts separate and preserve the April–December 2021 career break.",
+      "sourceIds": ["n-role-1", "n-gap-1", "n-role-2"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "n-registration",
+      "fact": "State adult nurse registration since September 2017.",
+      "sourceIds": ["n-registration"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "n-shift-lead",
+      "fact": "Describe nurse-in-charge as occasional night shifts under the ward manager's rota.",
+      "sourceIds": ["n-role-1"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "n-audit",
+      "fact": "Keep the 71%-to-88% checklist completion across 120 admissions, credited to a change the educator owned.",
+      "sourceIds": ["n-role-2"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "n-life-support",
+      "fact": "ILS is current; ALS is booked, not held.",
+      "sourceIds": ["n-training"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "n-education-languages",
+      "fact": "Retain the BSc, the university and the language levels.",
+      "sourceIds": ["n-education", "n-languages"],
+      "boundary": "deterministic"
+    }
+  ],
+  "requirementExpectations": [
+    {
+      "requirementId": "r1",
+      "status": "supported",
+      "sourceIds": ["n-registration"],
+      "rationale": "Registered adult nurse since 2017."
+    },
+    {
+      "requirementId": "r2",
+      "status": "supported",
+      "sourceIds": ["n-role-1", "n-role-2"],
+      "rationale": "Acute medical unit and coronary care with telemetry."
+    },
+    {
+      "requirementId": "r3",
+      "status": "partial",
+      "sourceIds": ["n-role-1"],
+      "rationale": "Nurse in charge on some night shifts only."
+    },
+    {
+      "requirementId": "r4",
+      "status": "supported",
+      "sourceIds": ["n-role-2"],
+      "rationale": "Practice supervisor for student nurses."
+    },
+    {
+      "requirementId": "r5",
+      "status": "unsupported",
+      "sourceIds": ["n-training"],
+      "rationale": "ALS is booked, not completed."
+    },
+    {
+      "requirementId": "r6",
+      "status": "unsupported",
+      "sourceIds": ["n-summary"],
+      "rationale": "No prescribing qualification."
+    }
+  ],
+  "prohibitedClaims": [
+    {
+      "id": "n-als-held",
+      "claim": "Amara holds an Advanced Life Support certificate.",
+      "sourceIds": ["n-training"],
+      "reason": "Only ILS is held; ALS is booked."
+    },
+    {
+      "id": "n-prescriber",
+      "claim": "Amara is a non-medical prescriber.",
+      "sourceIds": ["n-summary"],
+      "reason": "Prescribing rights are not established."
+    },
+    {
+      "id": "n-ward-manager",
+      "claim": "Amara managed a ward or owned the checklist change.",
+      "sourceIds": ["n-role-1", "n-role-2"],
+      "reason": "The ward manager set the rota and the educator owned the change."
+    },
+    {
+      "id": "n-altered-audit",
+      "claim": "Completion rose to a different figure or over a different number of admissions.",
+      "sourceIds": ["n-role-2"],
+      "reason": "Only 71% to 88% across 120 admissions is recorded."
+    },
+    {
+      "id": "n-continuous",
+      "claim": "Amara nursed continuously from 2017 to the present.",
+      "sourceIds": ["n-role-1", "n-gap-1", "n-role-2"],
+      "reason": "A 2021 career break is recorded."
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "id": "n-exact-periods",
+      "check": "Keep the role dates and the 2021 career break.",
+      "sourceIds": ["n-role-1", "n-gap-1", "n-role-2"]
+    },
+    {
+      "id": "n-exact-numbers",
+      "check": "Keep 28 beds, eight beds, six patients, 71%, 88% and 120 admissions unchanged if used.",
+      "sourceIds": ["n-role-1", "n-role-2"]
+    }
+  ],
+  "semanticChecks": [
+    {
+      "id": "n-attribution",
+      "check": "Separate Amara's help from the practice educator's ownership of the checklist.",
+      "sourceIds": ["n-role-2"]
+    },
+    {
+      "id": "n-mentoring-wave",
+      "check": "Joining the third wave of a mentoring scheme is not founding or leading it.",
+      "sourceIds": ["n-role-2"]
+    }
+  ],
+  "executionBoundary": {
+    "providerRunPerformed": false,
+    "plannedRoundsPerProfile": 1,
+    "maximumProviderCallsForCohort": 8,
+    "requiresSeparateAuthorization": true
+  }
+}

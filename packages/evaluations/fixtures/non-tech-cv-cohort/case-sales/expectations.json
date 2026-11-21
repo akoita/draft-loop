@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "caseId": "non-tech-cv-cohort-case-sales",
+  "profileSource": "candidate-profile.md",
+  "opportunitySource": "job-description.md",
+  "mustCover": [
+    {
+      "id": "s-chronology",
+      "fact": "Keep the SDR and account executive periods separate.",
+      "sourceIds": ["s-role-1", "s-role-2"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "s-quota",
+      "fact": "Keep 112% of a £600,000 quota in 2023 and 94% in 2024; do not claim every year exceeded quota.",
+      "sourceIds": ["s-role-2"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "s-largest-deal",
+      "fact": "Credit the £180,000 three-year deal as a team close with the director leading negotiation.",
+      "sourceIds": ["s-role-2"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "s-ranking",
+      "fact": "Keep 2nd of 14 in the 2023 sales club.",
+      "sourceIds": ["s-award"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "s-training-scope",
+      "fact": "MEDDICC is a two-day workshop with an attendance certificate.",
+      "sourceIds": ["s-training"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "s-languages",
+      "fact": "German native, English fluent.",
+      "sourceIds": ["s-languages"],
+      "boundary": "deterministic"
+    }
+  ],
+  "requirementExpectations": [
+    {
+      "requirementId": "r1",
+      "status": "partial",
+      "sourceIds": ["s-role-2"],
+      "rationale": "112% in 2023 but 94% in 2024."
+    },
+    {
+      "requirementId": "r2",
+      "status": "supported",
+      "sourceIds": ["s-role-2"],
+      "rationale": "Territory of manufacturing accounts."
+    },
+    {
+      "requirementId": "r3",
+      "status": "supported",
+      "sourceIds": ["s-role-2"],
+      "rationale": "£180,000 three-year contract, closed with others."
+    },
+    {
+      "requirementId": "r4",
+      "status": "supported",
+      "sourceIds": ["s-role-2", "s-skills"],
+      "rationale": "Weekly Salesforce forecasting."
+    },
+    {
+      "requirementId": "r5",
+      "status": "unsupported",
+      "sourceIds": ["s-summary", "s-role-1"],
+      "rationale": "No people management; SDR role was individual."
+    },
+    {
+      "requirementId": "r6",
+      "status": "supported",
+      "sourceIds": ["s-languages"],
+      "rationale": "German native."
+    }
+  ],
+  "prohibitedClaims": [
+    {
+      "id": "s-always-exceeded",
+      "claim": "Jonas exceeded quota every year.",
+      "sourceIds": ["s-role-2"],
+      "reason": "2024 attainment was 94%."
+    },
+    {
+      "id": "s-solo-close",
+      "claim": "Jonas negotiated the £180,000 deal alone.",
+      "sourceIds": ["s-role-2"],
+      "reason": "The regional director led the negotiation."
+    },
+    {
+      "id": "s-managed-sdrs",
+      "claim": "Jonas managed SDRs or a sales team.",
+      "sourceIds": ["s-summary"],
+      "reason": "No people management is recorded."
+    },
+    {
+      "id": "s-first-place",
+      "claim": "Jonas ranked first in the sales club.",
+      "sourceIds": ["s-award"],
+      "reason": "He ranked 2nd of 14."
+    },
+    {
+      "id": "s-certified",
+      "claim": "Jonas holds a MEDDICC certification.",
+      "sourceIds": ["s-training"],
+      "reason": "Attendance certificate only."
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "id": "s-exact-figures",
+      "check": "Keep £600,000, 112%, 94%, £180,000, three-year, 140 accounts and 2nd of 14 unchanged if used.",
+      "sourceIds": ["s-role-2", "s-award"]
+    }
+  ],
+  "semanticChecks": [
+    {
+      "id": "s-team-close",
+      "check": "Separate Jonas's contribution from the director's negotiation lead.",
+      "sourceIds": ["s-role-2"]
+    },
+    {
+      "id": "s-sdr-scope",
+      "check": "Booking meetings for account managers is not managing them.",
+      "sourceIds": ["s-role-1"]
+    }
+  ],
+  "executionBoundary": {
+    "providerRunPerformed": false,
+    "plannedRoundsPerProfile": 1,
+    "maximumProviderCallsForCohort": 8,
+    "requiresSeparateAuthorization": true
+  }
+}
