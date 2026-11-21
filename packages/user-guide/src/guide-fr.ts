@@ -56,6 +56,7 @@ export const frenchHelpGuide: HelpGuide = {
       paragraphs: [
         "Dans la candidature, lancez une exécution. Un modèle rédige le CV et un second modèle vérifie chaque affirmation à partir de vos éléments de parcours.",
         "Une exécution dure quelques minutes, et vous pouvez quitter la page pendant ce temps. Si elle s’arrête, l’écran indique si elle reprendra seule et combien de temps attendre.",
+        "Si une relecture s’est arrêtée avant que vous approuviez un CV, ouvrez Détails de l’exécution dans la candidature et sélectionnez Démarrer une nouvelle relecture.",
       ],
       keywords: ["exécution", "lancer", "générer", "rédiger", "modèle", "auteur", "critique"],
       screenshot: {

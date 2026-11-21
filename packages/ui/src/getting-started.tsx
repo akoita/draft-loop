@@ -8,6 +8,7 @@ import {
   type GettingStartedStepKey,
   gettingStartedView,
 } from "./getting-started-model.js";
+import { helpSectionForStage, useHelpSection } from "./help-context.js";
 import { applicationStageAction, nextStep, nextStepSentence } from "./next-step.js";
 import { ScreenHint } from "./screen-hint.js";
 
@@ -99,11 +100,13 @@ export function GettingStarted({
   readonly actions: GettingStartedActions;
 }) {
   const { preference, choose } = useDisplayPreference();
+  const loading = inputs.applications.status === "loading" || inputs.evidence.kind === "loading";
+  // Home's Quick help opens on the guide section for the next step, in every view.
+  useHelpSection(loading ? null : helpSectionForStage(nextStep(inputs).stage));
   if (choose === undefined) return null;
   const view = gettingStartedView(preference, inputs);
   // Guided keeps a line on Home once the guide is hidden or done, so it never looks like Simple.
   if (view.kind === "hidden") {
-    const loading = inputs.applications.status === "loading" || inputs.evidence.kind === "loading";
     // Guided keeps the next step on Home, worked out like every other guidance surface.
     return loading ? (
       <ScreenHint screen="home" />

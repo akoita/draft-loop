@@ -30,8 +30,10 @@ the landing page, the web header's Help menu and the Help panel link to it.
 
 ## How to use it
 
-Select **Help** in the header. A side sheet opens with one section per topic;
-the first one is open. Select a title to open or fold its section. Type in
+Select **Help** in the header. A side sheet opens with one section per topic.
+The section that fits the screen behind it is open: running a draft on a
+review without a draft, or the next step's topic on Home. Elsewhere the first
+section is open. Select a title to open or fold its section. Type in
 **Search the guide** to list only the matching sections, open and best
 first; accents and case do not matter. Close it with **Close**, Escape, or a
 click outside where the browser supports it.

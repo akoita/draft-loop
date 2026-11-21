@@ -67,6 +67,7 @@ import {
   type SentRevisionDirection,
   sentRevisionDirection,
 } from "./footer-running-round.js";
+import { useHelpSection } from "./help-context.js";
 import {
   requestApplicationPanel,
   useExportPreview,
@@ -997,6 +998,8 @@ export function ReviewWorkspace({
     (finding) => finding.decision === "accepted",
   );
   const hasArtifact = state.artifact.version > 0;
+  // Quick help opens on running a draft until there is one, then on review and export.
+  useHelpSection(hasArtifact ? "review" : "draft");
   const approvalReadiness = approvalReadinessForArtifact(state.approvalReadiness, state.artifact);
   const maximumRounds = state.providerTransmissionPreflight.budget.maxRounds;
   const roundLimitRecovery = roundLimitRecoveryRequired(state);

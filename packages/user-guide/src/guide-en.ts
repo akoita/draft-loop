@@ -56,6 +56,7 @@ export const englishHelpGuide: HelpGuide = {
       paragraphs: [
         "On the application, start a run. One model writes the CV and a second model checks each claim against your evidence.",
         "A run takes a few minutes, and you can leave the page while it works. If a run stops, the screen says whether it will recover by itself and how long to wait.",
+        "If a review stopped before you approved a CV, open Run details on the application and select Start a new review.",
       ],
       keywords: ["run", "start", "generate", "write", "model", "author", "critic"],
       screenshot: {
