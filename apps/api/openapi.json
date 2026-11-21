@@ -2704,6 +2704,18 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "nextStage": {
+            "type": "string",
+            "enum": [
+              "start-review",
+              "drafting",
+              "reviewing",
+              "review-ended",
+              "export",
+              "done"
+            ],
+            "description": "Where the application stands for the candidate: start-review (no run), drafting, reviewing (a draft waits for decisions), review-ended (the newest run stopped or ran out of budget before an approval), export (approved, not downloaded) or done."
+          },
           "modelProfiles": {
             "anyOf": [
               {
@@ -2802,6 +2814,7 @@
           "jobSourceKind",
           "suggestedName",
           "exportCount",
+          "nextStage",
           "modelProfiles",
           "language"
         ]
@@ -12986,6 +12999,18 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "nextStage": {
+            "type": "string",
+            "enum": [
+              "start-review",
+              "drafting",
+              "reviewing",
+              "review-ended",
+              "export",
+              "done"
+            ],
+            "description": "Where the application stands for the candidate: start-review (no run), drafting, reviewing (a draft waits for decisions), review-ended (the newest run stopped or ran out of budget before an approval), export (approved, not downloaded) or done."
+          },
           "modelProfiles": {
             "anyOf": [
               {
@@ -13087,6 +13112,7 @@
           "jobSourceKind",
           "suggestedName",
           "exportCount",
+          "nextStage",
           "modelProfiles",
           "language"
         ],

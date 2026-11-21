@@ -37,6 +37,7 @@ const application = {
   jobSourceKind: "pasted-text",
   suggestedName: null,
   exportCount: 0,
+  nextStage: "reviewing",
   modelProfiles: null,
   language: null,
 };
@@ -144,6 +145,11 @@ describe("application tools", () => {
         latest_run: { run_id: "run_new", state: "awaiting-approval" },
         run_count: 2,
         export_count: 0,
+        next_step: {
+          stage: "reviewing",
+          action:
+            "A draft waits for the candidate: they read it, decide each finding and approve it in DraftLoop.",
+        },
       },
     ]);
     const all = parsed(

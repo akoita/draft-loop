@@ -109,6 +109,7 @@ export interface ApiSchemas {
     readonly jobSourceKind: "pasted-text" | "approved-url" | "local-file";
     readonly suggestedName: string | null;
     readonly exportCount: number;
+    readonly nextStage: "start-review" | "drafting" | "reviewing" | "review-ended" | "export" | "done";
     readonly modelProfiles: {
       readonly author: {
         readonly id: string;

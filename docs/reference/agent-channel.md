@@ -198,7 +198,7 @@ Run `init` again to issue a new one. The
 - **`/add-project`** turns the current repository into a
   [project card](#code-projects-as-evidence). It asks for the candidate's
   commit emails, role and visibility, counts with `draft-loop evidence
-  add-repo` or `git log`, reads only allowlisted files, shows the card, and
+add-repo` or `git log`, reads only allowlisted files, shows the card, and
   calls `add_project` after the candidate says yes. `init` writes it beside
   `/log-work` for Claude Code and Codex.
 - **The Stop hook** (Claude Code only, with `--hook`) adds one advisory line
@@ -294,28 +294,28 @@ applications, read the job description one keeps, and add one. With
 `drafts:read`, it reads what the candidate already exported or saved. No tool
 returns a run's open draft, its findings or career evidence.
 
-| Tool                   | Scope               | What it does                                                                                       |
-| ---------------------- | ------------------- | -------------------------------------------------------------------------------------------------- |
-| `list_applications`    | `applications:read` | Lists applications with status, folder and latest run; archived on request                         |
-| `get_application`      | `applications:read` | Reads one application by id                                                                        |
-| `get_job_text`         | `applications:read` | Reads the job text an application keeps, or its page's address and copy                            |
-| `get_run_status`       | `applications:read` | Says where a CV run stands and what waits for the candidate                                        |
-| `add_job`              | `jobs:write`        | Adds an application from a job description pasted as text                                          |
-| `get_cv`               | `drafts:read`       | Reads the newest Markdown export of the CV the application uses                                    |
-| `list_materials`       | `drafts:read`       | Lists saved cover letters, interview guides and question sets, without text                        |
-| `get_material`         | `drafts:read`       | Reads one saved letter, guide or question set, without its cited facts or a guide's never-say list |
-| `get_requirement_evidence` | `drafts:read` | Lists which of the candidate's sources support each job requirement of a run, with lines, match type and grade, never their text |
-| `estimate_run`         | `runs:start`        | Prices a run and says what remains of the token's monthly spend cap                                |
-| `start_cv_run`         | `runs:start`        | Starts a CV run on the newest reviewed brief, within the cap                                       |
-| `draft_cover_letter`   | `runs:start`        | Drafts and saves a cover letter, within the cap                                                    |
-| `draft_interview_prep` | `runs:start`        | Drafts and saves interview questions with talking points, within the cap                           |
-| `send_feedback`        | `journal`           | Passes the candidate's own note about DraftLoop to the people who run it                           |
-| `add_project`          | `evidence:write`    | Files a project card about one repository, pending the candidate's approval                        |
-| `get_profile`          | `profile:suggest`   | Reads the reviewed career profile with fact ids, without the facts marked never-say                |
-| `suggest_profile_update` | `profile:suggest` | Files one change to the profile with the words behind it, pending the candidate's decision         |
-| `list_profile_suggestions` | `profile:suggest` | Lists the suggestions this token filed and their status                                        |
-| `search_help`          | `journal`           | Searches DraftLoop's user guide, in English or French, for how a feature works                     |
-| `service_notice`       | none (public)       | Says whether planned maintenance is coming or under way, and until when changes are paused         |
+| Tool                       | Scope               | What it does                                                                                                                     |
+| -------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `list_applications`        | `applications:read` | Lists applications with status, folder, latest run and `next_step`; archived on request                                          |
+| `get_application`          | `applications:read` | Reads one application by id                                                                                                      |
+| `get_job_text`             | `applications:read` | Reads the job text an application keeps, or its page's address and copy                                                          |
+| `get_run_status`           | `applications:read` | Says where a CV run stands and what waits for the candidate                                                                      |
+| `add_job`                  | `jobs:write`        | Adds an application from a job description pasted as text                                                                        |
+| `get_cv`                   | `drafts:read`       | Reads the newest Markdown export of the CV the application uses                                                                  |
+| `list_materials`           | `drafts:read`       | Lists saved cover letters, interview guides and question sets, without text                                                      |
+| `get_material`             | `drafts:read`       | Reads one saved letter, guide or question set, without its cited facts or a guide's never-say list                               |
+| `get_requirement_evidence` | `drafts:read`       | Lists which of the candidate's sources support each job requirement of a run, with lines, match type and grade, never their text |
+| `estimate_run`             | `runs:start`        | Prices a run and says what remains of the token's monthly spend cap                                                              |
+| `start_cv_run`             | `runs:start`        | Starts a CV run on the newest reviewed brief, within the cap                                                                     |
+| `draft_cover_letter`       | `runs:start`        | Drafts and saves a cover letter, within the cap                                                                                  |
+| `draft_interview_prep`     | `runs:start`        | Drafts and saves interview questions with talking points, within the cap                                                         |
+| `send_feedback`            | `journal`           | Passes the candidate's own note about DraftLoop to the people who run it                                                         |
+| `add_project`              | `evidence:write`    | Files a project card about one repository, pending the candidate's approval                                                      |
+| `get_profile`              | `profile:suggest`   | Reads the reviewed career profile with fact ids, without the facts marked never-say                                              |
+| `suggest_profile_update`   | `profile:suggest`   | Files one change to the profile with the words behind it, pending the candidate's decision                                       |
+| `list_profile_suggestions` | `profile:suggest`   | Lists the suggestions this token filed and their status                                                                          |
+| `search_help`              | `journal`           | Searches DraftLoop's user guide, in English or French, for how a feature works                                                   |
+| `service_notice`           | none (public)       | Says whether planned maintenance is coming or under way, and until when changes are paused                                       |
 
 With the operator's credential, the server's owner token, the server also
 offers `list_feedback` and `triage_feedback`: list members' notes by status and
