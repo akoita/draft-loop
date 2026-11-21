@@ -345,6 +345,7 @@ const checkVersions: ReadonlyMap<string, OmissionCheckScope> = new Map([
   ["cli-critic-v9", "cited-chunks"],
   ["cli-critic-v10", "every-chunk"],
   ["cli-critic-v11", "every-chunk"],
+  ["cli-critic-v12", "every-chunk"],
 ]);
 
 /** Whether a critic prompt version hands the omission review to the separate check. */
