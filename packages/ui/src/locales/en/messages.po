@@ -8942,6 +8942,10 @@ msgstr "Stop the review before changing models."
 msgid "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then try again."
 msgstr "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then try again."
 
+#: packages/ui/src/next-step.ts
+msgid "Stopped"
+msgstr "Stopped"
+
 #: packages/ui/src/stop-reason.ts
 msgid "Stopped: author and critic agree it's ready"
 msgstr "Stopped: author and critic agree it's ready"

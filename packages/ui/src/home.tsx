@@ -81,8 +81,6 @@ import {
   applicationRequirementsText,
   applicationRunningLabel,
   applicationRunText,
-  applicationStatusLabel,
-  applicationStatusTone,
   applicationsByActivity,
   evidencePresentation,
   type HomeApplicationsState,
@@ -99,6 +97,7 @@ import { useInlineRename } from "./inline-rename.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
 import type { HostApplicationCapabilities, HostProfileCapabilities } from "./native.js";
 import { NewApplicationDialog } from "./new-application-form.js";
+import { applicationCardStatus } from "./next-step.js";
 import {
   ProfileSuggestionsNote,
   usePendingFactSuggestionCount,
@@ -336,8 +335,8 @@ export function ApplicationCard({
         {running ? (
           <Chip tone="progress">{applicationRunningLabel()}</Chip>
         ) : (
-          <Chip tone={applicationStatusTone(application.status)}>
-            {applicationStatusLabel(application.status)}
+          <Chip tone={applicationCardStatus(application).tone}>
+            {applicationCardStatus(application).label}
           </Chip>
         )}
       </div>
@@ -565,8 +564,8 @@ function ApplicationsList({
     application.id === runningApplicationId ? (
       <Chip tone="progress">{applicationRunningLabel()}</Chip>
     ) : (
-      <Chip tone={applicationStatusTone(application.status)}>
-        {applicationStatusLabel(application.status)}
+      <Chip tone={applicationCardStatus(application).tone}>
+        {applicationCardStatus(application).label}
       </Chip>
     );
   const group = (list: readonly ApplicationSummaryView[], label: string) =>
