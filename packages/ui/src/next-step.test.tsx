@@ -7,6 +7,7 @@ import { DisplayPreferenceProvider } from "./display-preference.js";
 import { GettingStarted } from "./getting-started.js";
 import { gettingStartedView } from "./getting-started-model.js";
 import {
+  applicationCardStatus,
   type NextStepInputs,
   type NextStepStage,
   nextStep,
@@ -176,6 +177,13 @@ describe("the next step", () => {
       if (guide.kind === "guide" && guide.current.application !== null) {
         expect(guide.current.application).toBe(step.application);
       }
+    }
+
+    // The followed application's card chip never says In review for a review that ended.
+    if (step.application !== null) {
+      const chip = applicationCardStatus(step.application).label;
+      if (step.stage === "review-ended") expect(chip).toBe("Stopped");
+      else expect(chip).not.toBe("Stopped");
     }
 
     // Once the guide is hidden, its folded line or the Home hint says exactly the next step.

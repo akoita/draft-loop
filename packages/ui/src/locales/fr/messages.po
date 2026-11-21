@@ -8936,6 +8936,10 @@ msgstr "Arrêtez la relecture avant de changer de modèles."
 msgid "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then try again."
 msgstr "Arrêtez d’abord la génération. Une génération est en attente ou en cours : mettez-la en pause ou arrêtez-la définitivement depuis sa relecture, puis réessayez."
 
+#: packages/ui/src/next-step.ts
+msgid "Stopped"
+msgstr "Arrêtée"
+
 #: packages/ui/src/stop-reason.ts
 msgid "Stopped: author and critic agree it's ready"
 msgstr "Arrêté : le rédacteur et le relecteur s’accordent à dire que c’est prêt"

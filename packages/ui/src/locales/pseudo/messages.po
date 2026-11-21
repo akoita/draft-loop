@@ -8941,6 +8941,10 @@ msgstr ""
 msgid "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then try again."
 msgstr ""
 
+#: packages/ui/src/next-step.ts
+msgid "Stopped"
+msgstr ""
+
 #: packages/ui/src/stop-reason.ts
 msgid "Stopped: author and critic agree it's ready"
 msgstr ""

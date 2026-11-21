@@ -2,7 +2,13 @@ import { t } from "@lingui/core/macro";
 
 import type { ApplicationSummaryView } from "./application-contract.js";
 import type { CareerEvidenceStatus } from "./career-evidence.js";
-import type { HomeApplicationsState, HomeProfileStatus } from "./home-model.js";
+import {
+  applicationStatusLabel,
+  applicationStatusTone,
+  type HomeApplicationsState,
+  type HomeProfileStatus,
+  type HomeTone,
+} from "./home-model.js";
 
 /**
  * Where the person stands, read once from the record (#3224). Every guidance surface (Getting
@@ -126,4 +132,21 @@ export function nextStepSentence(step: NextStep): string {
       return name === undefined ? action : t`${name}: ${action}`;
     }
   }
+}
+
+/**
+ * The status chip on an application's card (#3225). It follows the saved status, except that a
+ * review that stopped before an approval reads Stopped rather than In review.
+ */
+export function applicationCardStatus(application: ApplicationSummaryView): {
+  readonly label: string;
+  readonly tone: HomeTone;
+} {
+  if (applicationStage(application) === "review-ended") {
+    return { label: t`Stopped`, tone: "attention" };
+  }
+  return {
+    label: applicationStatusLabel(application.status),
+    tone: applicationStatusTone(application.status),
+  };
 }
