@@ -109,7 +109,7 @@ export function WebHelpMenu({
   const recordId = useContext(RecordContext);
   const support = useMemo(() => webHelpSupport(client, recordId, mode), [client, recordId, mode]);
   const [quickHelp, setQuickHelp] = useState(false);
-  const feedback = useFeedbackDialog(client);
+  const feedback = useFeedbackDialog(client, release?.version);
   // The dialogs sit beside the menu, not in it, so folding the menu never hides them.
   return (
     <>

@@ -19,7 +19,9 @@ members, so it takes no notes.
 
 In the web screen, open **Help** in the header and select **Send feedback**, pick a kind of
 note if you know it, write it and select **Send**. Open **What we include**
-in the dialog to see every technical value the note carries.
+in the dialog to see every technical value the note carries. Its first rows
+name the server's version, such as `Version 0.26.60`, as the Help menu shows
+it, and the web screen's build id (**Web build**).
 
 Send a note through the API as a signed-in member:
 

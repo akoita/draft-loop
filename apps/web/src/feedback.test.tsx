@@ -128,6 +128,17 @@ describe("What we include (#2875)", () => {
     expect(html).not.toContain("<details open");
   });
 
+  it("names the server's version above the web build when the server has one", () => {
+    const html = render(<FeedbackDialog {...idle} context={context} version="0.26.60" />);
+
+    expect(html).toMatch(
+      /<dt>Version<\/dt><dd>0.26.60<\/dd><dt>Web build<\/dt><dd>index-a1b2c3<\/dd>/u,
+    );
+    expect(render(<FeedbackDialog {...idle} context={context} />)).not.toContain(
+      "<dt>Version</dt>",
+    );
+  });
+
   it("says None for what the screen has not seen, in French too", () => {
     const html = render(<FeedbackDialog {...idle} context={{ route: "/" }} />, "fr");
 

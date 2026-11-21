@@ -32,6 +32,8 @@ export interface FeedbackDialogProps {
   readonly sent: boolean;
   /** The technical facts the note will carry (#2875), listed under What we include. */
   readonly context?: FeedbackClientContext | undefined;
+  /** The server's release number, as the Help menu shows it; absent on an untagged build. */
+  readonly version?: string | undefined;
   readonly onSubmit: (note: { text: string; category: FeedbackCategory | undefined }) => void;
   readonly onClose: () => void;
 }
@@ -52,8 +54,10 @@ function Fact({ name, value }: { readonly name: string; readonly value: string }
  */
 export function FeedbackContextFold({
   context,
+  version,
 }: {
   readonly context: FeedbackClientContext | undefined;
+  readonly version?: string | undefined;
 }) {
   const none = t`None`;
   const errors = context?.recentErrors ?? [];
@@ -65,7 +69,8 @@ export function FeedbackContextFold({
       <dl>
         <Fact name={t`Source`} value={t`Web screen`} />
         <Fact name={t`Page`} value={context?.route || none} />
-        <Fact name={t`Web version`} value={context?.webBuild ?? none} />
+        {version === undefined ? null : <Fact name={t`Version`} value={version} />}
+        <Fact name={t`Web build`} value={context?.webBuild ?? none} />
         <Fact name={t`Record`} value={context?.ids?.recordId ?? none} />
         <Fact name={t`Application`} value={context?.ids?.applicationId ?? none} />
         <Fact name={t`Run`} value={context?.ids?.runId ?? none} />
@@ -106,6 +111,7 @@ export function FeedbackDialog({
   problem,
   sent,
   context,
+  version,
   onSubmit,
   onClose,
 }: FeedbackDialogProps) {
@@ -176,7 +182,7 @@ export function FeedbackDialog({
             <p id={`${id}-hint`} className="muted">
               {t`Up to ${maximumFeedbackLength} characters. Leave out passwords and other people's details.`}
             </p>
-            <FeedbackContextFold context={context} />
+            <FeedbackContextFold context={context} version={version} />
             {problem === undefined ? null : (
               <p className="problem" role="alert">
                 {problem}
@@ -221,7 +227,10 @@ export async function sendFeedback(
  * The Send feedback dialog and its sending, for whichever control opens it: `open` takes the
  * context then, so what the dialog lists is exactly what is sent. Sign-in mode only.
  */
-export function useFeedbackDialog(client: ApiClient): {
+export function useFeedbackDialog(
+  client: ApiClient,
+  version?: string,
+): {
   readonly open: () => void;
   readonly dialog: ReactNode;
 } {
@@ -267,6 +276,7 @@ export function useFeedbackDialog(client: ApiClient): {
         problem={problem}
         sent={sent}
         context={context}
+        version={version}
         onSubmit={(note) => void submit(note)}
         onClose={close}
       />

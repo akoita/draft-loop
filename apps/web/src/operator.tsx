@@ -303,7 +303,7 @@ function contextRows(note: FeedbackNote): readonly (readonly [string, string])[]
   add(t`Organisation`, note.organisationId);
   add(t`Source`, context.source);
   add(t`Page`, context.route);
-  add(t`Web version`, context.webBuild);
+  add(t`Web build`, context.webBuild);
   add(t`Server version`, context.serverRelease ?? undefined);
   add(t`Plan`, context.plan ?? undefined);
   add(t`Record`, context.ids?.recordId);
