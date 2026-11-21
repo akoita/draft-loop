@@ -9,7 +9,11 @@
 import {
   buildQualityDigest,
   type DigestLatency,
+  type DigestOutcomeEvent,
+  type DigestOutcomes,
   type DigestQuality,
+  type DigestRunPair,
+  digestOutcomes,
   latencyTrend,
   type QualityDigest,
   qualityTrend,
@@ -31,6 +35,8 @@ export type QualityDigestPorts = Pick<
   | "digestsBetween"
   | "organisationsActiveSince"
   | "spansBetween"
+  | "outcomesBetween"
+  | "feedbackNotesBetween"
   | "listInsights"
   | "saveInsights"
 > & {
@@ -49,21 +55,40 @@ export async function sweepQualityDigest(
 
   const organisations = await ports.organisationsActiveSince(from, maximumDigestOrganisations);
   const spans = [];
+  const events: DigestOutcomeEvent[] = [];
+  const runPairs: DigestRunPair[] = [];
   for (const organisationId of organisations) {
     spans.push(...(await ports.spansBetween(organisationId, from, to)));
+    // Member outcomes (#3245): run ids stay inside this sweep; the digest keeps counts.
+    const outcomes = await ports.outcomesBetween(organisationId, from, to);
+    events.push(...outcomes.events);
+    runPairs.push(...outcomes.runPairs);
   }
-  const digest = buildQualityDigest({ day, organisations: organisations.length, spans });
+  const digest = buildQualityDigest({
+    day,
+    organisations: organisations.length,
+    spans,
+    outcomes: digestOutcomes({
+      events,
+      runPairs,
+      feedbackNotes: await ports.feedbackNotesBetween(from, to),
+    }),
+  });
   await ports.save(day, digest as unknown as Record<string, unknown>);
   // This week against the week before, per model pair (#3240); older digests have no quality.
   const since = new Date(from.getTime() - 13 * dayMs).toISOString().slice(0, 10);
   const earlier = (await ports.digestsBetween(since, day)).filter((saved) => saved.day !== day);
   const trend = qualityTrend(day, [
-    ...earlier.map((saved) =>
-      saved.digest.quality === undefined
-        ? { day: saved.day }
-        : { day: saved.day, quality: saved.digest.quality as DigestQuality },
-    ),
-    { day, quality: digest.quality },
+    ...earlier.map((saved) => ({
+      day: saved.day,
+      ...(saved.digest.quality === undefined
+        ? {}
+        : { quality: saved.digest.quality as DigestQuality }),
+      ...(saved.digest.outcomes === undefined
+        ? {}
+        : { outcomes: saved.digest.outcomes as DigestOutcomes }),
+    })),
+    { day, quality: digest.quality, outcomes: digest.outcomes },
   ]);
   const latency = latencyTrend(day, [
     ...earlier.map((saved) =>
@@ -107,6 +132,8 @@ export async function runQualityDigest(wiring: {
         digestsBetween: digests.digestsBetween,
         organisationsActiveSince: digests.organisationsActiveSince,
         spansBetween: digests.spansBetween,
+        outcomesBetween: digests.outcomesBetween,
+        feedbackNotesBetween: digests.feedbackNotesBetween,
         listInsights: digests.listInsights,
         saveInsights: digests.saveInsights,
         log: (message, fields) => console.info(logLine("INFO", message, fields)),

@@ -37,7 +37,7 @@ flowchart TB
 | Part      | What it does                                                                             | Where                                                 |
 | --------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | Signals   | Spans per author, critic, revision and retrieval call; one log line per finding decision | [Run traces](runtime-and-trust.md#run-traces)         |
-| Digest    | Reduces one UTC day of spans to counts, codes, model ids and sample run ids, plus output quality by model pair, step latency, and week-over-week trends for both | `packages/application/src/quality-digest.ts`          |
+| Digest    | Reduces one UTC day of spans to counts, codes, model ids and sample run ids, plus output quality by model pair, member outcomes, step latency, and week-over-week trends | `packages/application/src/quality-digest.ts`          |
 | Ledger    | Tracks each pattern's status across days                                                 | `packages/application/src/quality-insights.ts`        |
 | Sweep     | Builds the digest, updates the ledger, logs both                                         | `apps/worker/src/quality-digest-sweep.ts`             |
 | Storage   | `quality_digests` and `quality_insights`, deployment-wide, content-free                  | `packages/storage-postgres/src/quality-digests.ts`    |
@@ -61,6 +61,7 @@ sequenceDiagram
     W->>PG: organisations active yesterday
     loop each organisation, as that tenant
       W->>PG: its spans that started yesterday
+      W->>PG: its decided findings, exports, refunds, stopped runs
     end
     W->>PG: save digest, upsert ledger rows
     W->>Log: quality digest, quality insights
@@ -75,6 +76,13 @@ sequenceDiagram
   start builds it.
 - **Tenant isolation.** Spans are read one organisation at a time, acting as
   that organisation, so row-level security still applies. Only counts leave.
+- **Member outcomes.** The digest's `outcomes` count, per author and critic
+  model, findings accepted or rejected, drafts exported, runs refunded and
+  runs stopped, plus `feedbackNotes` sent that day. A run without an
+  evaluation counts under `unknown`. Run ids stay inside the sweep. Each
+  `trend` pair carries `outcomes.current` and `outcomes.previous`, with the
+  week's `acceptRate` next to its ready rate; `trend.feedbackNotes` compares
+  the two weeks' notes.
 - **Failure.** A sweep error is logged as `quality digest failed` and never
   touches a run. The day stays claimed, so it is not retried.
 

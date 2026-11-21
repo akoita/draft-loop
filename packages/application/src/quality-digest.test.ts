@@ -82,6 +82,7 @@ describe("the daily quality digest (#2916)", () => {
       retrieval: { calls: 3, empty: 1, singleSource: 1, medianChunks: 6 },
       quality: { runs: 0, ready: 0, estimatedUsd: 0, costPerReadyDraft: null, pairs: [] },
       latency: [],
+      outcomes: { feedbackNotes: 0, pairs: [] },
     });
   });
 
