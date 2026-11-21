@@ -380,6 +380,13 @@ describe.runIf(connectionString !== undefined)("Postgres feedback notes (#2828)"
       expect(searched.map(({ text }) => text)).toEqual(["Still new."]);
       await expect(feedback.listNewest(10, undefined, { offset: 2 })).resolves.toEqual([]);
       await expect(feedback.listNewest(10, undefined, { query: "%" })).resolves.toEqual([]);
+      // The reference the member was shown finds the note (#2876).
+      const reference = `FB-${first.noteId
+        .replace(/[^A-Za-z0-9]/gu, "")
+        .slice(0, 8)
+        .toUpperCase()}`;
+      const quoted = await feedback.listNewest(10, undefined, { query: reference });
+      expect(quoted.map(({ noteId }) => noteId)).toEqual([first.noteId]);
       await expect(feedback.get(first.noteId)).resolves.toMatchObject({ status: "closed" });
       await expect(feedback.get("no-such-note")).resolves.toBeUndefined();
     });

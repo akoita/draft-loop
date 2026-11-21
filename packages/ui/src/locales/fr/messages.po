@@ -700,6 +700,10 @@ msgstr "{label} non enregistré pour {missing}, la comparaison est donc impossib
 msgid "{label} not recorded for either run, so it cannot be compared"
 msgstr "{label} non enregistré pour aucune des deux exécutions, la comparaison est donc impossible"
 
+#: apps/web/src/feedback.tsx
+msgid "{left} characters left"
+msgstr "Encore {left} caractères"
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "{legacyCount, plural, one {# source ready} other {# sources ready}}"
 msgstr "{legacyCount, plural, one {# source prête} other {# sources prêtes}}"
@@ -4805,8 +4809,8 @@ msgid "Kind of interview"
 msgstr "Type d’entretien"
 
 #: apps/web/src/feedback.tsx
-msgid "Kind of note"
-msgstr "Type de message"
+msgid "Kind of note (optional)"
+msgstr "Type d’avis (facultatif)"
 
 #: packages/ui/src/knowledge.tsx
 #: packages/ui/src/work-journal-panel.tsx
@@ -4884,6 +4888,10 @@ msgstr "Développeur principal ou développeuse principale"
 #: packages/ui/src/career-interview-model.ts
 msgid "Leadership"
 msgstr "Leadership"
+
+#: apps/web/src/feedback.tsx
+msgid "Leave out passwords and other people's details."
+msgstr "N’indiquez ni mot de passe ni informations sur d’autres personnes."
 
 #: apps/web/src/application-material.tsx
 #: apps/web/src/interview-guide.tsx
@@ -6091,10 +6099,6 @@ msgstr "Non filtré ; un propriétaire ou un administrateur l’a libéré."
 msgid "Not set"
 msgstr "Non défini"
 
-#: apps/web/src/feedback.tsx
-msgid "Not sure"
-msgstr "Je ne sais pas"
-
 #: apps/web/src/operator.tsx
 msgid "Not used yet"
 msgstr "Pas encore utilisées"
@@ -6197,7 +6201,7 @@ msgstr "ok"
 
 #: apps/web/src/operator.tsx
 msgid "Oldest first: the order people asked in."
-msgstr "Les plus anciennes d'abord : l'ordre des demandes."
+msgstr "Les plus anciennes d’abord : l'ordre des demandes."
 
 #: packages/ui/src/profile-presentation.ts
 msgid "Omission"
@@ -6973,6 +6977,10 @@ msgstr "Aide rapide"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Quick replies"
 msgstr "Réponses rapides"
+
+#: apps/web/src/feedback.tsx
+msgid "Quote it if you write to us about this note."
+msgstr "Citez-la si vous nous écrivez au sujet de cet avis."
 
 #. placeholder {0}: view.reason
 #: packages/ui/src/run-requirement-evidence.tsx
@@ -10777,10 +10785,6 @@ msgstr "Non pris en charge avec la route configurée."
 msgid "Unvalidated"
 msgstr "Non validé"
 
-#: apps/web/src/feedback.tsx
-msgid "Up to {maximumFeedbackLength} characters. Leave out passwords and other people's details."
-msgstr "Jusqu'à {maximumFeedbackLength} caractères. N'y mettez ni mot de passe ni informations sur d'autres personnes."
-
 #: packages/ui/src/profile-freshness.ts
 msgid "Up to date with your career evidence"
 msgstr "À jour par rapport à vos éléments de parcours"
@@ -11181,6 +11185,10 @@ msgstr "Nature de chaque source ("
 msgid "What each source is could not be read."
 msgstr "La nature de chaque source n’a pas pu être lue."
 
+#: apps/web/src/feedback.tsx
+msgid "What happened? What did you expect?"
+msgstr "Que s’est-il passé ? À quoi vous attendiez-vous ?"
+
 #: packages/ui/src/run-details.tsx
 msgid "What is cut"
 msgstr "Ce qui est retiré"
@@ -11368,6 +11376,10 @@ msgstr "Espace de travail indisponible"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Write"
 msgstr "Écrire"
+
+#: apps/web/src/feedback.tsx
+msgid "Write a note first."
+msgstr "Écrivez d’abord votre avis."
 
 #: packages/ui/src/application-language.tsx
 msgid "Write in {label}"
@@ -11793,6 +11805,10 @@ msgstr "Votre dossier ne dit rien sur {from}."
 #: packages/ui/src/career-interview-model.ts
 msgid "Your record says nothing between {from} and {to}."
 msgstr "Votre dossier ne dit rien entre {from} et {to}."
+
+#: apps/web/src/feedback.tsx
+msgid "Your reference:"
+msgstr "Votre référence :"
 
 #: apps/web/src/oidc-session.ts
 msgid "Your sign-in has expired. Sign in again."

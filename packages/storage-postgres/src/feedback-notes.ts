@@ -17,9 +17,13 @@ import { requireOrganisationId, TenantDirectoryError } from "@draft-loop/storage
 import { pageOffset, searchPattern } from "./operator-list-page.js";
 import type { SqlClient, SqlRow } from "./sql-client.js";
 
-/** What the inbox search reads: the member's text, the screen and the category. */
+/**
+ * What the inbox search reads: the member's text, the screen, the category and the reference the
+ * member was shown, `FB-` and the id's first eight characters (#2876).
+ */
 const searchMatch = `($SEARCH::text IS NULL OR body ILIKE $SEARCH OR screen ILIKE $SEARCH
-  OR coalesce(category, '') ILIKE $SEARCH)`;
+  OR coalesce(category, '') ILIKE $SEARCH
+  OR ('FB-' || upper(left(regexp_replace(id, '[^A-Za-z0-9]', '', 'g'), 8))) ILIKE $SEARCH)`;
 
 const columns =
   "tenant_id, id, kind, member_id, category, screen, body, transcript, context, status, issue_url, triaged_at, sent_at";
