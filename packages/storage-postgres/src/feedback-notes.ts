@@ -2,11 +2,14 @@ import { randomUUID } from "node:crypto";
 import { type FeedbackContext, feedbackContextSchema } from "@draft-loop/schemas/feedback";
 import {
   type FeedbackNote,
+  type FeedbackReply,
   type FeedbackStatus,
   type FeedbackStore,
   feedbackStatuses,
   isFeedbackCategory,
   maximumFeedbackCharacters,
+  maximumFeedbackReplies,
+  maximumFeedbackReplyCharacters,
   maximumFeedbackScreenCharacters,
   maximumSupportTranscriptTurnCharacters,
   maximumSupportTranscriptTurns,
@@ -26,7 +29,7 @@ const searchMatch = `($SEARCH::text IS NULL OR body ILIKE $SEARCH OR screen ILIK
   OR ('FB-' || upper(left(regexp_replace(id, '[^A-Za-z0-9]', '', 'g'), 8))) ILIKE $SEARCH)`;
 
 const columns =
-  "tenant_id, id, kind, member_id, category, screen, body, transcript, context, status, issue_url, triaged_at, sent_at";
+  "tenant_id, id, kind, member_id, category, screen, body, transcript, context, status, issue_url, triaged_at, replies, sent_at";
 
 /** The longest support summary, in characters: one paragraph. */
 const maximumSupportSummaryCharacters = 800;
@@ -48,6 +51,15 @@ function contextRecord(value: unknown): FeedbackContext | null {
   const parsed = typeof value === "string" ? (JSON.parse(value) as unknown) : value;
   const result = feedbackContextSchema.safeParse(parsed);
   return result.success ? result.data : null;
+}
+
+function repliesRecord(value: unknown): readonly FeedbackReply[] {
+  const parsed = typeof value === "string" ? (JSON.parse(value) as unknown) : value;
+  if (!Array.isArray(parsed)) return [];
+  return parsed.flatMap((reply: unknown) => {
+    const { text, sentAt } = (reply ?? {}) as { text?: unknown; sentAt?: unknown };
+    return typeof text === "string" && typeof sentAt === "string" ? [{ text, sentAt }] : [];
+  });
 }
 
 function statusRecord(value: unknown): FeedbackStatus {
@@ -76,6 +88,7 @@ function noteRecord(row: SqlRow): FeedbackNote {
     status: statusRecord(row.status),
     issueUrl: typeof row.issue_url === "string" ? row.issue_url : null,
     triagedAt: isoOrNull(row.triaged_at),
+    replies: repliesRecord(row.replies),
     sentAt: (sentAt instanceof Date ? sentAt : new Date(String(sentAt))).toISOString(),
   };
 }
@@ -241,6 +254,39 @@ export function createPostgresFeedback(client: SqlClient): FeedbackStore {
           `UPDATE feedback_notes SET status = $2, issue_url = $3, triaged_at = $4
            WHERE id = $1 RETURNING ${columns}`,
           [noteId, status, link, status === "new" ? null : now.toISOString()],
+        );
+        return row === undefined ? undefined : noteRecord(row);
+      });
+    },
+
+    // As triage: the `operator_triage` policy admits the update only under `draft_loop.operator`.
+    addReply: async ({ noteId, text, now }) => {
+      const body = text.trim();
+      if (body === "" || body.length > maximumFeedbackReplyCharacters) {
+        throw new TenantDirectoryError(
+          "invalid_input",
+          `A reply has 1 to ${maximumFeedbackReplyCharacters} characters.`,
+        );
+      }
+      if (Number.isNaN(now.getTime())) throw new Error("A clock must be a valid date.");
+      return client.transaction(async (executor) => {
+        await executor.query("SELECT set_config('draft_loop.operator', 'on', true)");
+        const [current] = await executor.query(
+          "SELECT jsonb_array_length(replies) AS count FROM feedback_notes WHERE id = $1 FOR UPDATE",
+          [noteId],
+        );
+        if (current === undefined) return undefined;
+        if (Number(current.count) >= maximumFeedbackReplies) {
+          throw new TenantDirectoryError(
+            "invalid_input",
+            `A note keeps at most ${maximumFeedbackReplies} replies.`,
+          );
+        }
+        const [row] = await executor.query(
+          `UPDATE feedback_notes
+              SET replies = replies || jsonb_build_array(jsonb_build_object('text', $2::text, 'sentAt', $3::text))
+            WHERE id = $1 RETURNING ${columns}`,
+          [noteId, body, now.toISOString()],
         );
         return row === undefined ? undefined : noteRecord(row);
       });

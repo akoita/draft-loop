@@ -66,6 +66,33 @@ stateDiagram-v2
 | **Draft an issue** | Opens GitHub's From feedback template with the note's context and id, never its text or ids in view |
 | Checkboxes, **Close selected** | Close several New or Kept notes at once; **Select all shown** picks the notes read so far |
 | **Context** | The note's page, versions, plan, ids, recent errors and browser |
+| **Reply by email** | Emails your reply to the member who sent the note; the replies sent show under the note |
+
+### Reply to a member
+
+Select **Reply by email** on a note, write the reply and select **Send
+reply**. Nothing is sent until you do. The server looks up the member's
+address, emails the reply in the language of their browser when known, and
+keeps it with the note. The address never reaches the screen, a log or the
+response.
+
+The email names the note by its `FB-` reference, never by its text. It asks
+the member to answer through Send feedback, quoting that reference.
+
+| Answer | Meaning | What to do |
+| --- | --- | --- |
+| `200` | Emailed and stored | Nothing |
+| `404 member_gone` | The member's account is gone | No reply is possible |
+| `502 mail_failed` | The mail provider refused it; nothing is stored | Try again later |
+| `503 mail_unavailable` | This server sends no email | Set the mail sender (`DRAFT_LOOP_MAIL_FROM`) |
+
+Through the API, with the owner token:
+
+```sh
+curl -X POST "$DRAFT_LOOP_URL/v1/operator/feedback/$NOTE_ID/reply" \
+  -H "Authorization: Bearer $OWNER_TOKEN" -H "Content-Type: application/json" \
+  -d '{"text": "Thanks, this is fixed in the next release."}'
+```
 
 ### Triage notes through the API
 

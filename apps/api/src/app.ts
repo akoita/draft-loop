@@ -75,6 +75,8 @@ import { registerExportPreviewRoutes } from "./export-preview-routes.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { registerFactSuggestionRoutes } from "./fact-suggestion-routes.js";
 import { registerFactUsageRoutes } from "./fact-usage-routes.js";
+import type { FeedbackReplyMailer } from "./feedback-reply-mail.js";
+import { registerFeedbackReplyRoutes } from "./feedback-reply-routes.js";
 import { type FeedbackRoutesOptions, registerFeedbackRoutes } from "./feedback-routes.js";
 import { registerHelpRoutes } from "./help-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
@@ -270,6 +272,8 @@ export interface ApiOptions {
   readonly inviteMailer?: InviteMailer;
   /** Emails each waitlist sign-up a confirmation link; absent where the deployment sets no sender. */
   readonly waitlistConfirmMailer?: WaitlistConfirmMailer;
+  /** Emails the operator's reply to a feedback note (#2878); absent where no sender is set. */
+  readonly feedbackReplyMailer?: FeedbackReplyMailer;
   /** The support assistant's switch and limits (#2882); without it the support routes are absent. */
   readonly support?: SupportSettings;
   /** The daily ceiling on automatic job-ad reading for unlimited plans; 50 when unset. */
@@ -1113,6 +1117,18 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       feedback: options.feedback,
       serverRelease: options.serverRelease ?? null,
       ...(auth.mode === "oidc" && entitlementsFor !== undefined ? { entitlementsFor } : {}),
+    });
+    // The member's address is read here, on the server, and only to email the reply (#2878).
+    const directory = options.directory;
+    registerFeedbackReplyRoutes(app, {
+      feedback: options.feedback,
+      ...(options.feedbackReplyMailer === undefined ? {} : { mailer: options.feedbackReplyMailer }),
+      memberEmail: async (organisationId, memberId) =>
+        directory === undefined
+          ? undefined
+          : (await directory.listMembers(organisationId)).find(
+              (member) => member.memberId === memberId,
+            )?.email,
     });
   }
   registerHelpRoutes(app);

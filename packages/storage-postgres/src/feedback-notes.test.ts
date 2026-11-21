@@ -100,6 +100,7 @@ describe.runIf(connectionString !== undefined)("Postgres feedback notes (#2828)"
           status: "new",
           issueUrl: null,
           triagedAt: null,
+          replies: [],
           sentAt: "2026-11-16T10:01:00.000Z",
         },
         {
@@ -115,6 +116,7 @@ describe.runIf(connectionString !== undefined)("Postgres feedback notes (#2828)"
           status: "new",
           issueUrl: null,
           triagedAt: null,
+          replies: [],
           sentAt: now.toISOString(),
         },
       ]);
@@ -200,6 +202,7 @@ describe.runIf(connectionString !== undefined)("Postgres feedback notes (#2828)"
         status: "new",
         issueUrl: null,
         triagedAt: null,
+        replies: [],
         sentAt: now.toISOString(),
       });
       await expect(feedback.listNewest(10)).resolves.toEqual([ticket]);
@@ -412,6 +415,52 @@ describe.runIf(connectionString !== undefined)("Postgres feedback notes (#2828)"
         await pool.close();
       }
       await expect(feedback.listNewest(10)).resolves.toEqual([note]);
+    });
+  });
+
+  it("keeps the operator's emailed replies with the note, oldest first (#2878)", async () => {
+    await withDirectory(async ({ feedback }) => {
+      const note = await feedback.send({
+        organisationId: "org-north",
+        memberId: "member-1",
+        category: "bug",
+        screen: "review",
+        text: "Export does nothing.",
+        now,
+      });
+      expect(note.replies).toEqual([]);
+
+      const later = new Date("2026-11-16T11:00:00.000Z");
+      const first = await feedback.addReply({
+        noteId: note.noteId,
+        text: "  Thanks, looking.  ",
+        now,
+      });
+      const second = await feedback.addReply({ noteId: note.noteId, text: "Fixed.", now: later });
+      expect(first?.replies).toEqual([{ text: "Thanks, looking.", sentAt: now.toISOString() }]);
+      expect(second?.replies).toEqual([
+        { text: "Thanks, looking.", sentAt: now.toISOString() },
+        { text: "Fixed.", sentAt: later.toISOString() },
+      ]);
+      // A reply leaves the triage as it was.
+      expect(second?.status).toBe("new");
+      await expect(feedback.get(note.noteId)).resolves.toEqual(second);
+
+      await expect(feedback.addReply({ noteId: "no-such-note", text: "Hi.", now })).resolves.toBe(
+        undefined,
+      );
+      await expect(
+        feedback.addReply({ noteId: note.noteId, text: "  ", now }),
+      ).rejects.toMatchObject({ code: "invalid_input" });
+      await expect(
+        feedback.addReply({ noteId: note.noteId, text: "x".repeat(2_001), now }),
+      ).rejects.toMatchObject({ code: "invalid_input" });
+      for (let index = 2; index < 20; index += 1) {
+        await feedback.addReply({ noteId: note.noteId, text: `Reply ${index}.`, now });
+      }
+      await expect(
+        feedback.addReply({ noteId: note.noteId, text: "One too many.", now }),
+      ).rejects.toMatchObject({ code: "invalid_input" });
     });
   });
 });

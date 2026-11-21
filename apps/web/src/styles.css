@@ -1126,6 +1126,28 @@ form button[type="submit"]:where(:not(.button)) {
   background: rgba(0, 0, 0, 0.5);
 }
 
+/* The operator's replies under a note (#2878): a quiet list, newest last. */
+.operator-replies h4 {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: 0.95rem;
+}
+
+.operator-replies ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.operator-replies p {
+  margin: 0;
+}
+
+.operator-reply-form textarea {
+  min-height: 6rem;
+}
+
 /* Send feedback (#2876): a real title, optional kind chips, a quiet hint row with the counter near
    the limit, and Cancel and Send on one row at one height, Send last as the primary. */
 .feedback-dialog {

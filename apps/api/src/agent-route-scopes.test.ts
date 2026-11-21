@@ -48,6 +48,7 @@ beforeEach(async () => {
       listNewest: async () => [],
       get: async () => undefined,
       statusCounts: async () => ({ new: 0, triaged: 0, issue: 0, closed: 0 }),
+      addReply: async () => undefined,
       triage: async () => undefined,
     },
     application: {

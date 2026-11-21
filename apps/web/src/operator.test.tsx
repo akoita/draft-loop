@@ -73,6 +73,7 @@ const note: FeedbackNote = {
   status: "new",
   issueUrl: null,
   triagedAt: null,
+  replies: [],
   sentAt: "2026-11-15T10:30:00.000Z",
 };
 

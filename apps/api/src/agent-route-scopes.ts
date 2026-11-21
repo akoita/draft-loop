@@ -190,6 +190,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "POST /v1/knowledge-bases",
   "POST /v1/knowledge-bases/:knowledgeBaseId/sensitivity-rules",
   "POST /v1/knowledge-bases/:knowledgeBaseId/sources",
+  "POST /v1/operator/feedback/:noteId/reply",
   "POST /v1/operator/organisations",
   "POST /v1/operator/organisations/:organisationId/credit-grants",
   "POST /v1/organisation/members",

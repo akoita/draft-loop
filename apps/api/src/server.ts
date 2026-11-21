@@ -13,6 +13,7 @@ import { readBriefExtractionsPerDay } from "./brief-extraction-allowance.js";
 import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { readScreeningConfig } from "./content-screening-config.js";
 import { contentScreeningSetup } from "./content-screening-service.js";
+import { createFeedbackReplyMailer } from "./feedback-reply-mail.js";
 import { openHostedTenants } from "./hosted-application.js";
 import { identityAdminClientFromEnv, keycloakAccounts } from "./identity-accounts.js";
 import { createInviteMailer, withInvitedAccount } from "./invite-mail.js";
@@ -182,6 +183,7 @@ const app = await buildApi({
                       logInviteSignInError,
                     ),
               waitlistConfirmMailer: createWaitlistConfirmMailer(mail),
+              feedbackReplyMailer: createFeedbackReplyMailer(mail),
             }),
         // The waitlist and the public landing page exist only while the beta is open (#2567).
         ...(betaAccountCap > 0 ? { betaWaitlist: directory.betaWaitlist } : {}),

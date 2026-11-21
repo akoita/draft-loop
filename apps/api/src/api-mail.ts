@@ -1,7 +1,7 @@
 /**
  * The API's transactional email: the shared Brevo sender from `@draft-loop/mail` with its key
  * read from Secret Manager, and one content-free log line per message. The templates live beside
- * the features that send them (invite-mail.ts, waitlist-confirm-mail.ts).
+ * the features that send them (invite-mail.ts, waitlist-confirm-mail.ts, feedback-reply-mail.ts).
  */
 
 import {
@@ -14,7 +14,7 @@ import {
 } from "@draft-loop/mail";
 import { createSecretManagerCredentialResolver } from "@draft-loop/model-gateway";
 
-export type ApiMailTemplate = "beta_invite" | "waitlist_confirm";
+export type ApiMailTemplate = "beta_invite" | "waitlist_confirm" | "feedback_reply";
 
 export interface ApiMail {
   /** The service's public address, the only site a message links to. */

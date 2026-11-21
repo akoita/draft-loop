@@ -11,6 +11,8 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
 import type { TenantEntitlementsFor } from "./entitlement-gate.js";
+import type { FeedbackReplyMailer } from "./feedback-reply-mail.js";
+import { registerFeedbackReplyRoutes } from "./feedback-reply-routes.js";
 import { registerFeedbackRoutes } from "./feedback-routes.js";
 import { cloudLoggingOptions } from "./logging.js";
 
@@ -18,7 +20,7 @@ const ownerToken = "owner-token-for-tests-0123456789abcdef";
 const issuer = "https://id.example.test/realms/draft-loop";
 const audience = "draft-loop-api";
 
-const untriaged = { status: "new", issueUrl: null, triagedAt: null } as const;
+const untriaged = { status: "new", issueUrl: null, triagedAt: null, replies: [] } as const;
 
 /** Notes kept in memory, trimmed and bounded as the Postgres store does. */
 function memoryFeedback() {
@@ -103,6 +105,17 @@ function memoryFeedback() {
         status,
         issueUrl: link,
         triagedAt: status === "new" ? null : now.toISOString(),
+      };
+      notes[index] = note;
+      return note;
+    },
+    addReply: async ({ noteId, text, now }) => {
+      const index = notes.findIndex((note) => note.noteId === noteId);
+      const current = notes[index];
+      if (current === undefined) return undefined;
+      const note: FeedbackNote = {
+        ...current,
+        replies: [...current.replies, { text: text.trim(), sentAt: now.toISOString() }],
       };
       notes[index] = note;
       return note;
@@ -551,6 +564,144 @@ describe("triaging notes (#2877)", () => {
       url: `/v1/operator/feedback/${noteId}`,
       headers: { authorization: await signIn("member-north") },
       payload: { status: "closed" },
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+});
+
+describe("replying to a note (#2878)", () => {
+  const now = new Date("2026-11-21T10:00:00.000Z");
+  const noteId = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+
+  async function replyApi(options: {
+    readonly mailer?: FeedbackReplyMailer;
+    readonly email?: string;
+    readonly language?: string;
+  }) {
+    const { store, notes } = memoryFeedback();
+    notes.push({
+      noteId,
+      kind: "note",
+      organisationId: "org-north",
+      memberId: "member-north",
+      category: "bug",
+      screen: "review",
+      text: "The export button does nothing.",
+      transcript: null,
+      context:
+        options.language === undefined
+          ? null
+          : {
+              source: "web",
+              serverRelease: null,
+              plan: null,
+              browser: {
+                family: "Firefox",
+                os: "Linux",
+                viewport: "1280x800",
+                language: options.language,
+                theme: "light",
+              },
+            },
+      ...untriaged,
+      sentAt: now.toISOString(),
+    });
+    const server = Fastify({ logger: false }).withTypeProvider<ZodTypeProvider>();
+    server.setValidatorCompiler(validatorCompiler);
+    server.setSerializerCompiler(serializerCompiler);
+    registerFeedbackReplyRoutes(server, {
+      feedback: store,
+      ...(options.mailer === undefined ? {} : { mailer: options.mailer }),
+      memberEmail: async (organisationId, memberId) =>
+        organisationId === "org-north" && memberId === "member-north" ? options.email : undefined,
+      now: () => now,
+    });
+    app = server;
+    return { server, notes };
+  }
+
+  it("emails the reply to the member in their language and keeps it with the note", async () => {
+    const sent: Parameters<FeedbackReplyMailer>[0][] = [];
+    const { server } = await replyApi({
+      email: "member@example.test",
+      language: "fr-FR",
+      mailer: async (message) => {
+        sent.push(message);
+        return true;
+      },
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: `/v1/operator/feedback/${noteId}/reply`,
+      payload: { text: "  Thanks, it is fixed in the next release.  " },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().replies).toEqual([
+      { text: "Thanks, it is fixed in the next release.", sentAt: now.toISOString() },
+    ]);
+    // The address goes to the mailer only, never into the response.
+    expect(response.body).not.toContain("member@example.test");
+    expect(sent).toEqual([
+      {
+        email: "member@example.test",
+        reference: "FB-1A2B3C4D",
+        text: "Thanks, it is fixed in the next release.",
+        locale: "fr",
+      },
+    ]);
+  });
+
+  it("stores nothing when the mail fails, and says why it cannot reply", async () => {
+    const failing = await replyApi({ email: "member@example.test", mailer: async () => false });
+    const failed = await failing.server.inject({
+      method: "POST",
+      url: `/v1/operator/feedback/${noteId}/reply`,
+      payload: { text: "Hello." },
+    });
+    expect(failed.statusCode).toBe(502);
+    expect(failed.json().error.code).toBe("mail_failed");
+    expect(failing.notes[0]?.replies).toEqual([]);
+    await app?.close();
+
+    const noMail = await replyApi({ email: "member@example.test" });
+    const unavailable = await noMail.server.inject({
+      method: "POST",
+      url: `/v1/operator/feedback/${noteId}/reply`,
+      payload: { text: "Hello." },
+    });
+    expect(unavailable.statusCode).toBe(503);
+    await app?.close();
+
+    const gone = await replyApi({ mailer: async () => true });
+    const goneResponse = await gone.server.inject({
+      method: "POST",
+      url: `/v1/operator/feedback/${noteId}/reply`,
+      payload: { text: "Hello." },
+    });
+    expect(goneResponse.statusCode).toBe(404);
+    expect(goneResponse.json().error.code).toBe("member_gone");
+    for (const [url, payload, status] of [
+      ["/v1/operator/feedback/no-such-note/reply", { text: "Hello." }, 404],
+      [`/v1/operator/feedback/${noteId}/reply`, { text: "   " }, 400],
+      [`/v1/operator/feedback/${noteId}/reply`, { text: "x".repeat(2_001) }, 400],
+    ] as const) {
+      const response = await gone.server.inject({ method: "POST", url, payload });
+      expect(response.statusCode).toBe(status);
+    }
+  });
+
+  it("keeps the reply route from members", async () => {
+    const { store } = memoryFeedback();
+    const server = await api(store);
+
+    const response = await server.inject({
+      method: "POST",
+      url: `/v1/operator/feedback/${noteId}/reply`,
+      headers: { authorization: await signIn("member-north") },
+      payload: { text: "Hello." },
     });
 
     expect(response.statusCode).toBe(401);

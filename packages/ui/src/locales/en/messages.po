@@ -1942,6 +1942,7 @@ msgstr "Can't start yet: {0}"
 #: apps/web/src/application-material.tsx
 #: apps/web/src/danger-dialog.tsx
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator-feedback-reply.tsx
 #: apps/web/src/operator.tsx
 #: apps/web/src/records.tsx
 #: apps/web/src/research-brief.tsx
@@ -3288,6 +3289,10 @@ msgstr "DraftLoop cannot price one of the workspace's models yet. Choose another
 msgid "DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out."
 msgstr "DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out."
 
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "DraftLoop emails this reply to the member who sent the note, in their language when known. Their address stays on the server."
+msgstr "DraftLoop emails this reply to the member who sent the note, in their language when known. Their address stays on the server."
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "DraftLoop is fetching the job page you approved. Its text then goes to {providerName} ({modelName}) to split into requirements."
 msgstr "DraftLoop is fetching the job page you approved. Its text then goes to {providerName} ({modelName}) to split into requirements."
@@ -3485,6 +3490,11 @@ msgstr "Elapsed"
 #: apps/web/src/landing.tsx
 msgid "Email address"
 msgstr "Email address"
+
+#. placeholder {0}: when(reply.sentAt)
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Emailed {0}"
+msgstr "Emailed {0}"
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Employer"
@@ -7415,6 +7425,14 @@ msgstr "Replace policy"
 msgid "Replace the job description"
 msgstr "Replace the job description"
 
+#: apps/web/src/operator.tsx
+msgid "Reply by email"
+msgstr "Reply by email"
+
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Reply to the member"
+msgstr "Reply to the member"
+
 #. placeholder {0}: countedNouns.acceptedBlockingFinding(acceptedBlockingFindings.length)
 #: packages/ui/src/review.tsx
 msgid "Request a revision for {0}, or reject or override the finding if it does not apply."
@@ -8423,6 +8441,10 @@ msgstr "Send only if allowed"
 #: apps/web/src/sensitivity-model.ts
 msgid "Send only if the workspace allows:"
 msgstr "Send only if the workspace allows:"
+
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Send reply"
+msgstr "Send reply"
 
 #: packages/ui/src/help-ask.tsx
 msgid "Send the conversation"
@@ -11387,6 +11409,10 @@ msgstr "Write"
 msgid "Write a note first."
 msgstr "Write a note first."
 
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Write a reply first."
+msgstr "Write a reply first."
+
 #: packages/ui/src/application-language.tsx
 msgid "Write in {label}"
 msgstr "Write in {label}"
@@ -11815,6 +11841,10 @@ msgstr "Your record says nothing between {from} and {to}."
 #: apps/web/src/feedback.tsx
 msgid "Your reference:"
 msgstr "Your reference:"
+
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Your replies"
+msgstr "Your replies"
 
 #: apps/web/src/oidc-session.ts
 msgid "Your sign-in has expired. Sign in again."
