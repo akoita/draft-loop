@@ -10144,6 +10144,10 @@ msgstr "Le serveur ajoute sa version et l’offre de votre organisation. Jamais 
 msgid "The server refused the edit. Check the title, summary and technologies."
 msgstr "Le serveur a refusé la modification. Vérifiez le titre, le résumé et les technologies."
 
+#: apps/web/src/refusal-text.ts
+msgid "The server stopped waiting before this finished (error 504). It does not recover on its own: try again. Nothing you saved is lost."
+msgstr "Le serveur a cessé d'attendre avant la fin (erreur 504). Cela ne se rétablit pas seul : réessayez. Rien de ce que vous avez enregistré n'est perdu."
+
 #: apps/web/src/sign-in.tsx
 msgid "The service cannot be reached. Check your connection and reload the page."
 msgstr "Le service est injoignable. Vérifiez votre connexion et rechargez la page."

@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { interviewGuideMarkdown } from "./interview-guide-model.js";
+import { refusalText } from "./refusal-text.js";
 
 /**
  * The web's application material (#2217): what the prepare panel says before the first draft,
@@ -175,7 +176,11 @@ export function applicationMaterialTellReason(tell: ApplicationMaterialTell): st
 
 /** What to tell the candidate when the draft is refused; the API's words for any other code. */
 export function applicationMaterialProblem(error: unknown): string {
-  if (error instanceof ApiRequestError) return refusals()[error.code] ?? error.message;
+  if (error instanceof ApiRequestError) {
+    // A bare status gets the shared words saying whether it recovers; other codes keep the API's.
+    if (error.code === "unreadable-error") return refusalText(error);
+    return refusals()[error.code] ?? error.message;
+  }
   return describeError(error);
 }
 

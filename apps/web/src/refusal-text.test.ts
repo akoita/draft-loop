@@ -14,6 +14,9 @@ describe("refusal text", () => {
     expect(refusalText({ code: "unreadable-error", message: "x", params: { status: 502 } })).toBe(
       "Redakloop's server did not answer (error 502). It recovers on its own within a minute; try again then. Nothing you saved is lost.",
     );
+    expect(refusalText({ code: "unreadable-error", message: "x", params: { status: 504 } })).toBe(
+      "The server stopped waiting before this finished (error 504). It does not recover on its own: try again. Nothing you saved is lost.",
+    );
     expect(refusalText({ code: "unreadable-error", message: "x", params: { status: 418 } })).toBe(
       "The API answered 418.",
     );
