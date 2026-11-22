@@ -1105,6 +1105,7 @@ export * from "./opportunity-brief.js";
 export * from "./opportunity-extraction.js";
 export * from "./opportunity-intake.js";
 export * from "./opportunity-persistence.js";
+export { providerAuthModesFromEnvironment } from "./provider-auth-environment.js";
 export { catalogModelPricing } from "./provider-model-pricing.js";
 export * from "./pull-request-sensitivity.js";
 export * from "./rejected-author-capture-summary.js";

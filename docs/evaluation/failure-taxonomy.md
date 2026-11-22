@@ -23,6 +23,8 @@ node scripts/failure-taxonomy-rounds.mjs --out ~/draft-loop-ftx \
   --preset economy --per-run-cap-usd 0.07 --total-cap-usd 3
 ```
 
+- To sign in with the signed-in `claude` or `codex` CLI instead of an API key, export
+  `DRAFT_LOOP_ANTHROPIC_AUTH_MODE=user-session` or `DRAFT_LOOP_OPENAI_AUTH_MODE=user-session`.
 - `--out` must be outside the repository. Each round gets `round.json` with
   the run state, cost, draft and critic findings.
 - The script stops before a round that could pass the total cap, and skips
