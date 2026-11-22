@@ -15,7 +15,7 @@ import {
   runProfileDetailLiveCheck,
 } from "./profile-detail-live-check.js";
 
-const helpText = `DraftLoop profile employment-detail live check
+const helpText = `Redakloop profile employment-detail live check
 
 Usage:
   pnpm test:profile-details:live [<company>/<modelId> ...]

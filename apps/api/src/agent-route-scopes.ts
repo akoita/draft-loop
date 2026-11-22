@@ -78,7 +78,7 @@ export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
       );
     },
     refusal:
-      "An agent token starts a run on an application's reviewed brief only (applicationId and opportunityBrief); the models and the career profile are the person's choice in DraftLoop.",
+      "An agent token starts a run on an application's reviewed brief only (applicationId and opportunityBrief); the models and the career profile are the person's choice in Redakloop.",
   },
   // A cover letter or interview questions within the same cap (#2601), on the default model.
   [`POST ${workspace}/applications/:applicationId/material`]: {
@@ -86,7 +86,7 @@ export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
     charge: "draft",
     allows: (request) => (request.body as Record<string, unknown> | undefined)?.model === undefined,
     refusal:
-      "An agent token drafts with the default model only; choosing another model is the person's choice in DraftLoop.",
+      "An agent token drafts with the default model only; choosing another model is the person's choice in Redakloop.",
   },
   // Pasted job text only: approving a job page fetch stays with the person (D17).
   [`POST ${workspace}/applications`]: {
@@ -101,7 +101,7 @@ export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
       );
     },
     refusal:
-      "An agent token adds a job from pasted job text only; a job page address needs the person's approval in DraftLoop.",
+      "An agent token adds a job from pasted job text only; a job page address needs the person's approval in Redakloop.",
   },
 };
 
@@ -209,7 +209,7 @@ export const humanOnlyRoutes: readonly string[] = [
   // A research run searches the web, so only the person approves it (#2560).
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/research",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/research",
-  // Reading a job page needs the person's approval in DraftLoop, as adding one by address does.
+  // Reading a job page needs the person's approval in Redakloop, as adding one by address does.
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/job/copy",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/versions",
   "POST /v1/workspaces/:workspaceId/applications/from-file",

@@ -2,7 +2,7 @@ import type { RunSnapshot } from "./index.js";
 
 /**
  * Failures a later attempt can pass without the person: a rate limit, a timeout, a provider fault
- * and an output DraftLoop rejected. An authentication failure is retryable by the person once they
+ * and an output Redakloop rejected. An authentication failure is retryable by the person once they
  * fix the credential, so it is left to them.
  */
 const automaticRetryCodes: ReadonlySet<string> = new Set([

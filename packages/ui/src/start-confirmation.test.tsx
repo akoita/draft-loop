@@ -307,7 +307,7 @@ describe("start confirmation dialog", () => {
       />,
     );
 
-    expect(html).toContain("Local models have not passed DraftLoop&#x27;s quality check");
+    expect(html).toContain("Local models have not passed Redakloop&#x27;s quality check");
     expect(html).toContain('role="note"');
     expect(html).toContain(">Start</button>");
   });

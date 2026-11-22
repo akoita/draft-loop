@@ -72,7 +72,7 @@ describe("add_project (#2895)", () => {
       possible_duplicate_of: [],
       screening: "clear",
       review_url: "/#work-journal",
-      message: "Recorded; the candidate reviews it in DraftLoop before it becomes evidence.",
+      message: "Recorded; the candidate reviews it in Redakloop before it becomes evidence.",
     };
     const { config, requests } = scripted(201, answer);
     const client = await connect(config);

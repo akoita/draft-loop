@@ -71,7 +71,7 @@ export function createOperatorFeedbackApi(config: WorkJournalApiConfig): Operato
     } catch {
       throw new WorkJournalApiError(
         "server_unreachable",
-        "The DraftLoop server did not answer.",
+        "The Redakloop server did not answer.",
         [],
         true,
       );
@@ -85,7 +85,7 @@ export function createOperatorFeedbackApi(config: WorkJournalApiConfig): Operato
         typeof body.error?.code === "string" ? body.error.code : `http_${response.status}`,
         typeof body.error?.message === "string"
           ? body.error.message
-          : "The DraftLoop server refused the call.",
+          : "The Redakloop server refused the call.",
         [],
         isRetryableStatus(response.status),
       );

@@ -83,7 +83,7 @@ export function registerWorkJournalCommands(
   const environment = dependencies.environment ?? process.env;
   const journal = root
     .command("work-journal")
-    .description("Review the notes agents recorded on a DraftLoop server");
+    .description("Review the notes agents recorded on a Redakloop server");
 
   const withConnection = (command: Command) =>
     command

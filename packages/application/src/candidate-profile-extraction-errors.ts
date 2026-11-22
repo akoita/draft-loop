@@ -197,7 +197,7 @@ function deepInfraFailureMessage(error: ProviderAdapterError): string | undefine
   ) {
     const summary = summarizeCounts(error.diagnosticCounts, deepInfraStreamDiagnosticLabels);
     const base =
-      "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved.";
+      "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update Redakloop; no facts were saved.";
     return summary === undefined ? base : `${base} Reasons: ${summary}.`;
   }
   for (const diagnostic of [...error.diagnostics, ...error.diagnosticCounts]) {

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping build DraftLoop. Keep changes small, auditable, and aligned
+Thanks for helping build Redakloop. Keep changes small, auditable, and aligned
 with the package boundaries described in [AGENTS.md](AGENTS.md).
 
 ## Development

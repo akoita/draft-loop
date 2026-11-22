@@ -262,7 +262,7 @@ export interface HostKnowledgeCapabilities {
     input: KnowledgeWorkspaceSourcesImportInput,
   ) => Promise<KnowledgeDirectoryImportResult>;
   /**
-   * Creates the default store and base in DraftLoop application data when absent; no dialog. A
+   * Creates the default store and base in Redakloop application data when absent; no dialog. A
    * host without store folders also takes a name the person typed, and makes or reuses that base.
    */
   readonly ensureDefaultCandidateKnowledgeBase?: (

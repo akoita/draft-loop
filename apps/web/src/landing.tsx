@@ -42,7 +42,7 @@ export function SitePageLinks({ newTab = false }: { readonly newTab?: boolean })
   return (
     <>
       <a href={french ? "/about/fr/" : "/about/"} {...target}>
-        {t`About DraftLoop`}
+        {t`About Redakloop`}
       </a>
       {" · "}
       <a href={french ? "/guide/fr/" : "/guide/"} {...target}>
@@ -109,7 +109,7 @@ export function WaitlistFormView({
           onChange={(event) => onConsentChange(event.target.checked)}
         />
         {/* Change betaWaitlistConsentVersion in the API whenever this text changes. */}
-        {t`Keep my email address to invite me to the DraftLoop beta. It is deleted once I am invited, or after six months.`}
+        {t`Keep my email address to invite me to the Redakloop beta. It is deleted once I am invited, or after six months.`}
       </label>
       <button type="submit" disabled={busy || !consent || email.trim() === ""}>
         {busy ? t`Joining` : t`Join the waitlist`}
@@ -172,7 +172,7 @@ export function WaitlistConfirmation({
 }
 
 /**
- * What a visitor who is not signed in sees on the hosted beta (#2567): what DraftLoop does, that
+ * What a visitor who is not signed in sees on the hosted beta (#2567): what Redakloop does, that
  * it is a test, the sign-in for invited people, the waitlist and the legal links. It loads no
  * analytics or third-party script, so it needs no cookie banner.
  */
@@ -191,8 +191,8 @@ export function Landing({
     <>
       <PreferencesBar />
       <main className="sign-in landing">
-        <h1>{t`DraftLoop`}</h1>
-        <p>{t`DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out.`}</p>
+        <h1>{t`Redakloop`}</h1>
+        <p>{t`Redakloop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out.`}</p>
         <p className="notice">
           {t`This is a free public test, open by invitation. It may change or pause without notice. Drafting sends the material you select to AI providers, some of them outside the EU.`}
         </p>

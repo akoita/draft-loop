@@ -128,7 +128,7 @@ function checkedRetryOptions(value: RetryOptions | undefined): RetryOptions {
  *
  * The backend, base URL, and API version are pinned so environment variables such as
  * GOOGLE_GEMINI_BASE_URL or GOOGLE_GENAI_USE_VERTEXAI cannot redirect candidate material.
- * SDK retries are disabled (`attempts: 1`); DraftLoop retries through `executeWithRetry`.
+ * SDK retries are disabled (`attempts: 1`); Redakloop retries through `executeWithRetry`.
  * The SDK `timeout` is deliberately not set: it keeps bounding the response body while it
  * streams, so the adapter enforces its own initial, idle, and total deadlines instead.
  */

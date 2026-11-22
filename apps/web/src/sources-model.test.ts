@@ -34,7 +34,7 @@ describe("source files", () => {
   it("refuses files the API would refuse before sending them", () => {
     expect(sourceFileProblem({ name: "notes.md", size: 10 })).toBeUndefined();
     expect(sourceFileProblem({ name: "slides.pptx", size: 10 })).toBe(
-      "slides.pptx: DraftLoop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV.",
+      "slides.pptx: Redakloop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV.",
     );
     expect(sourceFileProblem({ name: "empty.txt", size: 0 })).toBe("empty.txt is empty.");
     expect(sourceFileProblem({ name: `${"a".repeat(200)}.md`, size: 1 })).toMatch(/200 characters/);
@@ -50,7 +50,7 @@ describe("source files", () => {
         new ApiRequestError(415, "unsupported_media_type", "The bytes are not a PDF."),
       ),
     ).toBe(
-      "fake.pdf: DraftLoop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV. The bytes are not a PDF.",
+      "fake.pdf: Redakloop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV. The bytes are not a PDF.",
     );
     expect(uploadErrorMessage("a.md", new ApiRequestError(404, "not_found", "No such base."))).toBe(
       "a.md: No such base.",

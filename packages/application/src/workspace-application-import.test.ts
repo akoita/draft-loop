@@ -268,11 +268,11 @@ describe("importing a workspace as an application", () => {
     directories.push(empty);
 
     await expect(service.importApplication?.({ root: target, sourceRoot: empty })).rejects.toThrow(
-      /not a DraftLoop workspace/u,
+      /not a Redakloop workspace/u,
     );
     await expect(
       service.importApplication?.({ root: target, sourceRoot: join(empty, "missing") }),
-    ).rejects.toThrow(/not a DraftLoop workspace/u);
+    ).rejects.toThrow(/not a Redakloop workspace/u);
     await expect(service.importApplication?.({ root: target, sourceRoot: target })).rejects.toThrow(
       /cannot be imported into itself/u,
     );

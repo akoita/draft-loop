@@ -216,7 +216,7 @@ export function ConsentPanel(props: ConsentPanelProps) {
       </h3>
       <p className="consent-copy">
         {kind === "material-storage"
-          ? t`DraftLoop stores the CVs, notes and records you upload for this candidate, in the EU.`
+          ? t`Redakloop stores the CVs, notes and records you upload for this candidate, in the EU.`
           : t`Runs send the approved parts of the candidate's material to ${providerList(providers)} to draft and review the CV. The providers do not keep it.`}
       </p>
       <p className={granted ? "consent-status muted" : "consent-status notice"}>

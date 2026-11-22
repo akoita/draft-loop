@@ -50,7 +50,7 @@ export async function readDesktopWorkspaceBundles(
   try {
     config = await readWorkspace(root);
   } catch {
-    throw new CliUserError(`${root} is not a DraftLoop workspace.`);
+    throw new CliUserError(`${root} is not a Redakloop workspace.`);
   }
   const historyPath = localHistoryPath(root);
   if (
@@ -116,7 +116,7 @@ export async function readDesktopWorkspaceBundles(
   } catch (error) {
     if (error instanceof CliUserError) throw error;
     throw new CliUserError(
-      `The history of ${root} could not be read. Open it once in DraftLoop, then try again.`,
+      `The history of ${root} could not be read. Open it once in Redakloop, then try again.`,
     );
   } finally {
     await history.close();

@@ -99,7 +99,7 @@ export const toResponse = (note: FeedbackNote) => ({
 });
 
 /**
- * Feedback notes (#2828): a signed-in member sends a short note about DraftLoop from any screen or
+ * Feedback notes (#2828): a signed-in member sends a short note about Redakloop from any screen or
  * through their agent, and the operator reads and triages every note (#2877). Notes are data for
  * a person to read: no model reads them, so they are not screened. A note's context (#2875)
  * carries technical facts only; the server adds the source, its release and the plan itself.
@@ -186,7 +186,7 @@ export function registerFeedbackRoutes(
     {
       bodyLimit: 16 * 1024,
       schema: {
-        summary: "Send feedback about DraftLoop to the operator",
+        summary: "Send feedback about Redakloop to the operator",
         description: `Members only: owner-token mode has no members and answers 404. Stores the trimmed note in the caller's organisation for the operator to read, with its context and the server's own facts: source \`web\`, the server release and the plan. 400 invalid_input for an empty note, one over ${maximumFeedbackCharacters} characters or a context over its bounds. 429 feedback_cap_reached, with Retry-After, once the member has sent ${maximumFeedbackNotesPerDay} notes in 24 hours.`,
         body: sendBody,
         response: sendResponses,
@@ -202,7 +202,7 @@ export function registerFeedbackRoutes(
     {
       bodyLimit: 16 * 1024,
       schema: {
-        summary: "Send feedback about DraftLoop to the operator, from an agent",
+        summary: "Send feedback about Redakloop to the operator, from an agent",
         description:
           "As `POST /v1/feedback`, for an agent token of a member with the `journal` scope, which a token gets unless issued without it. The record in the path only admits the token; the note belongs to the organisation. Its context's source is `agent`.",
         params: z.strictObject({ workspaceId: z.string().min(1).max(256) }),

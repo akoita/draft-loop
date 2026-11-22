@@ -33,7 +33,7 @@ const preferenceSuggestionSchema = z
       .describe("The section kinds in order, for a section-order suggestion."),
     occurrences: z.number().int().describe("How many drafts showed the pattern."),
     applications: z.number().int().describe("How many applications those drafts belong to."),
-    reason: z.string().describe("Why DraftLoop suggests it, in words the person can check."),
+    reason: z.string().describe("Why Redakloop suggests it, in words the person can check."),
   })
   .meta({ id: "PreferenceSuggestion" });
 
@@ -44,7 +44,7 @@ const view = ({ runIds: _runIds, ...suggestion }: PreferenceSuggestion) =>
     : { ...suggestion, sectionOrder: [...suggestion.sectionOrder] };
 
 /**
- * Writing-policy preferences suggested from the person's review choices (#2253). DraftLoop
+ * Writing-policy preferences suggested from the person's review choices (#2253). Redakloop
  * suggests; the person decides. Accepting saves a new writing-policy version; dismissing means
  * the suggestion is never offered again.
  */

@@ -1,6 +1,6 @@
 # Outer loop: production quality diagnosis
 
-For a maintainer or operator who wants to know how DraftLoop finds recurring
+For a maintainer or operator who wants to know how Redakloop finds recurring
 quality problems in production runs, and how to act on what it reports.
 
 The outer loop watches finished production runs, groups their failures into

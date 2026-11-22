@@ -271,7 +271,7 @@ jobs:
             `Validation: https://github.com/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`,
             `Stage issue: https://github.com/${repository}/issues/${process.env.RELEASE_STAGE_ISSUE}`,
             "SBOM: CycloneDX JSON is attached to the release.",
-            "Desktop client: from v0.9.0 the desktop app is a client of a DraftLoop server (ADR 0011, D9): an Electron window over the server's own web screen, for your self-hosted server and, once production opens, the hosted service. It holds no engine, storage or provider keys, so its screens update with the server. The v0.8 desktop with its own local engine is not in this release; move its workspaces to a self-hosted server with `draft-loop server import`.",
+            "Desktop client: from v0.9.0 the desktop app is a client of a Redakloop server (ADR 0011, D9): an Electron window over the server's own web screen, for your self-hosted server and, once production opens, the hosted service. It holds no engine, storage or provider keys, so its screens update with the server. The v0.8 desktop with its own local engine is not in this release; move its workspaces to a self-hosted server with `draft-loop server import`.",
             ...(process.env.ATTEST_PROVENANCE === "true"
               ? ["Provenance: GitHub artifact attestations were requested for packaged artifacts."]
               : ["Provenance: not requested for this run."]),

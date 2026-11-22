@@ -6,9 +6,9 @@ import { WorkJournalApiError, type WorkspaceApiCall } from "./client.js";
 
 /**
  * The agent channel's drafting tools (#2601): a cover letter or interview questions for one job
- * application, written by DraftLoop from the candidate's career facts on the default model. Each
+ * application, written by Redakloop from the candidate's career facts on the default model. Each
  * draft reserves its cost cap against the agent token's monthly spend cap (`runs:start`). The
- * candidate reviews, edits and keeps the draft in DraftLoop.
+ * candidate reviews, edits and keeps the draft in Redakloop.
  */
 
 export type MaterialKind = "cover-letter" | "interview-questions";
@@ -48,7 +48,7 @@ const idPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/u;
 
 function pathId(id: string): string {
   if (!idPattern.test(id)) {
-    throw new WorkJournalApiError("invalid_id", "That is not a DraftLoop application id.", [
+    throw new WorkJournalApiError("invalid_id", "That is not a Redakloop application id.", [
       "application_id",
     ]);
   }
@@ -81,7 +81,7 @@ export function createMaterialApi(call: WorkspaceApiCall): MaterialApi {
         next_step:
           body.id === undefined
             ? "This server keeps no drafts: show the draft to the candidate now."
-            : "The draft is saved in DraftLoop, where the candidate reviews and edits it.",
+            : "The draft is saved in Redakloop, where the candidate reviews and edits it.",
       };
     },
   };
@@ -90,9 +90,9 @@ export function createMaterialApi(call: WorkspaceApiCall): MaterialApi {
 const spendLine =
   "It spends money: draft only when the candidate asked, and once per request. It reserves one draft's cost cap against this token's monthly cap and is refused past it. Needs the runs:start scope.";
 
-export const draftCoverLetterDescription = `Draft a cover letter for one job application from the candidate's career facts and the job's reviewed requirements, on DraftLoop's default model, and save it in DraftLoop. Pass the candidate's own wishes as guidance; never invent facts. A letter written entirely by AI can be spotted by recruiters and AI-detection tools: tell the candidate to rewrite it in their own words before sending it. ${spendLine}`;
+export const draftCoverLetterDescription = `Draft a cover letter for one job application from the candidate's career facts and the job's reviewed requirements, on Redakloop's default model, and save it in Redakloop. Pass the candidate's own wishes as guidance; never invent facts. A letter written entirely by AI can be spotted by recruiters and AI-detection tools: tell the candidate to rewrite it in their own words before sending it. ${spendLine}`;
 
-export const draftInterviewPrepDescription = `Draft interview questions for one job application, each with a talking point from the candidate's career facts, on DraftLoop's default model, and save them in DraftLoop. Pass the candidate's own wishes as guidance. ${spendLine}`;
+export const draftInterviewPrepDescription = `Draft interview questions for one job application, each with a talking point from the candidate's career facts, on Redakloop's default model, and save them in Redakloop. Pass the candidate's own wishes as guidance. ${spendLine}`;
 
 type Failure = (error: unknown) => {
   isError: boolean;

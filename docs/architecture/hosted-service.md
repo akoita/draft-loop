@@ -1,6 +1,6 @@
 # Hosted service architecture
 
-This page is the reference for the parts of DraftLoop that only the server has.
+This page is the reference for the parts of Redakloop that only the server has.
 It covers the run queue, model routes, run limits, the `/v1` API from setup to
 export, organisations and plans, and intake screening. It is written for a
 developer or a coding agent changing `apps/api`, `apps/worker` or the server
@@ -672,7 +672,7 @@ People manage their organisation through the API once it has a tenant directory
 The invite-only public beta (#2460) creates accounts from single-use invite
 codes, in the directory's `betaInvites` (`beta-invites.ts`). A signed-in
 person with no account gets 403 `no_account` from every other route; the web
-screen then shows **Join the DraftLoop beta** (`beta-sign-up.tsx`), which asks
+screen then shows **Join the Redakloop beta** (`beta-sign-up.tsx`), which asks
 for the code and words each refusal.
 
 | Route                                        | Who                                | What it does                                                         |
@@ -738,7 +738,7 @@ The waitlist exists only while the deployment opens the beta
 full: the landing page says places open in small groups and that an invite
 comes by email. Then `GET /v1/auth/config` answers `waitlist: true`, and a signed-out
 visitor sees the landing page (`landing.tsx`, #2567) instead of the bare
-sign-in. It says what DraftLoop does, that it is a test that sends material
+sign-in. It says what Redakloop does, that it is a test that sends material
 outside the EU, and links `/legal/privacy` and `/legal/terms` (#2462). It loads
 no analytics or third-party script, so it needs no cookie banner.
 
@@ -1047,7 +1047,7 @@ format. The manifest's SHA-256 is in `X-Archive-Manifest-SHA256`.
   content-free line.
 
 **Readable copy.** `GET /v1/workspaces/:workspaceId/export` downloads what a
-person reads rather than how the service stores it, as `draftloop-data.zip`
+person reads rather than how the service stores it, as `redakloop-data.zip`
 (**Download everything** on the screen). It holds a README, their documents
 under their own names, a folder per application with its job text, letters
 and exported drafts, their profile, work journal and consent history. Each

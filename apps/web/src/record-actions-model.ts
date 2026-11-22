@@ -27,7 +27,7 @@ export function exportRequest(
 }
 
 /** The file a downloaded copy is saved under, as the API names it. */
-export const exportFileName = "draftloop-data.zip";
+export const exportFileName = "redakloop-data.zip";
 
 /** The word a person types to confirm a deletion, in their language; never an internal id. */
 export function deleteConfirmWord(): string {

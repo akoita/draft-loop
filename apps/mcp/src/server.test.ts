@@ -69,7 +69,7 @@ async function connect(api: WorkJournalApi) {
   return client;
 }
 
-describe("DraftLoop MCP server", () => {
+describe("Redakloop MCP server", () => {
   it("lists the two tools with their hints, the guide and the prompt", async () => {
     const client = await connect(scriptedApi().api);
     const { tools } = await client.listTools();
@@ -160,7 +160,7 @@ describe("DraftLoop MCP server", () => {
   });
 });
 
-describe("DraftLoop MCP HTTP client", () => {
+describe("Redakloop MCP HTTP client", () => {
   it("sends the bearer token and idempotency key, and maps refusals and 401", async () => {
     const requests: { url: string; init: RequestInit }[] = [];
     const answers = [

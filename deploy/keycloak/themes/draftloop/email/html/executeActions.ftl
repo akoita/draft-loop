@@ -9,7 +9,7 @@
 <#if invite>
 <div style="background:#FBFAF7;padding:24px 0;font-family:Arial,Helvetica,sans-serif;color:#14181D;">
   <div style="max-width:520px;margin:0 auto;background:#FFFFFF;border:1px solid #E3E1DA;border-radius:8px;padding:32px;">
-    <p style="margin:0 0 24px;font-size:20px;font-weight:bold;letter-spacing:0.04em;">DraftLoop</p>
+    <p style="margin:0 0 24px;font-size:20px;font-weight:bold;letter-spacing:0.04em;">Redakloop</p>
     <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;">${msg("draftloopInviteHeading")}</h1>
     <p style="margin:0 0 24px;font-size:16px;line-height:1.5;">${msg("draftloopInviteIntro")}</p>
     <p style="margin:0 0 24px;">

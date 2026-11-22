@@ -247,7 +247,7 @@ describe("Extract requirements card states", () => {
     const html = renderToStaticMarkup(
       <OpenJobReplacement.Provider value={() => undefined}>
         <JobRequirementsExtractionView
-          phase={{ kind: "failed", message: "DraftLoop could not read this page." }}
+          phase={{ kind: "failed", message: "Redakloop could not read this page." }}
           writingModel={writingModel}
           disabled={false}
           onOpen={() => undefined}
@@ -413,7 +413,7 @@ describe("the job step while a job page is read (#1836)", () => {
   it("says it is reading the page, not waiting for the model", () => {
     const html = renderPage({ kind: "running" });
     expect(html).toContain("<strong>Reading the job page…</strong>");
-    expect(html).toContain("DraftLoop is fetching the job page you approved.");
+    expect(html).toContain("Redakloop is fetching the job page you approved.");
     expect(html).not.toContain("Waiting for");
   });
 

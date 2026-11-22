@@ -35,7 +35,7 @@ describe("ProfileGenerationProgress", () => {
     expect(html).toContain("Generating profile…");
     expect(html).toContain("Elapsed 1:05");
     expect(html).toContain("processed in parts");
-    expect(html).toContain("Keep DraftLoop open.");
+    expect(html).toContain("Keep Redakloop open.");
   });
 
   it("announces once and hides the ticking elapsed time from assistive technology", () => {

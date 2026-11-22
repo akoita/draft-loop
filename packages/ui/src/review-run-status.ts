@@ -60,10 +60,10 @@ export function runActivity(state: RunStatusInput): string {
   if (hostRetrying(state) && state.providerFailure != null) {
     const failed = state.providerFailure.step;
     return failed === "critic"
-      ? t`DraftLoop retries the critic on version ${state.artifact.version} shortly.`
+      ? t`Redakloop retries the critic on version ${state.artifact.version} shortly.`
       : failed === "revision"
-        ? t`DraftLoop retries the revision for round ${state.round} shortly.`
-        : t`DraftLoop retries the draft shortly.`;
+        ? t`Redakloop retries the revision for round ${state.round} shortly.`
+        : t`Redakloop retries the draft shortly.`;
   }
   const step =
     state.execution.step ??

@@ -75,7 +75,7 @@ export interface RemoteOAuthOptions {
 }
 
 export interface RemoteMcpOptions {
-  /** The DraftLoop API the tools call. */
+  /** The Redakloop API the tools call. */
   readonly baseUrl: string;
   /** The workspace the tools act in; with `oauth`, the signed-in person's own instead. */
   readonly workspaceId: string;
@@ -203,7 +203,7 @@ export function protectedResourceMetadata(oauth: RemoteOAuthOptions) {
     authorization_servers: [oauth.issuer],
     scopes_supported: [...remoteScopes],
     bearer_methods_supported: ["header"],
-    resource_name: "DraftLoop",
+    resource_name: "Redakloop",
   };
 }
 
@@ -254,7 +254,7 @@ async function workspaceOf(options: RemoteMcpOptions, token: string): Promise<Wo
       { headers: { authorization: `Bearer ${token}` } },
     );
   } catch {
-    return { outcome: "refused", status: 502, message: "DraftLoop could not be reached." };
+    return { outcome: "refused", status: 502, message: "Redakloop could not be reached." };
   }
   if (response.status === 401) {
     return { outcome: "refused", status: 401, message: "The sign-in has expired or is not valid." };
@@ -263,7 +263,7 @@ async function workspaceOf(options: RemoteMcpOptions, token: string): Promise<Wo
     return {
       outcome: "refused",
       status: 403,
-      message: "This account has no DraftLoop workspace, or the connection was granted no scope.",
+      message: "This account has no Redakloop workspace, or the connection was granted no scope.",
     };
   }
   const body = response.ok
@@ -274,8 +274,8 @@ async function workspaceOf(options: RemoteMcpOptions, token: string): Promise<Wo
   const id = body?.workspaces?.[0]?.id;
   if (typeof id !== "string") {
     return response.ok
-      ? { outcome: "refused", status: 403, message: "This account has no DraftLoop workspace." }
-      : { outcome: "refused", status: 502, message: "DraftLoop could not answer." };
+      ? { outcome: "refused", status: 403, message: "This account has no Redakloop workspace." }
+      : { outcome: "refused", status: 502, message: "Redakloop could not answer." };
   }
   return { outcome: "found", workspaceId: id };
 }
@@ -313,7 +313,7 @@ export function createRemoteMcpHandler(
     }
     const token = bearerToken(request);
     if (token === undefined) {
-      return answer(response, 401, "A DraftLoop credential is required.", {
+      return answer(response, 401, "A Redakloop credential is required.", {
         "www-authenticate": challenge(oauth),
       });
     }

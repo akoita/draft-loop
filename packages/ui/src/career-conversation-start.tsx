@@ -51,7 +51,7 @@ export function CareerStartChoice({
           >{t`Start a conversation`}</button>
         </div>
       </div>
-      <p className="hint">{t`Either way, you check every fact before DraftLoop uses it. You can add documents later.`}</p>
+      <p className="hint">{t`Either way, you check every fact before Redakloop uses it. You can add documents later.`}</p>
     </section>
   );
 }

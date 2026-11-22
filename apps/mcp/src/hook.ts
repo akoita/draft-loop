@@ -7,7 +7,7 @@ import { readFile } from "node:fs/promises";
  */
 
 export const stopHookAdvice =
-  "This turn merged work without a DraftLoop record_work call. If it is a user-visible feature worth a CV line, record it with /log-work.";
+  "This turn merged work without a Redakloop record_work call. If it is a user-visible feature worth a CV line, record it with /log-work.";
 
 /** A pull request merged from the shell, or a push straight to the default branch. */
 const mergeCommand =

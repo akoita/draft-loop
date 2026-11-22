@@ -44,7 +44,7 @@ function speakerLabel(speaker: FactSuggestionView["speaker"]): string {
     case "agent":
       return t`An agent said`;
     case "system":
-      return t`DraftLoop noticed`;
+      return t`Redakloop noticed`;
   }
 }
 

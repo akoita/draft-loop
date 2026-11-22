@@ -142,7 +142,7 @@ export function registerRecordArchiveRoutes(
       return reply
         .code(200)
         .header("content-type", "application/zip")
-        .header("content-disposition", 'attachment; filename="draftloop-data.zip"')
+        .header("content-disposition", 'attachment; filename="redakloop-data.zip"')
         .header("cache-control", "private, no-store")
         .send(zipStream(prepared.files(), new Date(prepared.createdAt)));
     },

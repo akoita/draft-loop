@@ -1,6 +1,6 @@
 # Claude Code plugin walk with a real coding agent
 
-This record says whether a candidate can install the DraftLoop plugin in Claude
+This record says whether a candidate can install the Redakloop plugin in Claude
 Code and let it read and add job applications. It is for anyone deciding
 whether the [agent channel](../reference/agent-channel.md) plugin path is ready.
 
@@ -18,10 +18,10 @@ setup traps the docs now name. Issue:
 | Date        | 2026-11-07                                                                             |
 | Server      | A clone's self-hosted stack built from `main` (`b1a4ebf`), owner-token mode            |
 | Address     | `http://127.0.0.1:8081`, Compose project `draft-loop-dev`, beside the installed stack  |
-| Agent       | Claude Code 2.1.296, headless (`claude -p`), on Haiku, only the DraftLoop tools allowed |
+| Agent       | Claude Code 2.1.296, headless (`claude -p`), on Haiku, only the Redakloop tools allowed |
 | Toolchain   | Node 24.22.1, pnpm 10.18.3, WSL with zsh                                               |
 | Data        | One fictional job description; no candidate material                                   |
-| Model spend | None by DraftLoop: no run, extraction or interview. About US$0.02 of agent use.         |
+| Model spend | None by Redakloop: no run, extraction or interview. About US$0.02 of agent use.         |
 
 ## Steps
 

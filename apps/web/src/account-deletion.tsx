@@ -27,7 +27,7 @@ export function accountDeletionRefusal(error: unknown): string {
       return t`A draft is being written. Wait for it to finish or stop it, then delete your account.`;
     }
     if (error.code === "operator_account") {
-      return t`This account runs DraftLoop as an operator, so it cannot be deleted from here. Remove its operator role first.`;
+      return t`This account runs Redakloop as an operator, so it cannot be deleted from here. Remove its operator role first.`;
     }
     if (error.code === "organisation_has_members") {
       return t`Other people share your account's team, so it cannot be deleted from here. Ask us to close it.`;
@@ -39,7 +39,7 @@ export function accountDeletionRefusal(error: unknown): string {
 /** What the signed-out screen says once the account is gone. */
 export function accountDeletedNotice(identity: "deleted" | "kept"): string {
   return identity === "deleted"
-    ? t`Your account and everything stored for it were deleted. Thank you for trying DraftLoop.`
+    ? t`Your account and everything stored for it were deleted. Thank you for trying Redakloop.`
     : t`Everything stored for your account was deleted. Your sign-in could not be removed yet; we will remove it shortly.`;
 }
 

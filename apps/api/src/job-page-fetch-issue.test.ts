@@ -27,13 +27,13 @@ function failedFetch(code: IngestionIssueCode | undefined): JobPageFetch {
 
 describe("a job page that cannot be read (#1836)", () => {
   const cases: readonly [IngestionIssueCode, string][] = [
-    ["fetch-failure", "DraftLoop could not reach this job page."],
-    ["unsafe-url", "DraftLoop only fetches public https pages"],
+    ["fetch-failure", "Redakloop could not reach this job page."],
+    ["unsafe-url", "Redakloop only fetches public https pages"],
     ["fetch-timeout", "The job page took too long to answer."],
     ["response-too-large", "The job page is too large to read."],
-    ["unsupported-content-type", "The address is not a web page DraftLoop can read."],
+    ["unsupported-content-type", "The address is not a web page Redakloop can read."],
     ["redirect-limit", "The job page redirected too many times."],
-    ["empty-content", "DraftLoop found no job text on this page."],
+    ["empty-content", "Redakloop found no job text on this page."],
   ];
 
   for (const [code, message] of cases) {
@@ -59,7 +59,7 @@ describe("a job page that cannot be read (#1836)", () => {
   it("treats a fetch with no issue and no text as an empty page", async () => {
     const warn = vi.fn();
     await expect(fetchApprovedJobPage(failedFetch(undefined), sources, { warn })).rejects.toThrow(
-      "DraftLoop found no job text on this page.",
+      "Redakloop found no job text on this page.",
     );
     expect(warn.mock.calls[0]?.[0]).toMatchObject({ issueCode: "empty-content" });
   });

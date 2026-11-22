@@ -27,7 +27,7 @@ export function SignIn({ notice, onSignIn }: SignInProps) {
     <>
       <PreferencesBar />
       <main className="sign-in">
-        <h1>{t`DraftLoop`}</h1>
+        <h1>{t`Redakloop`}</h1>
         <p>{t`Sign in with the owner token of this deployment. It stays in this tab until you close it.`}</p>
         {notice === undefined ? null : (
           <p className="notice" role="status">
@@ -61,7 +61,7 @@ export function ServiceUnreachable() {
     <>
       <PreferencesBar />
       <main className="sign-in">
-        <h1>{t`DraftLoop`}</h1>
+        <h1>{t`Redakloop`}</h1>
         <p
           className="problem"
           role="alert"

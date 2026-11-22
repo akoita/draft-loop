@@ -136,7 +136,7 @@ for (const shell of shells) {
         const result = server(shell, [command], { home: homeOf() });
         assert.equal(result.status, 0, `${command}: ${result.stderr}`);
         if (command === "up") {
-          assert.match(result.stdout, /DraftLoop is running at http:\/\/127\.0\.0\.1:8080\n/u);
+          assert.match(result.stdout, /Redakloop is running at http:\/\/127\.0\.0\.1:8080\n/u);
           assert.match(
             result.stdout,
             /owner token, which this prints: .+draft-loop-server(\.ps1)? token\n/u,
@@ -205,7 +205,7 @@ for (const shell of shells) {
       const env = { DRAFT_LOOP_SERVER_RELEASES: releases };
       const installed = server(shell, ["install"], { env });
       assert.equal(installed.status, 0, installed.stderr);
-      assert.match(installed.stdout, /Installed DraftLoop server 0\.12\.0/u);
+      assert.match(installed.stdout, /Installed Redakloop server 0\.12\.0/u);
       const named = server(shell, ["install", "latest", latestHome], { env });
       assert.equal(named.status, 0, named.stderr);
       assert.equal(readFileSync(join(latestHome, ".env"), "utf8"), "DRAFT_LOOP_VERSION=0.12.0\n");
@@ -332,7 +332,7 @@ for (const shell of shells) {
       );
       assert.match(
         server(shell, ["restore", join(scratch, "source.tar.gz")], { home: homeOf() }).stderr,
-        /is not a DraftLoop server backup/u,
+        /is not a Redakloop server backup/u,
       );
     });
 

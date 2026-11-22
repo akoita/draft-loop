@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem in DraftLoop
+description: Report a reproducible problem in Redakloop
 title: "[Bug]: "
 labels:
   - bug

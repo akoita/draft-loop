@@ -8,7 +8,7 @@ export function jobPageFetchRefusal(code: IngestionIssueCode | undefined): strin
   switch (code) {
     case "unsafe-url":
     case "approval-required":
-      return "DraftLoop only fetches public https pages, and this address is not one. Paste the job text instead.";
+      return "Redakloop only fetches public https pages, and this address is not one. Paste the job text instead.";
     case "fetch-timeout":
       return "The job page took too long to answer. Try again, or paste the job text instead.";
     case "response-too-large":
@@ -17,21 +17,21 @@ export function jobPageFetchRefusal(code: IngestionIssueCode | undefined): strin
       return "The job page is too large to read. Paste the job text instead.";
     case "unsupported-content-type":
     case "unsupported-media-type":
-      return "The address is not a web page DraftLoop can read. Paste the job text instead.";
+      return "The address is not a web page Redakloop can read. Paste the job text instead.";
     case "redirect-limit":
       return "The job page redirected too many times. Check the address, or paste the job text instead.";
     case "empty-content":
     case "parse-failure":
     case "extracted-content-invalid":
-      return "DraftLoop found no job text on this page. Paste the job text instead.";
+      return "Redakloop found no job text on this page. Paste the job text instead.";
     default:
-      return "DraftLoop could not reach this job page. Check the address, or paste the job text instead.";
+      return "Redakloop could not reach this job page. Check the address, or paste the job text instead.";
   }
 }
 
 /** The refusal for a page that gave too few words to be a job posting (#2857). */
 export function jobPageTooShortRefusal(words: number): string {
-  return `DraftLoop read only ${words} words of job text on this page, too few to find requirements. Paste the job text, or attach the job as a file, instead.`;
+  return `Redakloop read only ${words} words of job text on this page, too few to find requirements. Paste the job text, or attach the job as a file, instead.`;
 }
 
 /** The host of an address for a log line, never its path or query; null when it does not parse. */

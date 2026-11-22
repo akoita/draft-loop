@@ -1,5 +1,5 @@
 /**
- * Checks a server before the client opens it: is it a DraftLoop server that answers, and how
+ * Checks a server before the client opens it: is it a Redakloop server that answers, and how
  * does it sign people in? Both routes are public (`apps/api/src/web-screen.ts`), so the check
  * sends no credential.
  */
@@ -47,14 +47,14 @@ export async function checkServer(
     if (!health.ok) return { reachable: false, reason: `The server answered ${health.status}.` };
     const config = await fetchImpl(`${origin}/v1/auth/config`, init);
     if (!config.ok)
-      return { reachable: false, reason: "This does not look like a DraftLoop server." };
+      return { reachable: false, reason: "This does not look like a Redakloop server." };
     const body: unknown = await config.json();
     if (isRecord(body) && body.mode === "owner") return { reachable: true, signIn: "owner" };
     if (isRecord(body) && body.mode === "oidc") {
       const issuer = issuerOrigin(body.issuer);
       if (issuer !== undefined) return { reachable: true, signIn: "oidc", issuerOrigin: issuer };
     }
-    return { reachable: false, reason: "This does not look like a DraftLoop server." };
+    return { reachable: false, reason: "This does not look like a Redakloop server." };
   } catch {
     return {
       reachable: false,

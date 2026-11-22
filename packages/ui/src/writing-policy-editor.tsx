@@ -142,7 +142,7 @@ export function WritingPolicyEditorView({
       >
         <div className="modal-header">
           <div>
-            <p className="eyebrow">{t`DraftLoop / Writing policy`}</p>
+            <p className="eyebrow">{t`Redakloop / Writing policy`}</p>
             <h2 id="writing-policy-dialog-title">{t`Edit writing policy`}</h2>
           </div>
           <button className="button button-quiet" type="button" onClick={onClose}>

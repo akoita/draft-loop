@@ -737,7 +737,7 @@ export async function initWorkspace(
       .read(root, configFilename)
       .catch(() => undefined)) !== undefined
   ) {
-    throw new CliUserError(`A DraftLoop workspace already exists at ${root}.`);
+    throw new CliUserError(`A Redakloop workspace already exists at ${root}.`);
   }
   const config: WorkspaceConfig = {
     schemaVersion: 1,
@@ -2360,7 +2360,7 @@ export function createLocalApplicationDriver(
 }
 
 function pilotReportMarkdown(report: PilotReport): string {
-  return `# DraftLoop Phase-0 Pilot Report
+  return `# Redakloop Phase-0 Pilot Report
 
 ## Result
 

@@ -138,29 +138,29 @@ export const localizedSectionHeadings: Readonly<Record<string, Readonly<Record<s
 
 export const localizedDocumentTitles: Readonly<Record<string, Readonly<Record<string, string>>>> = {
   en: {
-    cv: "DraftLoop Tailored CV",
-    "cover-letter": "DraftLoop Cover Letter",
-    "application-qa": "DraftLoop Application Q&A",
+    cv: "Redakloop Tailored CV",
+    "cover-letter": "Redakloop Cover Letter",
+    "application-qa": "Redakloop Application Q&A",
   },
   fr: {
-    cv: "CV personnalisé DraftLoop",
-    "cover-letter": "Lettre de motivation DraftLoop",
-    "application-qa": "Questions-réponses DraftLoop",
+    cv: "CV personnalisé Redakloop",
+    "cover-letter": "Lettre de motivation Redakloop",
+    "application-qa": "Questions-réponses Redakloop",
   },
   de: {
-    cv: "DraftLoop Lebenslauf",
-    "cover-letter": "DraftLoop Anschreiben",
-    "application-qa": "DraftLoop Bewerbungsfragen",
+    cv: "Redakloop Lebenslauf",
+    "cover-letter": "Redakloop Anschreiben",
+    "application-qa": "Redakloop Bewerbungsfragen",
   },
   es: {
-    cv: "Curriculum Vitae DraftLoop",
-    "cover-letter": "Carta de presentación DraftLoop",
-    "application-qa": "Preguntas y respuestas DraftLoop",
+    cv: "Curriculum Vitae Redakloop",
+    "cover-letter": "Carta de presentación Redakloop",
+    "application-qa": "Preguntas y respuestas Redakloop",
   },
   ja: {
-    cv: "DraftLoop 履歴書",
-    "cover-letter": "DraftLoop 送付状",
-    "application-qa": "DraftLoop 応募質問回答",
+    cv: "Redakloop 履歴書",
+    "cover-letter": "Redakloop 送付状",
+    "application-qa": "Redakloop 応募質問回答",
   },
 };
 
@@ -180,7 +180,7 @@ export function getLocalizedSectionTitle(
 export function getLocalizedDocumentTitle(artifactKind = "cv", language = "en"): string {
   const langKey = language.toLowerCase().slice(0, 2);
   const langTable = localizedDocumentTitles[langKey] ?? localizedDocumentTitles.en;
-  return langTable?.[artifactKind] ?? langTable?.cv ?? "DraftLoop CV";
+  return langTable?.[artifactKind] ?? langTable?.cv ?? "Redakloop CV";
 }
 
 export function extensionForFormat(format: OutputFormat): OutputExtension {

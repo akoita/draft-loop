@@ -11,22 +11,22 @@ export const legalTextsFr: LegalTexts = {
     terms: {
       title: "Conditions d'utilisation",
       description:
-        "Les conditions d'utilisation de DraftLoop, un test public gratuit qui rédige CV et lettres de motivation à partir de vos propres documents.",
+        "Les conditions d'utilisation de Redakloop, un test public gratuit qui rédige CV et lettres de motivation à partir de vos propres documents.",
       intro: [
-        "Ces conditions régissent votre utilisation du service de test DraftLoop. Vous les acceptez en créant votre compte. Elles vont avec la [politique de confidentialité](/legal/privacy) et les [mentions légales](/legal/notice).",
+        "Ces conditions régissent votre utilisation du service de test Redakloop. Vous les acceptez en créant votre compte. Elles vont avec la [politique de confidentialité](/legal/privacy) et les [mentions légales](/legal/notice).",
       ],
       sections: [
         {
           heading: "1. Un service de test gratuit, qui peut s'arrêter",
           blocks: [
-            "DraftLoop est proposé en version de test gratuite, sur invitation. C'est un environnement de test : ses fonctions peuvent changer, le service peut être interrompu, et il peut s'arrêter à tout moment.",
+            "Redakloop est proposé en version de test gratuite, sur invitation. C'est un environnement de test : ses fonctions peuvent changer, le service peut être interrompu, et il peut s'arrêter à tout moment.",
             "Avant un arrêt prévu, nous ferons notre possible pour l'annoncer dans le service ou par e-mail et pour vous laisser le temps de télécharger vos données. Gardez votre propre copie de ce qui compte pour vous : le service n'est pas un service de stockage.",
           ],
         },
         {
           heading: "2. Ce que fait le service",
           blocks: [
-            "DraftLoop vous aide à préparer vos candidatures à partir des éléments de carrière que vous fournissez : CV, lettres de motivation et préparation d'entretien. Une IA autrice rédige un brouillon, une IA critique d'une autre entreprise le relit, et vous décidez de ce que vous gardez, modifiez et exportez.",
+            "Redakloop vous aide à préparer vos candidatures à partir des éléments de carrière que vous fournissez : CV, lettres de motivation et préparation d'entretien. Une IA autrice rédige un brouillon, une IA critique d'une autre entreprise le relit, et vous décidez de ce que vous gardez, modifiez et exportez.",
             "Le service prépare des documents. Il ne postule jamais à une offre, n'envoie aucun message et ne contacte aucun employeur à votre place.",
           ],
         },
@@ -91,9 +91,9 @@ export const legalTextsFr: LegalTexts = {
     privacy: {
       title: "Politique de confidentialité",
       description:
-        "Ce que DraftLoop conserve sur vous, pourquoi, où, quels fournisseurs d'IA y accèdent, et comment l'exporter ou le supprimer.",
+        "Ce que Redakloop conserve sur vous, pourquoi, où, quels fournisseurs d'IA y accèdent, et comment l'exporter ou le supprimer.",
       intro: [
-        "DraftLoop conserve les éléments de carrière que vous choisissez de téléverser, en envoie des extraits choisis à des fournisseurs de modèles d'IA pour rédiger et relire vos brouillons, et garde une trace de chaque brouillon pour que vous voyiez d'où vient chaque affirmation. Cette politique dit ce qui est traité, pourquoi, où, combien de temps, et ce que vous pouvez faire.",
+        "Redakloop conserve les éléments de carrière que vous choisissez de téléverser, en envoie des extraits choisis à des fournisseurs de modèles d'IA pour rédiger et relire vos brouillons, et garde une trace de chaque brouillon pour que vous voyiez d'où vient chaque affirmation. Cette politique dit ce qui est traité, pourquoi, où, combien de temps, et ce que vous pouvez faire.",
       ],
       sections: [
         {
@@ -145,7 +145,7 @@ export const legalTextsFr: LegalTexts = {
               ],
             },
             "Chaque sous-traitant est lié par un accord de traitement des données. Nous ne vendons pas vos données, et ne les communiquons aux autorités que lorsque la loi l'exige.",
-            "Lorsque le service vend des packs de crédits, Stripe (Stripe Payments Europe, Limited, Irlande) les vend en tant que vendeur officiel (merchant of record), via son service Link. Stripe recueille vos données de paiement et votre adresse de facturation sur sa propre page, selon sa propre politique de confidentialité, et envoie le reçu. DraftLoop ne voit jamais votre carte ; il reçoit seulement le pack acheté par votre organisation, le montant et le fait qu'il a été payé ou remboursé.",
+            "Lorsque le service vend des packs de crédits, Stripe (Stripe Payments Europe, Limited, Irlande) les vend en tant que vendeur officiel (merchant of record), via son service Link. Stripe recueille vos données de paiement et votre adresse de facturation sur sa propre page, selon sa propre politique de confidentialité, et envoie le reçu. Redakloop ne voit jamais votre carte ; il reçoit seulement le pack acheté par votre organisation, le montant et le fait qu'il a été payé ou remboursé.",
           ],
         },
         {
@@ -192,7 +192,7 @@ export const legalTextsFr: LegalTexts = {
     },
     notice: {
       title: "Mentions légales",
-      description: "Qui publie DraftLoop et comment le contacter.",
+      description: "Qui publie Redakloop et comment le contacter.",
       intro: [
         "Informations requises par la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique (LCEN), article 6-III.",
       ],

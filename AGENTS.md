@@ -8,7 +8,7 @@ priorities change.
 
 ## MVP execution mode
 
-DraftLoop is a small side-project MVP. Use Maestro for routine feature and
+Redakloop is a small side-project MVP. Use Maestro for routine feature and
 bug-fix work with one verified Luna implementation worker. Do not add a scout
 or separate review worker unless a specific unresolved question blocks
 implementation. The Sol root owns requirements, one consolidated diff review,
@@ -170,7 +170,7 @@ The full guide is the agent-toolkit `document-software` skill
   HTTP: an HTTP client of the API that depends only on `packages/schemas`. It
   holds no domain logic, and the desktop and the CLI never depend on it.
 - `apps/desktop-client` is the desktop client (ADR 0011, D9): an Electron
-  shell over a DraftLoop server's own web screen. It holds no domain logic and
+  shell over a Redakloop server's own web screen. It holds no domain logic and
   never depends on engine, storage, provider or server packages.
 
 ## Commands and quality gates

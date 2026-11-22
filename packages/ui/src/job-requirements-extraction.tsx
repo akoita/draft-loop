@@ -283,7 +283,7 @@ export function JobRequirementsExtractionView({
               : phase.background === true
                 ? pendingExtractionNote()
                 : readingPage
-                  ? t`DraftLoop is fetching the job page you approved. Its text then goes to ${providerName} (${modelName}) to split into requirements.`
+                  ? t`Redakloop is fetching the job page you approved. Its text then goes to ${providerName} (${modelName}) to split into requirements.`
                   : onCancelExtraction === undefined
                     ? // A host that cannot stop the request does not offer Cancel, so the note does
                       // not promise it (#1832).

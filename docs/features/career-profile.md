@@ -5,7 +5,7 @@ status: available
 # Career profile
 
 The career profile is the reviewed list of facts about your career that every
-draft starts from. DraftLoop derives it from your
+draft starts from. Redakloop derives it from your
 [career evidence](career-evidence-sources.md); you edit it, mark where each
 fact may be used, and review it before a run can bind it. This page is for a
 candidate building a profile and a developer changing it.

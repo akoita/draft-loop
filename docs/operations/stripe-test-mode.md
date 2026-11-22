@@ -11,7 +11,7 @@ purchase before selling to anyone, see
 ## What you need
 
 - A Stripe account. A sandbox needs no business verification.
-- A DraftLoop server in sign-in mode: the hosted service, or the local stack.
+- A Redakloop server in sign-in mode: the hosted service, or the local stack.
 - Access to the server's settings and secrets.
 
 ## How the pieces fit
@@ -22,7 +22,7 @@ flowchart LR
     P[Two products<br/>with prices] --> C[Hosted checkout]
     C --> W[Webhook endpoint]
   end
-  S[DraftLoop server] -- secret key, price ids --> C
+  S[Redakloop server] -- secret key, price ids --> C
   W -- signed events --> S
   S --> L[Credit ledger]
 ```

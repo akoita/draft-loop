@@ -14,28 +14,28 @@ const flowSteps = (): readonly { readonly step: CareerFlowStep; readonly label: 
 ];
 
 export const careerEvidenceIntro = (): string =>
-  t`Your career evidence is the documents you provide: CVs, career-fact files, exports and links. DraftLoop searches them during reviews and builds your career profile from them.`;
+  t`Your career evidence is the documents you provide: CVs, career-fact files, exports and links. Redakloop searches them during reviews and builds your career profile from them.`;
 
 export const careerProfileIntro = (): string =>
-  t`Your career profile is the facts DraftLoop extracts from your documents: roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version.`;
+  t`Your career profile is the facts Redakloop extracts from your documents: roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version.`;
 
 /** Shown on the Career evidence page while a profile generation reads the evidence. */
 export const careerEvidenceLockedDuringGeneration = (): string =>
   t`Your career profile is being generated from this evidence. You can look around; changes to your evidence are available again once it is generated.`;
 
 export const careerEvidenceCardSubtitle = (): string =>
-  t`Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them.`;
+  t`Your documents: CVs, career-fact files, exports and links. Redakloop searches them and builds your profile from them.`;
 
 export const careerProfileCardSubtitle = (): string =>
-  t`The facts DraftLoop extracts from your documents, each with its exact quote. You review them once; every application reuses them.`;
+  t`The facts Redakloop extracts from your documents, each with its exact quote. You review them once; every application reuses them.`;
 
 /** The Your career panel on Home: one line on how the two steps relate. */
 export const careerPanelSummary = (): string =>
-  t`You give the documents, DraftLoop builds the facts, and every application reuses them.`;
+  t`You give the documents, Redakloop builds the facts, and every application reuses them.`;
 
 /** Who does the work in each step of the Your career panel. */
 export const careerEvidenceRole = (): string => t`What you give`;
-export const careerProfileRole = (): string => t`What DraftLoop builds, you check`;
+export const careerProfileRole = (): string => t`What Redakloop builds, you check`;
 
 /**
  * "Career evidence → Career profile → Applications", with the current step marked for assistive

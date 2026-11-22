@@ -13,7 +13,7 @@ interview answer box: a microphone for **Answer by voice** and a sound wave for
 ## Answer by voice
 
 **Audio never leaves the browser.** Whisper base runs in a worker on the
-candidate's device. Only the model files travel, once, from the DraftLoop
+candidate's device. Only the model files travel, once, from the Redakloop
 server's own origin.
 
 ### How it works
@@ -23,7 +23,7 @@ sequenceDiagram
   participant C as Candidate
   participant P as Web screen
   participant W as Speech worker
-  participant S as DraftLoop server
+  participant S as Redakloop server
   P->>S: GET /speech-models/manifest.json
   S-->>P: available, model, revision
   C->>P: Answer by voice, then Stop
@@ -84,7 +84,7 @@ writing** returns to the chat, where every spoken turn is already saved.
 sequenceDiagram
   participant C as Candidate
   participant P as Web screen
-  participant A as DraftLoop API
+  participant A as Redakloop API
   participant G as Google Cloud speech (EU)
   participant M as Claude interviewer
   P->>A: WebSocket /live, owner or sign-in token as subprotocol

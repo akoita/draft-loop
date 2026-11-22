@@ -1,7 +1,7 @@
 # CLI and desktop reference
 
 This page is the reference for two clients. The first is the **desktop client**, a
-window over a DraftLoop server. The second is the source-only **CLI**, which
+window over a Redakloop server. The second is the source-only **CLI**, which
 runs a local workspace. It is for a developer or power user who needs the exact
 command, the setting file it writes, and what the screen shows for the same
 action.
@@ -38,7 +38,7 @@ screen.
 ## Desktop client
 
 The desktop client (`apps/desktop-client`, ADR 0011, D9) is an Electron window
-over a DraftLoop server's own web screen. Every screen and action it offers is
+over a Redakloop server's own web screen. Every screen and action it offers is
 the web's. To run it from a clone:
 
 ```sh
@@ -117,7 +117,7 @@ and account or provider availability is unchecked.
   version 1 keeps its 32,768-token budget until the preset is chosen again.
 - **The two Anthropic-only pairs** suit a deployment without an OpenAI budget.
 - **The two Google writer pairs** run in the CLI with
-  your own Gemini key. A DraftLoop server does not route Gemini yet
+  your own Gemini key. A Redakloop server does not route Gemini yet
   ([#2704](https://github.com/akoita/draft-loop/issues/2704)).
   A different Claude model reviews each draft, so author and critic still
   differ.
@@ -308,7 +308,7 @@ Claude and OpenAI rates are in the catalog (`model-profiles`).
 - **Claude Opus 5.5 and Sonnet 5.5** bill their whole 1,000,000-token window at
   standard rates, so their cap is 1,000,000.
 - **Claude Haiku 5.5** bills a prompt above 100,000 tokens at a higher rate.
-  DraftLoop applies that rate to every Haiku call, which gives an upper bound,
+  Redakloop applies that rate to every Haiku call, which gives an upper bound,
   with a 1,000,000 cap.
 - **OpenAI critics** are capped at 272,000, and a longer prompt leaves the
   estimate unknown.
@@ -627,9 +627,9 @@ For a job page address or a saved job page, extraction reads only that page:
 
 | Case                                      | What happens                                                                                                                                                                                                                                                                                                                         |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| The page has schema.org `JobPosting` data | DraftLoop reads the job from it: title and company as a heading, then the description with its headings and lists. This makes pages rendered by JavaScript readable. No other address is fetched, and the review says "Read from the page's job posting data."                                                                       |
-| Under 400 characters of job text          | Fails before any provider call, and no brief is saved: "DraftLoop could not read enough job text from this page. It may show the job only with JavaScript. Paste the job text instead."                                                                                                                                              |
-| Garbled text                              | Ligatures such as "ﬁ" are expanded first. Text with at least 30 Latin-script words, a quarter or more of them implausible (such as "FsaocG" from a broken PDF), fails before any provider call: "The job text looks garbled, so DraftLoop did not extract requirements from it. …" Camel-case names and acronyms count as plausible. |
+| The page has schema.org `JobPosting` data | Redakloop reads the job from it: title and company as a heading, then the description with its headings and lists. This makes pages rendered by JavaScript readable. No other address is fetched, and the review says "Read from the page's job posting data."                                                                       |
+| Under 400 characters of job text          | Fails before any provider call, and no brief is saved: "Redakloop could not read enough job text from this page. It may show the job only with JavaScript. Paste the job text instead."                                                                                                                                              |
+| Garbled text                              | Ligatures such as "ﬁ" are expanded first. Text with at least 30 Latin-script words, a quarter or more of them implausible (such as "FsaocG" from a broken PDF), fails before any provider call: "The job text looks garbled, so Redakloop did not extract requirements from it. …" Camel-case names and acronyms count as plausible. |
 | No requirements found                     | The step says "No requirements were found in this job text" and offers **Extract again**. The start checklist offers **Extract requirements again**. A first draft no extraction has read says the requirements have not been read yet and offers **Extract requirements**.                                                          |
 | A job document over 64 KiB                | Fails with a message.                                                                                                                                                                                                                                                                                                                |
 
@@ -668,7 +668,7 @@ brief vN · R requirements · C critical · P responsibilities". The run starts 
 that exact version.
 
 - **Exact versions.** `start` takes each brief or profile id and version only as
-  a pair, and both must be reviewed. DraftLoop pins the versions and their
+  a pair, and both must be reviewed. Redakloop pins the versions and their
   checksums in the run, so later edits do not change it.
 - **Profile check.** A pinned profile's checksum is checked again at start and
   resume. Its grounded facts lead the evidence
@@ -853,7 +853,7 @@ The checks ignore:
 1. **Retry once.** On a smaller input, a grounding failure can trigger one more
    full-context request with the same sources and fixed diagnostic counts.
    Failed values and quotes are not sent back.
-2. **Drop what is ungrounded.** If the retry still fails, DraftLoop keeps the
+2. **Drop what is ungrounded.** If the retry still fails, Redakloop keeps the
    grounded facts and drops the rest, along with any issue that cites them. One
    warning, with no quoted text, says how many were dropped. Acknowledge it
    after checking for missing facts.
@@ -921,7 +921,7 @@ application readiness or quality.
 ### Career evidence and Career profile on screen
 
 The shared screens keep the documents a person gives apart from the facts
-DraftLoop builds, on the web and the desktop alike.
+Redakloop builds, on the web and the desktop alike.
 
 ```mermaid
 flowchart LR
@@ -941,7 +941,7 @@ A host without a profile workflow shows no Career profile tab or signpost.
 ### Import your pull requests
 
 On the web, Career evidence takes a list of your merged pull requests, so
-code review work can support a CV claim with a link. DraftLoop makes no
+code review work can support a CV claim with a link. Redakloop makes no
 network call: you export the list yourself.
 
 ```sh
@@ -1129,7 +1129,7 @@ text in the editor; saving it makes a new version, and nothing is deleted.
 
 ### Suggested preferences
 
-DraftLoop suggests a writing preference when your review choices repeat, and
+Redakloop suggests a writing preference when your review choices repeat, and
 you decide. Nothing changes until you accept one, and no model is called.
 
 ```sh

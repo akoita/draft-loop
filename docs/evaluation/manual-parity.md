@@ -4,9 +4,9 @@
 **Issue:** [#870](https://github.com/akoita/draft-loop/issues/870), part of
 [#869](https://github.com/akoita/draft-loop/issues/869)
 
-DraftLoop is meant to replace a manual loop in which a candidate passes a
+Redakloop is meant to replace a manual loop in which a candidate passes a
 resume between two frontier coding agents until both agree it is ready to
-send. This page defines how a DraftLoop draft is compared with the CV that
+send. This page defines how a Redakloop draft is compared with the CV that
 loop produced for the same job post, and records the scores.
 
 ## Reference set
@@ -77,8 +77,8 @@ later drafts are scored against the same list.
 - Every requirement the draft missed and the reference covered depends on
   that recent work.
 - The one leak came from a part of the career source the candidate had
-  marked as not for a CV. DraftLoop does not model those markings yet.
-- Scorer: Claude Opus 5.5 in a DraftLoop maintenance session. Edits before
+  marked as not for a CV. Redakloop does not model those markings yet.
+- Scorer: Claude Opus 5.5 in a Redakloop maintenance session. Edits before
   sending await the candidate's count.
 
 ### First observation, reference A (2026-10-06, #878)

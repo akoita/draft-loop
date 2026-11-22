@@ -10,7 +10,7 @@ const base = "http://127.0.0.1:8080/v1/workspaces/owner";
 
 const guide = {
   language: "en",
-  intro: "DraftLoop turns your career evidence into a CV for one job.",
+  intro: "Redakloop turns your career evidence into a CV for one job.",
   query: null,
   sections: [
     { id: "evidence", title: "Add your career evidence", paragraphs: ["From Home, open it."] },

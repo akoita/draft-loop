@@ -1,6 +1,6 @@
 ---
 name: add-project
-description: Turn the current code repository into a DraftLoop project card the candidate reviews before it is sent.
+description: Turn the current code repository into a Redakloop project card the candidate reviews before it is sent.
 ---
 
 # Add this repository as a project card
@@ -13,4 +13,4 @@ Use this when the candidate asks to add the current repository to their career e
 4. Draft the card: a one-line purpose, a summary a hiring manager reads (the problem, what it does, its scale), the stack, scale signals, and up to eight highlights, each citing the file or pull request it came from.
 5. Show the whole card to the candidate and apply their changes. Send nothing until they say yes.
 6. Call `add_project` with the card. Never include code, file contents, keys, or any email address, and send no links for a private repository.
-7. Say that the card waits for the candidate's approval in DraftLoop's Work journal.
+7. Say that the card waits for the candidate's approval in Redakloop's Work journal.

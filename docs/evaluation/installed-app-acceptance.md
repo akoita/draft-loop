@@ -16,7 +16,7 @@ arm64 and Windows x64. It is a required check on `main`.
 ## What it checks
 
 The harness launches the packaged client with a fresh profile
-(`--user-data-dir`) against a scripted fake DraftLoop API on the runner. It
+(`--user-data-dir`) against a scripted fake Redakloop API on the runner. It
 calls no provider, no real server and no public site, and uses no candidate
 material.
 

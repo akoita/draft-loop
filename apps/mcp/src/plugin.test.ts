@@ -76,7 +76,7 @@ async function toolNames(): Promise<readonly string[]> {
   return tools.map((tool) => tool.name);
 }
 
-describe("the DraftLoop Claude Code plugin", () => {
+describe("the Redakloop Claude Code plugin", () => {
   it("is listed by the repository's marketplace under its own folder", async () => {
     const marketplace = await json(join(repository, ".claude-plugin", "marketplace.json"));
     const manifest = await json(join(plugin, ".claude-plugin", "plugin.json"));

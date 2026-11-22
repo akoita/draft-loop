@@ -45,7 +45,7 @@ async function connect(config: ReturnType<typeof scripted>["config"]) {
 }
 
 describe("send_feedback (#2843)", () => {
-  it("sends the candidate's note from the agent and says nobody replies in DraftLoop", async () => {
+  it("sends the candidate's note from the agent and says nobody replies in Redakloop", async () => {
     const { config, requests } = scripted(201, {
       noteId: "note-1",
       organisationId: "org-north",
@@ -65,7 +65,7 @@ describe("send_feedback (#2843)", () => {
     expect(sent.structuredContent).toEqual({
       note_id: "note-1",
       sent_at: "2026-11-16T23:00:00.000Z",
-      next_step: "Sent. The people who run DraftLoop read it; there is no reply in DraftLoop.",
+      next_step: "Sent. The people who run Redakloop read it; there is no reply in Redakloop.",
     });
     expect(requests).toEqual([
       {
@@ -92,7 +92,7 @@ describe("send_feedback (#2843)", () => {
     await client.close();
   });
 
-  it("refuses an empty note before calling DraftLoop", async () => {
+  it("refuses an empty note before calling Redakloop", async () => {
     const { config, requests } = scripted(201, {});
     const client = await connect(config);
 

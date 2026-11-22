@@ -1447,7 +1447,7 @@ describe("desktop workspace setup", () => {
       { status: "idle" },
     );
 
-    expect(localWriter).toContain("Local models have not passed DraftLoop&#x27;s quality check");
+    expect(localWriter).toContain("Local models have not passed Redakloop&#x27;s quality check");
     expect(localReviewer).not.toContain("Local models have not passed");
     expect(renderForm(named, { status: "idle" })).not.toContain("Local models have not passed");
   });

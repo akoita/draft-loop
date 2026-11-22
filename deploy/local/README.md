@@ -1,6 +1,6 @@
 # Self-hosted stack
 
-DraftLoop's hosted service on your own machine: the same API, worker, page fetcher and Postgres as
+Redakloop's hosted service on your own machine: the same API, worker, page fetcher and Postgres as
 the cloud, with files on disk and your own provider keys. The full guide is
 [docs/operations/self-hosted.md](../../docs/operations/self-hosted.md).
 

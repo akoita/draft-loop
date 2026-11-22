@@ -170,7 +170,7 @@ describe("record members", () => {
       </Records>,
     );
 
-    expect(html).toContain('role="status">Opening DraftLoop…</p>');
+    expect(html).toContain('role="status">Opening Redakloop…</p>');
     expect(html).not.toContain("screens for");
   });
 });

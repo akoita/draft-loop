@@ -14,7 +14,7 @@ export const profileSignpostText = () =>
 export const evidenceSignpostText = () =>
   ({
     lead: t`Looking for your facts?`,
-    body: t`Facts DraftLoop finds in these documents are reviewed and edited in Career profile.`,
+    body: t`Facts Redakloop finds in these documents are reviewed and edited in Career profile.`,
     action: t`Open Career profile`,
   }) as const;
 

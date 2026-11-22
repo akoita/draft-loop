@@ -13,7 +13,7 @@ interface StubSource {
   readonly checksum: string;
 }
 
-/** A fake DraftLoop API with the three knowledge routes the import calls. */
+/** A fake Redakloop API with the three knowledge routes the import calls. */
 function stubServer(token: string) {
   const bases: { id: string; displayName: string; description: string; workspaceId?: string }[] =
     [];

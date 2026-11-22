@@ -20,7 +20,7 @@ usability gap, each filed as an issue below. Issue:
 | Agent       | Claude Code 2.1.296, headless (`claude -p "/log-work"`)           |
 | Toolchain   | Node 24.22.1, pnpm 10.18.3, a clone at `main` (`cf7dc53`)         |
 | Project     | A throwaway Git project with one fictional commit                 |
-| Model spend | None by DraftLoop. The agent ran on the owner's own subscription. |
+| Model spend | None by Redakloop. The agent ran on the owner's own subscription. |
 
 The note was fictional, so the owner discarded it instead of approving it,
 and no fictional note became career evidence. Approval is covered by

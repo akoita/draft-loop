@@ -15,7 +15,7 @@ describe("account page", () => {
     );
 
     expect(html).toContain("Signed in as ada@example.test");
-    expect(html).toContain(">Back to DraftLoop</button>");
+    expect(html).toContain(">Back to Redakloop</button>");
     expect(html).toMatch(/Your data<\/h2><p>download here[\s\S]*danger-zone/u);
     const [, danger = ""] = html.split("danger-zone");
     expect(danger).toContain("Danger zone</h2>");

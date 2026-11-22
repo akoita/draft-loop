@@ -15,7 +15,7 @@ function describe(suggestion: PreferenceSuggestion): string {
 
 /**
  * Registers `preferences list|accept|dismiss|sources` (#2253, #2384): writing preferences suggested from the
- * person's own review choices. DraftLoop suggests; the person decides. Accepting saves a new
+ * person's own review choices. Redakloop suggests; the person decides. Accepting saves a new
  * writing-policy version; dismissing means it is never offered again. No model is called.
  */
 export function registerPreferenceCommands(
@@ -40,7 +40,7 @@ export function registerPreferenceCommands(
         return;
       }
       if (listed.length === 0) {
-        io.write("No suggested preferences. DraftLoop suggests one when a review pattern repeats.");
+        io.write("No suggested preferences. Redakloop suggests one when a review pattern repeats.");
         return;
       }
       for (const suggestion of listed) {

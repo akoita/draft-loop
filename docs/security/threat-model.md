@@ -1,6 +1,6 @@
 # Threat model
 
-This page is the repository-grounded security baseline for DraftLoop. It is
+This page is the repository-grounded security baseline for Redakloop. It is
 written for anyone who changes a trust boundary or reviews a release, and it
 lists what is protected, how, and what risk remains. It is not a claim that the
 product is safe for every deployment. Revisit it whenever a boundary changes.
@@ -19,7 +19,7 @@ The [roadmap](../roadmap.md) records the current stage.
 
 ## Scope
 
-DraftLoop runs in four ways ([architecture overview](../architecture/overview.md#ways-to-run)).
+Redakloop runs in four ways ([architecture overview](../architecture/overview.md#ways-to-run)).
 This page covers the CLI and the engine every way shares. The server, its model
 routes, the desktop client, the agent channel and the self-hosted stack are in
 the [server threat model](server-threat-model.md).
@@ -33,7 +33,7 @@ the [server threat model](server-threat-model.md).
 
 The v0.8 desktop, with its own engine, renderer bridge and credential store, was
 retired on 2026-11-04 (#2117–#2119), and its boundaries are no longer modelled.
-DraftLoop has no browser extension and no job submission path.
+Redakloop has no browser extension and no job submission path.
 
 ## Assumptions
 
@@ -47,7 +47,7 @@ DraftLoop has no browser extension and no job submission path.
 - **Untrusted inputs.** Source files, fetched pages, model output, exports,
   backups, diagnostics and retrieval indexes are sensitive or untrusted. Models
   and sources may contain errors or indirect instructions.
-- **Data, not instructions.** DraftLoop treats source content as data, never as
+- **Data, not instructions.** Redakloop treats source content as data, never as
   application policy or executable instructions.
 
 ## Contract scopes

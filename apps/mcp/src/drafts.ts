@@ -134,7 +134,7 @@ const idPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/u;
 
 function pathId(id: string, what: string): string {
   if (!idPattern.test(id)) {
-    throw new WorkJournalApiError("invalid_id", `That is not a DraftLoop ${what} id.`, [what]);
+    throw new WorkJournalApiError("invalid_id", `That is not a Redakloop ${what} id.`, [what]);
   }
   return encodeURIComponent(id);
 }
@@ -177,7 +177,7 @@ export function createDraftsApi(call: WorkspaceApiCall): DraftsApi {
       if (runId === undefined) {
         throw new WorkJournalApiError(
           "no_cv",
-          "This application has no CV run yet; the candidate starts one in DraftLoop.",
+          "This application has no CV run yet; the candidate starts one in Redakloop.",
         );
       }
       const { exports } = (await call(`/runs/${pathId(runId, "run")}/exports`, {
@@ -189,7 +189,7 @@ export function createDraftsApi(call: WorkspaceApiCall): DraftsApi {
       if (markdown === undefined) {
         throw new WorkJournalApiError(
           "no_markdown_export",
-          "This CV has no Markdown export; the candidate approves the draft and exports it as Markdown in DraftLoop.",
+          "This CV has no Markdown export; the candidate approves the draft and exports it as Markdown in Redakloop.",
         );
       }
       const text = (await call(
@@ -223,7 +223,7 @@ export function createDraftsApi(call: WorkspaceApiCall): DraftsApi {
 }
 
 export const getCvDescription =
-  "Read the CV the candidate approved and exported as Markdown for one job application: the newest Markdown export of the run the application uses. Without one, the candidate exports it in DraftLoop; never write or change a CV here. Needs the drafts:read scope.";
+  "Read the CV the candidate approved and exported as Markdown for one job application: the newest Markdown export of the run the application uses. Without one, the candidate exports it in Redakloop; never write or change a CV here. Needs the drafts:read scope.";
 
 export const listMaterialsDescription =
   "List the cover letters, interview preparation guides and interview question sets the candidate saved for one job application, newest first: id, kind, date and whether they edited it. It returns no text; call get_material for one. Needs the drafts:read scope.";

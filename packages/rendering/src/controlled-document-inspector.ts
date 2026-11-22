@@ -447,14 +447,14 @@ export function inspectControlledDocument(
     return observationForPages(
       parsePdfPages(rendered.content, rightMarginPt(rendered.metadata.layoutProfile)),
       rendered,
-      "DraftLoop controlled PDF byte inspector",
+      "Redakloop controlled PDF byte inspector",
     );
   }
   if (rendered.metadata.format === "docx") {
     return observationForPages(
       parseDocxPages(rendered.content),
       rendered,
-      "DraftLoop controlled DOCX OOXML inspector",
+      "Redakloop controlled DOCX OOXML inspector",
     );
   }
   fail("controlled document inspection supports only PDF and DOCX");

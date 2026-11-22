@@ -84,7 +84,7 @@ export async function setSensitiveKnowledgeConsent(
   const settings = workspaceSettings();
   if ((await settings.read(rootInput, "workspace.json").catch(() => undefined)) === undefined) {
     throw new CliUserError(
-      `No DraftLoop workspace found at ${rootInput}. Run draft-loop init first.`,
+      `No Redakloop workspace found at ${rootInput}. Run draft-loop init first.`,
     );
   }
   const consent: SensitiveKnowledgeConsent = { allowSensitive, updatedAt: now() };

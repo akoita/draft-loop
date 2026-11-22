@@ -1,5 +1,5 @@
 /**
- * The catalog of memory kinds (#2250): every kind of context DraftLoop keeps for a run, how long it
+ * The catalog of memory kinds (#2250): every kind of context Redakloop keeps for a run, how long it
  * lives, who writes it, whether it may hold candidate content, and the module that owns it.
  *
  * The table in docs/architecture/memory.md lists the same kinds; a test keeps the two in step.

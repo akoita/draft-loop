@@ -1,7 +1,7 @@
 # Readable export
 
 The readable export is the copy a person opens to see their data. **Download
-everything** under Your data saves it as `draftloop-data.zip`. Owners and
+everything** under Your data saves it as `redakloop-data.zip`. Owners and
 admins download it from `GET /v1/workspaces/{workspaceId}/export`.
 
 The [record archive](record-archive.md) stays the complete, checkable copy of

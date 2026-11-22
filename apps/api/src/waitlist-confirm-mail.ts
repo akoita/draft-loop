@@ -29,7 +29,7 @@ function english(link: string): string[] {
   return [
     "Hello,",
     "",
-    "Someone, probably you, asked to join the DraftLoop beta waitlist with this address. Open this link to confirm it:",
+    "Someone, probably you, asked to join the Redakloop beta waitlist with this address. Open this link to confirm it:",
     "",
     link,
     "",
@@ -37,7 +37,7 @@ function english(link: string): string[] {
     "",
     "If it was not you, ignore this email: the request is deleted after that.",
     "",
-    "The DraftLoop team",
+    "The Redakloop team",
   ];
 }
 
@@ -45,7 +45,7 @@ function french(link: string): string[] {
   return [
     "Bonjour,",
     "",
-    "Quelqu'un, sans doute vous, a demandé à rejoindre la liste d'attente de la beta de DraftLoop avec cette adresse. Ouvrez ce lien pour la confirmer :",
+    "Quelqu'un, sans doute vous, a demandé à rejoindre la liste d'attente de la beta de Redakloop avec cette adresse. Ouvrez ce lien pour la confirmer :",
     "",
     link,
     "",
@@ -53,7 +53,7 @@ function french(link: string): string[] {
     "",
     "Si ce n'était pas vous, ignorez cet email : la demande sera ensuite supprimée.",
     "",
-    "L'équipe DraftLoop",
+    "L'équipe Redakloop",
   ];
 }
 
@@ -66,18 +66,18 @@ export function waitlistConfirmMessage(input: {
   const link = waitlistConfirmLink(input.serviceUrl, input.token);
   if (input.locale === "en") {
     return {
-      subject: "Confirm your email for the DraftLoop waitlist",
+      subject: "Confirm your email for the Redakloop waitlist",
       text: english(link).join("\n"),
     };
   }
   if (input.locale === "fr") {
     return {
-      subject: "Confirmez votre email pour la liste d'attente DraftLoop",
+      subject: "Confirmez votre email pour la liste d'attente Redakloop",
       text: french(link).join("\n"),
     };
   }
   return {
-    subject: "Confirmez votre email / Confirm your email: DraftLoop",
+    subject: "Confirmez votre email / Confirm your email: Redakloop",
     text: [...french(link), "", "----", "", ...english(link)].join("\n"),
   };
 }

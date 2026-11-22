@@ -11,7 +11,7 @@ import { configureWorkspaceWritingPolicy } from "./local.js";
  */
 export const defaultWritingPolicyContent = `# Default CV writing policy
 
-DraftLoop applies this policy to new workspaces. Edit it to make it yours.
+Redakloop applies this policy to new workspaces. Edit it to make it yours.
 
 Tone: professional
 Verbosity: concise

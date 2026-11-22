@@ -9,7 +9,7 @@ import { z } from "zod";
 import type { WorkspaceApiCall } from "./client.js";
 
 /**
- * The agent channel's user guide (#2881): the same text as DraftLoop's Help button, so an agent
+ * The agent channel's user guide (#2881): the same text as Redakloop's Help button, so an agent
  * answers its candidate's "how do I" questions without guessing. Reads only; needs the `journal`
  * scope, which a token holds by default.
  */
@@ -34,7 +34,7 @@ export function createHelpApi(call: WorkspaceApiCall): HelpApi {
 
 /** The guide as one Markdown page: what the resource returns. */
 export function helpMarkdown(guide: HelpGuideResponse): string {
-  const title = guide.language === "fr" ? "Guide de DraftLoop" : "DraftLoop user guide";
+  const title = guide.language === "fr" ? "Guide de Redakloop" : "Redakloop user guide";
   const sections = guide.sections.map((section) =>
     [`## ${section.title}`, ...section.paragraphs].join("\n\n"),
   );
@@ -42,7 +42,7 @@ export function helpMarkdown(guide: HelpGuideResponse): string {
 }
 
 export const searchHelpDescription =
-  "Search DraftLoop's user guide, the text its Help button shows, to answer the candidate's questions about using DraftLoop: adding evidence, jobs, runs, review and export, Prepare, agents, credits, privacy and errors. Pass a few words; leave query out for the whole guide. Answer from the returned sections and never guess a screen or button that is not in them.";
+  "Search Redakloop's user guide, the text its Help button shows, to answer the candidate's questions about using Redakloop: adding evidence, jobs, runs, review and export, Prepare, agents, credits, privacy and errors. Pass a few words; leave query out for the whole guide. Answer from the returned sections and never guess a screen or button that is not in them.";
 
 type Failure = (error: unknown) => {
   isError: boolean;
@@ -56,7 +56,7 @@ export function registerHelpTools(server: McpServer, api: HelpApi, failure: Fail
   server.registerTool(
     "search_help",
     {
-      title: "Search the DraftLoop user guide",
+      title: "Search the Redakloop user guide",
       description: searchHelpDescription,
       inputSchema: z.object({
         query: z.string().trim().max(200).optional().describe("A few words, such as 'export PDF'."),
@@ -94,7 +94,7 @@ export function registerHelpTools(server: McpServer, api: HelpApi, failure: Fail
       `help-guide-${language}`,
       `draftloop://help/guide/${language}`,
       {
-        title: language === "fr" ? "Guide de DraftLoop" : "DraftLoop user guide",
+        title: language === "fr" ? "Guide de Redakloop" : "Redakloop user guide",
         description:
           language === "fr"
             ? "The whole user guide in French, as the Help button shows it."

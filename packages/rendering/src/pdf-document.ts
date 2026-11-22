@@ -602,7 +602,7 @@ export function buildPdf(input: PdfRenderInput): Uint8Array {
     ? input.generatedAt.replace(/[-:TZ.]/gu, "").slice(0, 14)
     : "20260813120000";
   objects[infoId] =
-    `<< /Title ${pdfTextString(input.documentTitle)} /Author (DraftLoop) /Creator (DraftLoop CV Engine) /CreationDate (D:${createdDate}Z) >>`;
+    `<< /Title ${pdfTextString(input.documentTitle)} /Author (Redakloop) /Creator (Redakloop CV Engine) /CreationDate (D:${createdDate}Z) >>`;
 
   // Built as byte chunks: font files are binary, so xref offsets must count bytes, not characters.
   const chunks: Uint8Array[] = [];

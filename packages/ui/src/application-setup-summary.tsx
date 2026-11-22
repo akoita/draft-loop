@@ -53,7 +53,7 @@ function profileState(
       return {
         chip: t`Unavailable`,
         tone: "neutral",
-        text: t`This version of DraftLoop cannot manage a career profile.`,
+        text: t`This version of Redakloop cannot manage a career profile.`,
       };
     case "failed":
       return {

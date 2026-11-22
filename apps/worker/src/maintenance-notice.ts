@@ -35,11 +35,11 @@ export function maintenanceNotice(
   const when = windowText(window, locale);
   if (locale === "fr") {
     return {
-      subject: "Maintenance planifiée de DraftLoop",
+      subject: "Maintenance planifiée de Redakloop",
       text: [
         "Bonjour,",
         "",
-        `DraftLoop fera l'objet d'une maintenance planifiée : ${when} (heure de Paris).`,
+        `Redakloop fera l'objet d'une maintenance planifiée : ${when} (heure de Paris).`,
         "",
         window.readOnly
           ? "Pendant ce temps, vous pourrez toujours consulter et télécharger vos documents, mais les modifications seront suspendues."
@@ -48,16 +48,16 @@ export function maintenanceNotice(
         "",
         `Vous n'avez rien d'autre à faire : le service reprend de lui-même. ${serviceUrl}`,
         "",
-        "L'équipe DraftLoop",
+        "L'équipe Redakloop",
       ].join("\n"),
     };
   }
   return {
-    subject: "Planned maintenance on DraftLoop",
+    subject: "Planned maintenance on Redakloop",
     text: [
       "Hello,",
       "",
-      `DraftLoop has planned maintenance: ${when} (Paris time).`,
+      `Redakloop has planned maintenance: ${when} (Paris time).`,
       "",
       window.readOnly
         ? "During it you can still read and download your documents, but changes will be paused."
@@ -66,7 +66,7 @@ export function maintenanceNotice(
       "",
       `Nothing else is needed from you: the service comes back on its own. ${serviceUrl}`,
       "",
-      "The DraftLoop team",
+      "The Redakloop team",
     ].join("\n"),
   };
 }

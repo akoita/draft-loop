@@ -318,7 +318,7 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
     if (!(await store.intake(workspaceId)).enabled) {
       throw new WorkJournalError(
         "not_consented",
-        'The candidate has not turned on "Accept notes from agents" in DraftLoop.',
+        'The candidate has not turned on "Accept notes from agents" in Redakloop.',
       );
     }
   };
@@ -386,7 +386,7 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
       status: "amended",
       possible_duplicate_of: possible,
       screening: screening.verdict,
-      message: "The pending note was amended; the candidate reviews it in DraftLoop.",
+      message: "The pending note was amended; the candidate reviews it in Redakloop.",
     };
   };
 
@@ -460,8 +460,8 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
       screening: screening.verdict,
       message:
         screening.verdict === "clear"
-          ? "Recorded; the candidate reviews it in DraftLoop before it becomes evidence."
-          : "Recorded but held by screening; the candidate decides in DraftLoop.",
+          ? "Recorded; the candidate reviews it in Redakloop before it becomes evidence."
+          : "Recorded but held by screening; the candidate decides in Redakloop.",
     };
   };
 

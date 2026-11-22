@@ -20,7 +20,7 @@ screenshots. Issue: [#2161](https://github.com/akoita/draft-loop/issues/2161).
 | Agent       | Claude Code 2.1.296, headless (`claude -p`), on Haiku                                      |
 | Toolchain   | Node 24.22.1, pnpm 10.18.3                                                                 |
 | Data        | A throwaway Git project with two fictional commits; a workspace created for the walk       |
-| Model spend | None by DraftLoop. The agent ran on the owner's own subscription.                          |
+| Model spend | None by Redakloop. The agent ran on the owner's own subscription.                          |
 
 The walk used its own Compose project and port. A clone's stack and the
 installed stack share one project name, so the default start would have run

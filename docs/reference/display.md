@@ -1,6 +1,6 @@
-# How DraftLoop shows itself
+# How Redakloop shows itself
 
-This page is for a candidate or coach who wants DraftLoop simpler or fuller.
+This page is for a candidate or coach who wants Redakloop simpler or fuller.
 One **Display** choice in **Settings** on Home sets how much each
 screen shows at once.
 

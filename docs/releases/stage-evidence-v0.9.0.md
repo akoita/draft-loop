@@ -8,7 +8,7 @@ the [#1309](https://github.com/akoita/draft-loop/issues/1309) exit is not met.
 
 ## Why this release
 
-From v0.9.0 the desktop app is a client of a DraftLoop server
+From v0.9.0 the desktop app is a client of a Redakloop server
 ([ADR 0011](../adr/0011-client-server-version.md), D9): an Electron window over
 the server's own web screen. It holds no engine, storage or provider keys, so
 its screens update with the server. It works with a self-hosted server today
@@ -85,9 +85,9 @@ previous desktop release.
 
 | Asset                            | Bytes       | SHA-256                                                            |
 | -------------------------------- | ----------- | ------------------------------------------------------------------ |
-| `DraftLoop-win32-x64-0.9.0.zip`  | 157,901,720 | `c98bf26553eff87a4ca4884a304974b6c3d67747028202b73eb725e2425a85db` |
-| `DraftLoop-darwin-arm64-0.9.0.zip` | 128,595,404 | `89d73fd7a8b6182b437f028002172142febefbf51dcde5831330128730ff21d7` |
-| `DraftLoop-linux-x64-0.9.0.zip`  | 123,109,361 | `b4371dbaea965ce6d8b07bbf733eeb686f201e6d22b8e150252a7cd794f067e0` |
+| `Redakloop-win32-x64-0.9.0.zip`  | 157,901,720 | `c98bf26553eff87a4ca4884a304974b6c3d67747028202b73eb725e2425a85db` |
+| `Redakloop-darwin-arm64-0.9.0.zip` | 128,595,404 | `89d73fd7a8b6182b437f028002172142febefbf51dcde5831330128730ff21d7` |
+| `Redakloop-linux-x64-0.9.0.zip`  | 123,109,361 | `b4371dbaea965ce6d8b07bbf733eeb686f201e6d22b8e150252a7cd794f067e0` |
 
 - **Provenance:** attestation was not requested.
 

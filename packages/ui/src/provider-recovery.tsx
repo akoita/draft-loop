@@ -42,7 +42,7 @@ export function automaticRetryLine(failure: ProviderFailureView, remainingMs: nu
     remainingMs > 0
       ? t`Attempt ${next} of ${failure.maxAttempts} starts in ${waitLabel(remainingMs)}.`
       : t`Attempt ${next} of ${failure.maxAttempts} is starting.`;
-  return t`${when} You don't need to do anything: waiting is safe, and DraftLoop asks you only if the last attempt also fails.`;
+  return t`${when} You don't need to do anything: waiting is safe, and Redakloop asks you only if the last attempt also fails.`;
 }
 
 /** The Stop control as it stands: one button, or the question with both answers. */
@@ -61,7 +61,7 @@ export function ProviderFailureStopView(props: {
   }
   return (
     <div className="provider-stop-confirm">
-      <p className="subtle">{t`DraftLoop is still retrying. Stopping ends this review for good; you would start a new one.`}</p>
+      <p className="subtle">{t`Redakloop is still retrying. Stopping ends this review for good; you would start a new one.`}</p>
       <button className="button button-outline" type="button" onClick={props.onKeepWaiting}>
         {t`Keep waiting`}
       </button>

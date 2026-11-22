@@ -5,7 +5,7 @@ export function CoverLetterRiskNotice() {
   return (
     <div className="cover-letter-risk" role="note">
       <p className="cover-letter-risk-title">{t`Write the letter yourself.`}</p>
-      <p>{t`Recruiters and AI-detection tools often spot a letter written entirely by AI, and it can count against you. Use what DraftLoop gives you here as material, then write the letter in your own words.`}</p>
+      <p>{t`Recruiters and AI-detection tools often spot a letter written entirely by AI, and it can count against you. Use what Redakloop gives you here as material, then write the letter in your own words.`}</p>
     </div>
   );
 }

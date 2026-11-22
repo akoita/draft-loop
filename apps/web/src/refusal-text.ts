@@ -67,7 +67,7 @@ function knownText(refusal: Refusal): string | undefined {
       if (status === undefined) return undefined;
       // A bare 5xx is Cloud Run's answer while the server restarts or starts: it passes.
       if (typeof status === "number" && status >= 500)
-        return t`DraftLoop's server did not answer (error ${status}). It recovers on its own within a minute; try again then. Nothing you saved is lost.`;
+        return t`Redakloop's server did not answer (error ${status}). It recovers on its own within a minute; try again then. Nothing you saved is lost.`;
       return t`The API answered ${status}.`;
     }
     default:

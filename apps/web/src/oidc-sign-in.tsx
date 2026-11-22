@@ -91,7 +91,7 @@ export function OidcSignIn(
     <>
       <PreferencesBar />
       <main className="sign-in">
-        <h1>{t`DraftLoop`}</h1>
+        <h1>{t`Redakloop`}</h1>
         <SignInBlock {...signIn} />
       </main>
     </>

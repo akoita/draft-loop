@@ -62,7 +62,7 @@ describe("candidate profile extraction failure guidance", () => {
   it.each([
     [
       "malformed_stream",
-      "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved.",
+      "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update Redakloop; no facts were saved.",
     ],
     [
       "incomplete_stream",
@@ -152,7 +152,7 @@ describe("candidate profile extraction failure guidance", () => {
     );
 
     expect(legacy).toBe(
-      "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved.",
+      "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update Redakloop; no facts were saved.",
     );
     expect(legacy).not.toContain("/");
     expect(wrongStage).toBe(

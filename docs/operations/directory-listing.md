@@ -1,6 +1,6 @@
 # Directory listing
 
-This page is for the operator who lists DraftLoop in an assistant directory:
+This page is for the operator who lists Redakloop in an assistant directory:
 the Claude directory first, then the ChatGPT and Codex plugin directory. It
 holds the listing texts, the test cases a reviewer runs and the checklist to
 finish before submitting.
@@ -15,7 +15,7 @@ needs the owner's explicit go ([#2650](https://github.com/akoita/draft-loop/issu
 | Tools with a title and annotations     | Ready     | `apps/mcp/src`                                               |
 | Remote MCP server with OAuth sign-in   | Built     | [Agent channel](../reference/agent-channel.md#with-oauth-sign-in) |
 | Spend limit per connected assistant    | Built     | [Agent channel](../reference/agent-channel.md#the-connections-spend-cap) |
-| Public documentation page              | Ready     | [Connect DraftLoop to your assistant](../reference/connect-an-assistant.md) |
+| Public documentation page              | Ready     | [Connect Redakloop to your assistant](../reference/connect-an-assistant.md) |
 | Listing texts and test cases           | Ready     | This page                                                    |
 | Privacy policy and terms at a URL      | Missing   | Drafts in [`docs/legal`](../legal/README.md); pages in #2462 |
 | Sign-in service hosted, one client per assistant | Missing | Infrastructure repository                            |
@@ -31,26 +31,26 @@ quality. Say what the tools do.
 
 | Field        | Text                                                                                   |
 | ------------ | -------------------------------------------------------------------------------------- |
-| Name         | DraftLoop                                                                              |
+| Name         | Redakloop                                                                              |
 | Summary      | Track your job applications and tailor your CV from evidence you approved.             |
 | Categories   | Productivity, Career                                                                   |
 | Developer    | The legal name in the legal notice (`/legal/notice`, [legal pack](../legal/README.md))                         |
 
 **Description:**
 
-> DraftLoop keeps your job applications, your career evidence and the CVs you
+> Redakloop keeps your job applications, your career evidence and the CVs you
 > tailor for each job. With this connector, your assistant can list your
 > applications, add a job from a description you paste, follow a CV run and
 > record notable work for you to review. If you allow it, it can also read
 > the CVs and cover letters you saved, and start a CV run or a draft within a
 > monthly limit you set. Approving a draft, exporting a document and every
-> setting stay with you in DraftLoop. You need a DraftLoop account.
+> setting stay with you in Redakloop. You need a Redakloop account.
 
 **Example prompts:**
 
-1. "List my job applications in DraftLoop and tell me which ones wait for me."
-2. "Add this job to DraftLoop:" followed by the pasted job description.
-3. "Record in my DraftLoop work journal what we shipped today."
+1. "List my job applications in Redakloop and tell me which ones wait for me."
+2. "Add this job to Redakloop:" followed by the pasted job description.
+3. "Record in my Redakloop work journal what we shipped today."
 
 ## Test cases for the reviewer
 
@@ -61,17 +61,17 @@ unless a case names another.
 
 | # | Prompt                                                        | Expected                                                       |
 | - | ------------------------------------------------------------- | -------------------------------------------------------------- |
-| 1 | "List my DraftLoop applications."                             | `list_applications` returns the sample applications            |
+| 1 | "List my Redakloop applications."                             | `list_applications` returns the sample applications            |
 | 2 | "Where does my application for the first one stand?"          | `get_application` and `get_run_status` describe it             |
-| 3 | "Add this job to DraftLoop:" with a pasted description        | `add_job` creates an application and returns its id            |
-| 4 | "Record this work in my DraftLoop journal:" with a summary    | `record_work` files a note that waits for review               |
+| 3 | "Add this job to Redakloop:" with a pasted description        | `add_job` creates an application and returns its id            |
+| 4 | "Record this work in my Redakloop journal:" with a summary    | `record_work` files a note that waits for review               |
 | 5 | With "Read CVs and drafts": "Show the CV for that application." | `get_cv` returns the exported Markdown CV                    |
 
 ### Should be refused
 
 | # | Prompt                                              | Expected                                                              |
 | - | --------------------------------------------------- | --------------------------------------------------------------------- |
-| 1 | "Approve the draft of my CV in DraftLoop."          | No tool exists; the assistant says approval stays in DraftLoop        |
+| 1 | "Approve the draft of my CV in Redakloop."          | No tool exists; the assistant says approval stays in Redakloop        |
 | 2 | "Add the job at this address:" with a URL only      | `add_job` refuses an address and asks for the pasted text             |
 | 3 | Without a spend limit: "Start a CV run for it."     | `start_cv_run` is refused and names where to set the monthly limit    |
 
@@ -114,6 +114,6 @@ Submit from a verified individual or organisation on the OpenAI platform.
 
 ## Related
 
-- [Connect DraftLoop to your assistant](../reference/connect-an-assistant.md)
+- [Connect Redakloop to your assistant](../reference/connect-an-assistant.md)
 - [Agent channel](../reference/agent-channel.md)
 - [Server deploy](server-deploy.md)

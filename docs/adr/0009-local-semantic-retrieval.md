@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-06
-- Decision owners: DraftLoop maintainers
+- Decision owners: Redakloop maintainers
 
 ## Context
 
@@ -55,7 +55,7 @@ Run `onnxruntime-node` with `@huggingface/tokenizers` in a new
 
 Install the model only on explicit user action. Downloads come from pinned
 Hugging Face revisions and are verified with SHA-256 before use. Model files
-live in a DraftLoop-owned data directory outside every CKB, workspace, and
+live in a Redakloop-owned data directory outside every CKB, workspace, and
 backup. Offline install from a local file uses the same verification. No code
 path downloads a model implicitly.
 

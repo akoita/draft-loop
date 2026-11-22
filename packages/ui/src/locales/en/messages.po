@@ -903,8 +903,8 @@ msgid "{when} · revised after the critic's check"
 msgstr "{when} · revised after the critic's check"
 
 #: packages/ui/src/provider-recovery.tsx
-msgid "{when} You don't need to do anything: waiting is safe, and DraftLoop asks you only if the last attempt also fails."
-msgstr "{when} You don't need to do anything: waiting is safe, and DraftLoop asks you only if the last attempt also fails."
+msgid "{when} You don't need to do anything: waiting is safe, and Redakloop asks you only if the last attempt also fails."
+msgstr "{when} You don't need to do anything: waiting is safe, and Redakloop asks you only if the last attempt also fails."
 
 #: packages/ui/src/profile-fact-suggestions-model.ts
 msgid "{where}, {day}"
@@ -1032,8 +1032,8 @@ msgid "A new review adds another run with the models set for new runs. This run,
 msgstr "A new review adds another run with the models set for new runs. This run, its approval and its export are kept."
 
 #: apps/web/src/new-release-model.ts
-msgid "A new version of DraftLoop is available."
-msgstr "A new version of DraftLoop is available."
+msgid "A new version of Redakloop is available."
+msgstr "A new version of Redakloop is available."
 
 #: apps/web/src/screening-model.ts
 msgid "A newer screening result replaced this one. Reload to see the current status."
@@ -1079,8 +1079,8 @@ msgstr "about {0}"
 
 #: apps/web/src/help-menu.tsx
 #: apps/web/src/landing.tsx
-msgid "About DraftLoop"
-msgstr "About DraftLoop"
+msgid "About Redakloop"
+msgstr "About Redakloop"
 
 #: apps/web/src/application-material.tsx
 msgid "About the company"
@@ -1203,8 +1203,8 @@ msgid "Add a CV or other documents, or tell your story in a conversation."
 msgstr "Add a CV or other documents, or tell your story in a conversation."
 
 #: packages/ui/src/home-model.ts
-msgid "Add a CV, portfolio or other source so DraftLoop can quote you accurately."
-msgstr "Add a CV, portfolio or other source so DraftLoop can quote you accurately."
+msgid "Add a CV, portfolio or other source so Redakloop can quote you accurately."
+msgstr "Add a CV, portfolio or other source so Redakloop can quote you accurately."
 
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Add a CV, portfolio, or other source"
@@ -1277,8 +1277,8 @@ msgid "Add source files"
 msgstr "Add source files"
 
 #: packages/ui/src/review.tsx
-msgid "Add the career evidence DraftLoop is allowed to use. Your files stay in this workspace. DraftLoop will not invent missing experience or start an agent run until the target job and career evidence are present."
-msgstr "Add the career evidence DraftLoop is allowed to use. Your files stay in this workspace. DraftLoop will not invent missing experience or start an agent run until the target job and career evidence are present."
+msgid "Add the career evidence Redakloop is allowed to use. Your files stay in this workspace. Redakloop will not invent missing experience or start an agent run until the target job and career evidence are present."
+msgstr "Add the career evidence Redakloop is allowed to use. Your files stay in this workspace. Redakloop will not invent missing experience or start an agent run until the target job and career evidence are present."
 
 #: packages/ui/src/application-steps-model.ts
 msgid "Add the job description from a file or a public URL, then extract and review its requirements."
@@ -1419,14 +1419,14 @@ msgstr "Allow {0} to hear my voice"
 msgid "Allow and continue"
 msgstr "Allow and continue"
 
-#: packages/ui/src/new-application-model.ts
-msgid "Allow DraftLoop to fetch this page to continue. Nothing is fetched until you extract requirements."
-msgstr "Allow DraftLoop to fetch this page to continue. Nothing is fetched until you extract requirements."
-
 #. placeholder {0}: pullRequestRepositoryOfRule(rule) ?? ""
 #: apps/web/src/private-sections.tsx
 msgid "Allow pull requests from {0}"
 msgstr "Allow pull requests from {0}"
+
+#: packages/ui/src/new-application-model.ts
+msgid "Allow Redakloop to fetch this page to continue. Nothing is fetched until you extract requirements."
+msgstr "Allow Redakloop to fetch this page to continue. Nothing is fetched until you extract requirements."
 
 #: apps/web/src/private-sections.tsx
 msgid "Allow this repository"
@@ -1839,11 +1839,6 @@ msgstr "Awards"
 msgid "Back to {0}"
 msgstr "Back to {0}"
 
-#: apps/web/src/account-page.tsx
-#: apps/web/src/operator.tsx
-msgid "Back to DraftLoop"
-msgstr "Back to DraftLoop"
-
 #: packages/ui/src/screen-hint.tsx
 msgid "Back to Getting started"
 msgstr "Back to Getting started"
@@ -1851,6 +1846,11 @@ msgstr "Back to Getting started"
 #: packages/ui/src/earlier-run-view.tsx
 msgid "Back to latest run"
 msgstr "Back to latest run"
+
+#: apps/web/src/account-page.tsx
+#: apps/web/src/operator.tsx
+msgid "Back to Redakloop"
+msgstr "Back to Redakloop"
 
 #: packages/ui/src/career-interview-live.tsx
 msgid "Back to writing"
@@ -2714,8 +2714,8 @@ msgid "Create workspace"
 msgstr "Create workspace"
 
 #: apps/web/src/beta-sign-up.tsx
-msgid "Create your DraftLoop account"
-msgstr "Create your DraftLoop account"
+msgid "Create your Redakloop account"
+msgstr "Create your Redakloop account"
 
 #: packages/ui/src/profile-status-view.tsx
 msgid "Created"
@@ -2898,12 +2898,12 @@ msgid "Decision for"
 msgstr "Decision for"
 
 #: packages/ui/src/profile-outcome.ts
-msgid "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved."
-msgstr "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved."
+msgid "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update Redakloop; no facts were saved."
+msgstr "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update Redakloop; no facts were saved."
 
 #: packages/ui/src/profile-outcome.ts
-msgid "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved."
-msgstr "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved."
+msgid "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update Redakloop to the latest supported version; no facts were saved."
+msgstr "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update Redakloop to the latest supported version; no facts were saved."
 
 #: apps/web/src/application-material.tsx
 #: packages/ui/src/knowledge.tsx
@@ -3296,92 +3296,6 @@ msgstr "Drafting sends this application's job requirements and the facts in your
 msgid "Drafting…"
 msgstr "Drafting…"
 
-#: apps/web/src/landing.tsx
-#: apps/web/src/oidc-sign-in.tsx
-#: apps/web/src/sign-in.tsx
-#: packages/ui/src/app.tsx
-msgid "DraftLoop"
-msgstr "DraftLoop"
-
-#: packages/ui/src/opportunity-brief-review.tsx
-msgid "DraftLoop / Opportunity brief"
-msgstr "DraftLoop / Opportunity brief"
-
-#: packages/ui/src/writing-policy-editor.tsx
-msgid "DraftLoop / Writing policy"
-msgstr "DraftLoop / Writing policy"
-
-#: packages/ui/src/career-evidence-contract.ts
-msgid "DraftLoop application data"
-msgstr "DraftLoop application data"
-
-#: apps/web/src/credits-model.ts
-msgid "DraftLoop cannot price one of the workspace's models yet. Choose another preset or model."
-msgstr "DraftLoop cannot price one of the workspace's models yet. Choose another preset or model."
-
-#: apps/web/src/landing.tsx
-msgid "DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out."
-msgstr "DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out."
-
-#: apps/web/src/operator-feedback-reply.tsx
-msgid "DraftLoop emails this reply to the member who sent the note, in their language when known. Their address stays on the server."
-msgstr "DraftLoop emails this reply to the member who sent the note, in their language when known. Their address stays on the server."
-
-#: packages/ui/src/job-requirements-extraction.tsx
-msgid "DraftLoop is fetching the job page you approved. Its text then goes to {providerName} ({modelName}) to split into requirements."
-msgstr "DraftLoop is fetching the job page you approved. Its text then goes to {providerName} ({modelName}) to split into requirements."
-
-#: packages/ui/src/provider-recovery.tsx
-msgid "DraftLoop is still retrying. Stopping ends this review for good; you would start a new one."
-msgstr "DraftLoop is still retrying. Stopping ends this review for good; you would start a new one."
-
-#: apps/web/src/beta-sign-up.tsx
-#: packages/ui/src/new-application-form.tsx
-msgid "DraftLoop is tuned and tested on software and tech roles so far. It works for other jobs too, so check those drafts a little more closely. Support for more professions is on our roadmap."
-msgstr "DraftLoop is tuned and tested on software and tech roles so far. It works for other jobs too, so check those drafts a little more closely. Support for more professions is on our roadmap."
-
-#: packages/ui/src/profile-fact-suggestions-model.ts
-msgid "DraftLoop noticed"
-msgstr "DraftLoop noticed"
-
-#: packages/ui/src/profile-fact-suggestions.tsx
-msgid "DraftLoop noticed these from what was said. Nothing changes your profile until you accept it, and accepting counts as reviewing that change."
-msgstr "DraftLoop noticed these from what was said. Nothing changes your profile until you accept it, and accepting counts as reviewing that change."
-
-#: packages/ui/src/preference-suggestions-panel.tsx
-msgid "DraftLoop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs."
-msgstr "DraftLoop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs."
-
-#. placeholder {0}: state.artifact.version
-#: packages/ui/src/review-run-status.ts
-msgid "DraftLoop retries the critic on version {0} shortly."
-msgstr "DraftLoop retries the critic on version {0} shortly."
-
-#: packages/ui/src/review-run-status.ts
-msgid "DraftLoop retries the draft shortly."
-msgstr "DraftLoop retries the draft shortly."
-
-#. placeholder {0}: state.round
-#: packages/ui/src/review-run-status.ts
-msgid "DraftLoop retries the revision for round {0} shortly."
-msgstr "DraftLoop retries the revision for round {0} shortly."
-
-#: apps/web/src/consent.tsx
-msgid "DraftLoop stores the CVs, notes and records you upload for this candidate, in the EU."
-msgstr "DraftLoop stores the CVs, notes and records you upload for this candidate, in the EU."
-
-#: apps/web/src/sources-model.ts
-msgid "DraftLoop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV."
-msgstr "DraftLoop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV."
-
-#: apps/web/src/credits-model.ts
-msgid "DraftLoop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month."
-msgstr "DraftLoop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month."
-
-#: apps/web/src/refusal-text.ts
-msgid "DraftLoop's server did not answer (error {status}). It recovers on its own within a minute; try again then. Nothing you saved is lost."
-msgstr "DraftLoop's server did not answer (error {status}). It recovers on its own within a minute; try again then. Nothing you saved is lost."
-
 #: packages/ui/src/export-preview.tsx
 msgid "Drawing the preview…"
 msgstr "Drawing the preview…"
@@ -3514,8 +3428,8 @@ msgid "effort"
 msgstr "effort"
 
 #: packages/ui/src/career-conversation-start.tsx
-msgid "Either way, you check every fact before DraftLoop uses it. You can add documents later."
-msgstr "Either way, you check every fact before DraftLoop uses it. You can add documents later."
+msgid "Either way, you check every fact before Redakloop uses it. You can add documents later."
+msgstr "Either way, you check every fact before Redakloop uses it. You can add documents later."
 
 #: packages/ui/src/profile-generation-progress.tsx
 msgid "Elapsed"
@@ -3826,8 +3740,8 @@ msgid "Facts by category"
 msgstr "Facts by category"
 
 #: packages/ui/src/career-signposts.tsx
-msgid "Facts DraftLoop finds in these documents are reviewed and edited in Career profile."
-msgstr "Facts DraftLoop finds in these documents are reviewed and edited in Career profile."
+msgid "Facts Redakloop finds in these documents are reviewed and edited in Career profile."
+msgstr "Facts Redakloop finds in these documents are reviewed and edited in Career profile."
 
 #: packages/ui/src/profile.tsx
 msgid "Facts:"
@@ -4490,8 +4404,8 @@ msgid "I accept the terms of use and the privacy policy."
 msgstr "I accept the terms of use and the privacy policy."
 
 #: packages/ui/src/new-application-form.tsx
-msgid "I approve DraftLoop fetching this page. It is read only when you extract requirements on the application's first step, never before."
-msgstr "I approve DraftLoop fetching this page. It is read only when you extract requirements on the application's first step, never before."
+msgid "I approve Redakloop fetching this page. It is read only when you extract requirements on the application's first step, never before."
+msgstr "I approve Redakloop fetching this page. It is read only when you extract requirements on the application's first step, never before."
 
 #: packages/ui/src/help-ask.tsx
 msgid "I can't answer that myself right now, and no guide section matches."
@@ -4637,8 +4551,8 @@ msgid "Install draftloop-mcp once on this computer."
 msgstr "Install draftloop-mcp once on this computer."
 
 #: packages/ui/src/agent-setup-model.ts
-msgid "Installs the DraftLoop tools, the /log-work and /tailor-cv skills and a reminder to record notable work. The token goes in your user folder, never in a project."
-msgstr "Installs the DraftLoop tools, the /log-work and /tailor-cv skills and a reminder to record notable work. The token goes in your user folder, never in a project."
+msgid "Installs the Redakloop tools, the /log-work and /tailor-cv skills and a reminder to record notable work. The token goes in your user folder, never in a project."
+msgstr "Installs the Redakloop tools, the /log-work and /tailor-cv skills and a reminder to record notable work. The token goes in your user folder, never in a project."
 
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Interview only"
@@ -4820,8 +4734,8 @@ msgid "Keep it"
 msgstr "Keep it"
 
 #: apps/web/src/landing.tsx
-msgid "Keep my email address to invite me to the DraftLoop beta. It is deleted once I am invited, or after six months."
-msgstr "Keep my email address to invite me to the DraftLoop beta. It is deleted once I am invited, or after six months."
+msgid "Keep my email address to invite me to the Redakloop beta. It is deleted once I am invited, or after six months."
+msgstr "Keep my email address to invite me to the Redakloop beta. It is deleted once I am invited, or after six months."
 
 #: apps/web/src/private-sections.tsx
 msgid "Keep parts of your documents, such as Salary or Health, away from the models. Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
@@ -4902,8 +4816,8 @@ msgid "Language"
 msgstr "Language"
 
 #: packages/ui/src/profile-generation-progress.tsx
-msgid "Large knowledge bases are processed in parts, so this can take several minutes. Keep DraftLoop open."
-msgstr "Large knowledge bases are processed in parts, so this can take several minutes. Keep DraftLoop open."
+msgid "Large knowledge bases are processed in parts, so this can take several minutes. Keep Redakloop open."
+msgstr "Large knowledge bases are processed in parts, so this can take several minutes. Keep Redakloop open."
 
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home-list-model.ts
@@ -4983,8 +4897,8 @@ msgid "Length in minutes"
 msgstr "Length in minutes"
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
-msgstr "Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
+msgid "Let Claude Code, Codex or another agent work with Redakloop for you. Approvals, review decisions and settings always stay with you here."
+msgstr "Let Claude Code, Codex or another agent work with Redakloop for you. Approvals, review decisions and settings always stay with you here."
 
 #: packages/ui/src/career-interview-model.ts
 msgid "Let's go on with the basics. Which would you like to talk about next?"
@@ -6467,8 +6381,8 @@ msgid "Opening"
 msgstr "Opening"
 
 #: apps/web/src/records.tsx
-msgid "Opening DraftLoop…"
-msgstr "Opening DraftLoop…"
+msgid "Opening Redakloop…"
+msgstr "Opening Redakloop…"
 
 #: apps/web/src/workspace.tsx
 msgid "Opening your documents…"
@@ -7021,8 +6935,8 @@ msgid "Public uncached API list rates"
 msgstr "Public uncached API list rates"
 
 #: packages/ui/src/model-profile-picker.tsx
-msgid "Quality for real CVs has not been validated for these presets, and account availability is not checked. OpenAI Codex user-session routes cannot use these profiles. DraftLoop never switches your sign-in automatically."
-msgstr "Quality for real CVs has not been validated for these presets, and account availability is not checked. OpenAI Codex user-session routes cannot use these profiles. DraftLoop never switches your sign-in automatically."
+msgid "Quality for real CVs has not been validated for these presets, and account availability is not checked. OpenAI Codex user-session routes cannot use these profiles. Redakloop never switches your sign-in automatically."
+msgstr "Quality for real CVs has not been validated for these presets, and account availability is not checked. OpenAI Codex user-session routes cannot use these profiles. Redakloop never switches your sign-in automatically."
 
 #: packages/ui/src/model-profile-details.tsx
 msgid "Quality unvalidated; account availability unchecked"
@@ -7326,8 +7240,94 @@ msgid "Recording… speak your answer."
 msgstr "Recording… speak your answer."
 
 #: apps/web/src/cover-letter-risk.tsx
-msgid "Recruiters and AI-detection tools often spot a letter written entirely by AI, and it can count against you. Use what DraftLoop gives you here as material, then write the letter in your own words."
-msgstr "Recruiters and AI-detection tools often spot a letter written entirely by AI, and it can count against you. Use what DraftLoop gives you here as material, then write the letter in your own words."
+msgid "Recruiters and AI-detection tools often spot a letter written entirely by AI, and it can count against you. Use what Redakloop gives you here as material, then write the letter in your own words."
+msgstr "Recruiters and AI-detection tools often spot a letter written entirely by AI, and it can count against you. Use what Redakloop gives you here as material, then write the letter in your own words."
+
+#: apps/web/src/landing.tsx
+#: apps/web/src/oidc-sign-in.tsx
+#: apps/web/src/sign-in.tsx
+#: packages/ui/src/app.tsx
+msgid "Redakloop"
+msgstr "Redakloop"
+
+#: packages/ui/src/opportunity-brief-review.tsx
+msgid "Redakloop / Opportunity brief"
+msgstr "Redakloop / Opportunity brief"
+
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "Redakloop / Writing policy"
+msgstr "Redakloop / Writing policy"
+
+#: packages/ui/src/career-evidence-contract.ts
+msgid "Redakloop application data"
+msgstr "Redakloop application data"
+
+#: apps/web/src/credits-model.ts
+msgid "Redakloop cannot price one of the workspace's models yet. Choose another preset or model."
+msgstr "Redakloop cannot price one of the workspace's models yet. Choose another preset or model."
+
+#: apps/web/src/landing.tsx
+msgid "Redakloop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out."
+msgstr "Redakloop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out."
+
+#: apps/web/src/operator-feedback-reply.tsx
+msgid "Redakloop emails this reply to the member who sent the note, in their language when known. Their address stays on the server."
+msgstr "Redakloop emails this reply to the member who sent the note, in their language when known. Their address stays on the server."
+
+#: packages/ui/src/job-requirements-extraction.tsx
+msgid "Redakloop is fetching the job page you approved. Its text then goes to {providerName} ({modelName}) to split into requirements."
+msgstr "Redakloop is fetching the job page you approved. Its text then goes to {providerName} ({modelName}) to split into requirements."
+
+#: packages/ui/src/provider-recovery.tsx
+msgid "Redakloop is still retrying. Stopping ends this review for good; you would start a new one."
+msgstr "Redakloop is still retrying. Stopping ends this review for good; you would start a new one."
+
+#: apps/web/src/beta-sign-up.tsx
+#: packages/ui/src/new-application-form.tsx
+msgid "Redakloop is tuned and tested on software and tech roles so far. It works for other jobs too, so check those drafts a little more closely. Support for more professions is on our roadmap."
+msgstr "Redakloop is tuned and tested on software and tech roles so far. It works for other jobs too, so check those drafts a little more closely. Support for more professions is on our roadmap."
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Redakloop noticed"
+msgstr "Redakloop noticed"
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "Redakloop noticed these from what was said. Nothing changes your profile until you accept it, and accepting counts as reviewing that change."
+msgstr "Redakloop noticed these from what was said. Nothing changes your profile until you accept it, and accepting counts as reviewing that change."
+
+#: packages/ui/src/preference-suggestions-panel.tsx
+msgid "Redakloop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs."
+msgstr "Redakloop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs."
+
+#. placeholder {0}: state.artifact.version
+#: packages/ui/src/review-run-status.ts
+msgid "Redakloop retries the critic on version {0} shortly."
+msgstr "Redakloop retries the critic on version {0} shortly."
+
+#: packages/ui/src/review-run-status.ts
+msgid "Redakloop retries the draft shortly."
+msgstr "Redakloop retries the draft shortly."
+
+#. placeholder {0}: state.round
+#: packages/ui/src/review-run-status.ts
+msgid "Redakloop retries the revision for round {0} shortly."
+msgstr "Redakloop retries the revision for round {0} shortly."
+
+#: apps/web/src/consent.tsx
+msgid "Redakloop stores the CVs, notes and records you upload for this candidate, in the EU."
+msgstr "Redakloop stores the CVs, notes and records you upload for this candidate, in the EU."
+
+#: apps/web/src/sources-model.ts
+msgid "Redakloop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV."
+msgstr "Redakloop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV."
+
+#: apps/web/src/credits-model.ts
+msgid "Redakloop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month."
+msgstr "Redakloop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month."
+
+#: apps/web/src/refusal-text.ts
+msgid "Redakloop's server did not answer (error {status}). It recovers on its own within a minute; try again then. Nothing you saved is lost."
+msgstr "Redakloop's server did not answer (error {status}). It recovers on its own within a minute; try again then. Nothing you saved is lost."
 
 #: apps/web/src/operator-model.ts
 #: apps/web/src/operator.tsx
@@ -7363,8 +7363,8 @@ msgid "Reject"
 msgstr "Reject"
 
 #: packages/ui/src/profile-fact-suggestions.tsx
-msgid "Rejected. DraftLoop will not suggest that change again."
-msgstr "Rejected. DraftLoop will not suggest that change again."
+msgid "Rejected. Redakloop will not suggest that change again."
+msgstr "Rejected. Redakloop will not suggest that change again."
 
 #: apps/web/src/screening.tsx
 msgid "Release"
@@ -8575,8 +8575,8 @@ msgid "Sent, not used yet"
 msgstr "Sent, not used yet"
 
 #: packages/ui/src/help-ask.tsx
-msgid "Sent. The people who run DraftLoop will read it and get back to you."
-msgstr "Sent. The people who run DraftLoop will read it and get back to you."
+msgid "Sent. The people who run Redakloop will read it and get back to you."
+msgstr "Sent. The people who run Redakloop will read it and get back to you."
 
 #: apps/web/src/operator.tsx
 msgid "Server version"
@@ -9159,8 +9159,8 @@ msgid "Suggested updates could not be loaded."
 msgstr "Suggested updates could not be loaded."
 
 #: packages/ui/src/app.tsx
-msgid "Suggestions show only the tier and role registered in DraftLoop; they do not establish account or plan availability or CV quality. IDs are not guaranteed to work with your account, plan, or CLI version. You may type any exact model id. Catalog entries show their review dates; CLI-specific live availability has not been reverified. Provider documentation: Anthropic, OpenAI, DeepInfra, Google, and Mistral."
-msgstr "Suggestions show only the tier and role registered in DraftLoop; they do not establish account or plan availability or CV quality. IDs are not guaranteed to work with your account, plan, or CLI version. You may type any exact model id. Catalog entries show their review dates; CLI-specific live availability has not been reverified. Provider documentation: Anthropic, OpenAI, DeepInfra, Google, and Mistral."
+msgid "Suggestions show only the tier and role registered in Redakloop; they do not establish account or plan availability or CV quality. IDs are not guaranteed to work with your account, plan, or CLI version. You may type any exact model id. Catalog entries show their review dates; CLI-specific live availability has not been reverified. Provider documentation: Anthropic, OpenAI, DeepInfra, Google, and Mistral."
+msgstr "Suggestions show only the tier and role registered in Redakloop; they do not establish account or plan availability or CV quality. IDs are not guaranteed to work with your account, plan, or CLI version. You may type any exact model id. Catalog entries show their review dates; CLI-specific live availability has not been reverified. Provider documentation: Anthropic, OpenAI, DeepInfra, Google, and Mistral."
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Summary"
@@ -9260,8 +9260,8 @@ msgid "Tell it in a conversation"
 msgstr "Tell it in a conversation"
 
 #: apps/web/src/feedback.tsx
-msgid "Tell the people who run DraftLoop what works, what breaks or what you miss. Your note goes with the technical details listed under What we include, never your CV, job descriptions, page text or screenshots."
-msgstr "Tell the people who run DraftLoop what works, what breaks or what you miss. Your note goes with the technical details listed under What we include, never your CV, job descriptions, page text or screenshots."
+msgid "Tell the people who run Redakloop what works, what breaks or what you miss. Your note goes with the technical details listed under What we include, never your CV, job descriptions, page text or screenshots."
+msgstr "Tell the people who run Redakloop what works, what breaks or what you miss. Your note goes with the technical details listed under What we include, never your CV, job descriptions, page text or screenshots."
 
 #: packages/ui/src/getting-started.tsx
 msgid "Tell us about your career"
@@ -9283,8 +9283,8 @@ msgid "Text"
 msgstr "Text"
 
 #: apps/web/src/feedback.tsx
-msgid "Thank you. The people who run DraftLoop read every note."
-msgstr "Thank you. The people who run DraftLoop read every note."
+msgid "Thank you. The people who run Redakloop read every note."
+msgstr "Thank you. The people who run Redakloop read every note."
 
 #: apps/web/src/waitlist-model.ts
 msgid "Thanks. You are on the waitlist. Places open in small groups and access opens soon: we will email you an invite when your place is ready."
@@ -9609,8 +9609,8 @@ msgid "The desktop host denied this operation."
 msgstr "The desktop host denied this operation."
 
 #: packages/ui/src/native-startup.ts
-msgid "The desktop native connection is unavailable. Restart DraftLoop and try again."
-msgstr "The desktop native connection is unavailable. Restart DraftLoop and try again."
+msgid "The desktop native connection is unavailable. Restart Redakloop and try again."
+msgstr "The desktop native connection is unavailable. Restart Redakloop and try again."
 
 #: packages/ui/src/bridge.ts
 msgid "The desktop operation could not be completed."
@@ -9645,8 +9645,8 @@ msgid "The evidence kind could not be saved."
 msgstr "The evidence kind could not be saved."
 
 #: packages/ui/src/career-flow.tsx
-msgid "The facts DraftLoop extracts from your documents, each with its exact quote. You review them once; every application reuses them."
-msgstr "The facts DraftLoop extracts from your documents, each with its exact quote. You review them once; every application reuses them."
+msgid "The facts Redakloop extracts from your documents, each with its exact quote. You review them once; every application reuses them."
+msgstr "The facts Redakloop extracts from your documents, each with its exact quote. You review them once; every application reuses them."
 
 #: packages/ui/src/run-details.tsx
 msgid "The fallback critic comes from the author's company, so this review is not cross-company."
@@ -10274,8 +10274,8 @@ msgid "The workspace has no default application."
 msgstr "The workspace has no default application."
 
 #: packages/ui/src/local-writer-warning.tsx
-msgid "The writer is a local model. Local models have not passed DraftLoop's quality check yet, so expect the draft to need more edits."
-msgstr "The writer is a local model. Local models have not passed DraftLoop's quality check yet, so expect the draft to need more edits."
+msgid "The writer is a local model. Local models have not passed Redakloop's quality check yet, so expect the draft to need more edits."
+msgstr "The writer is a local model. Local models have not passed Redakloop's quality check yet, so expect the draft to need more edits."
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "The writing policy could not be loaded."
@@ -10341,12 +10341,12 @@ msgid "This account is not a member of an organisation yet. Ask your organisatio
 msgstr "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
 
 #: apps/web/src/account-deletion.tsx
-msgid "This account runs DraftLoop as an operator, so it cannot be deleted from here. Remove its operator role first."
-msgstr "This account runs DraftLoop as an operator, so it cannot be deleted from here. Remove its operator role first."
+msgid "This account runs Redakloop as an operator, so it cannot be deleted from here. Remove its operator role first."
+msgstr "This account runs Redakloop as an operator, so it cannot be deleted from here. Remove its operator role first."
 
 #: packages/ui/src/bridge.ts
-msgid "This action is not available in this version of DraftLoop."
-msgstr "This action is not available in this version of DraftLoop."
+msgid "This action is not available in this version of Redakloop."
+msgstr "This action is not available in this version of Redakloop."
 
 #: apps/web/src/research-brief-model.ts
 msgid "This application could not be researched."
@@ -10397,8 +10397,8 @@ msgid "This cap comes from the deployment setting. Set another with pnpm beta:ca
 msgstr "This cap comes from the deployment setting. Set another with pnpm beta:cap; no redeploy is needed."
 
 #: packages/ui/src/review.tsx
-msgid "This claim is not linked to the candidate materials supplied to DraftLoop."
-msgstr "This claim is not linked to the candidate materials supplied to DraftLoop."
+msgid "This claim is not linked to the candidate materials supplied to Redakloop."
+msgstr "This claim is not linked to the candidate materials supplied to Redakloop."
 
 #: packages/ui/src/career-interview-model.ts
 msgid "This conversation could not be found. Start a new one."
@@ -10474,8 +10474,8 @@ msgid "This is a free public test, open by invitation. It may change or pause wi
 msgstr "This is a free public test, open by invitation. It may change or pause without notice. Drafting sends the material you select to AI providers, some of them outside the EU."
 
 #: apps/web/src/beta-sign-up.tsx
-msgid "This is a free test version: it can stop at any time, and we will make an effort to let you download your data first. To write and review your drafts, DraftLoop sends the parts of your material you select to Anthropic and OpenAI, which process them outside the European Union."
-msgstr "This is a free test version: it can stop at any time, and we will make an effort to let you download your data first. To write and review your drafts, DraftLoop sends the parts of your material you select to Anthropic and OpenAI, which process them outside the European Union."
+msgid "This is a free test version: it can stop at any time, and we will make an effort to let you download your data first. To write and review your drafts, Redakloop sends the parts of your material you select to Anthropic and OpenAI, which process them outside the European Union."
+msgstr "This is a free test version: it can stop at any time, and we will make an effort to let you download your data first. To write and review your drafts, Redakloop sends the parts of your material you select to Anthropic and OpenAI, which process them outside the European Union."
 
 #: packages/ui/src/earlier-run.ts
 msgid "This is an earlier run. Open the latest run to change it."
@@ -10614,8 +10614,8 @@ msgid "This screening result was not found on this record. Reload the page and t
 msgstr "This screening result was not found on this record. Reload the page and try again."
 
 #: packages/ui/src/help-ask.tsx
-msgid "This sends the conversation above to the people who run DraftLoop, who will read it and get back to you. It is kept for 90 days."
-msgstr "This sends the conversation above to the people who run DraftLoop, who will read it and get back to you. It is kept for 90 days."
+msgid "This sends the conversation above to the people who run Redakloop, who will read it and get back to you. It is kept for 90 days."
+msgstr "This sends the conversation above to the people who run Redakloop, who will read it and get back to you. It is kept for 90 days."
 
 #: packages/ui/src/work-journal-model.ts
 msgid "This server cannot turn notes into career evidence yet."
@@ -10675,8 +10675,8 @@ msgstr "This version is already reviewed."
 
 #: packages/ui/src/application-setup-summary.tsx
 #: packages/ui/src/home-model.ts
-msgid "This version of DraftLoop cannot manage a career profile."
-msgstr "This version of DraftLoop cannot manage a career profile."
+msgid "This version of Redakloop cannot manage a career profile."
+msgstr "This version of Redakloop cannot manage a career profile."
 
 #: packages/ui/src/profile.tsx
 msgid "This version records a failed generation; its cause is shown above."
@@ -11302,10 +11302,6 @@ msgstr "Week of"
 msgid "what changed thanks to your work"
 msgstr "what changed thanks to your work"
 
-#: packages/ui/src/career-flow.tsx
-msgid "What DraftLoop builds, you check"
-msgstr "What DraftLoop builds, you check"
-
 #: packages/ui/src/finding-decision-hint.tsx
 msgid "What each decision does"
 msgstr "What each decision does"
@@ -11337,6 +11333,10 @@ msgstr "What leads"
 #: apps/web/src/operator.tsx
 msgid "What members tell you, the beta's waitlist, its invites and a run's trace. Each invite and trace read is written to the audit log. The lists update every 30 seconds."
 msgstr "What members tell you, the beta's waitlist, its invites and a run's trace. Each invite and trace read is written to the audit log. The lists update every 30 seconds."
+
+#: packages/ui/src/career-flow.tsx
+msgid "What Redakloop builds, you check"
+msgstr "What Redakloop builds, you check"
 
 #: packages/ui/src/agent-setup.tsx
 msgid "What the agent may do"
@@ -11635,8 +11635,8 @@ msgid "You"
 msgstr "You"
 
 #: apps/web/src/beta-sign-up.tsx
-msgid "You are signed in, but this sign-in has no DraftLoop account yet. Enter the invite code you received by email to create it."
-msgstr "You are signed in, but this sign-in has no DraftLoop account yet. Enter the invite code you received by email to create it."
+msgid "You are signed in, but this sign-in has no Redakloop account yet. Enter the invite code you received by email to create it."
+msgstr "You are signed in, but this sign-in has no Redakloop account yet. Enter the invite code you received by email to create it."
 
 #: packages/ui/src/help-ask.tsx
 msgid "You asked:"
@@ -11671,8 +11671,8 @@ msgid "You chose to talk about: {title}"
 msgstr "You chose to talk about: {title}"
 
 #: packages/ui/src/career-flow.tsx
-msgid "You give the documents, DraftLoop builds the facts, and every application reuses them."
-msgstr "You give the documents, DraftLoop builds the facts, and every application reuses them."
+msgid "You give the documents, Redakloop builds the facts, and every application reuses them."
+msgstr "You give the documents, Redakloop builds the facts, and every application reuses them."
 
 #: packages/ui/src/getting-started.tsx
 msgid "You have done every step. For your next job, start again at Add the job you want."
@@ -11708,8 +11708,8 @@ msgid "You've reached today's questions for the assistant. It answers again tomo
 msgstr "You've reached today's questions for the assistant. It answers again tomorrow."
 
 #: apps/web/src/account-deletion.tsx
-msgid "Your account and everything stored for it were deleted. Thank you for trying DraftLoop."
-msgstr "Your account and everything stored for it were deleted. Thank you for trying DraftLoop."
+msgid "Your account and everything stored for it were deleted. Thank you for trying Redakloop."
+msgstr "Your account and everything stored for it were deleted. Thank you for trying Redakloop."
 
 #: apps/web/src/beta-sign-up.tsx
 msgid "Your account could not be created. Try again."
@@ -11741,8 +11741,8 @@ msgid "Your career evidence is indexed and searched as the review runs"
 msgstr "Your career evidence is indexed and searched as the review runs"
 
 #: packages/ui/src/career-flow.tsx
-msgid "Your career evidence is the documents you provide: CVs, career-fact files, exports and links. DraftLoop searches them during reviews and builds your career profile from them."
-msgstr "Your career evidence is the documents you provide: CVs, career-fact files, exports and links. DraftLoop searches them during reviews and builds your career profile from them."
+msgid "Your career evidence is the documents you provide: CVs, career-fact files, exports and links. Redakloop searches them during reviews and builds your career profile from them."
+msgstr "Your career evidence is the documents you provide: CVs, career-fact files, exports and links. Redakloop searches them during reviews and builds your career profile from them."
 
 #: packages/ui/src/profile-fact-suggestions-model.ts
 msgid "Your career interview"
@@ -11761,12 +11761,12 @@ msgid "Your career profile is being generated from this evidence. You can look a
 msgstr "Your career profile is being generated from this evidence. You can look around; changes to your evidence are available again once it is generated."
 
 #: packages/ui/src/home-model.ts
-msgid "Your career profile is being generated. You can keep using DraftLoop meanwhile; open the profile to follow the progress or cancel."
-msgstr "Your career profile is being generated. You can keep using DraftLoop meanwhile; open the profile to follow the progress or cancel."
+msgid "Your career profile is being generated. You can keep using Redakloop meanwhile; open the profile to follow the progress or cancel."
+msgstr "Your career profile is being generated. You can keep using Redakloop meanwhile; open the profile to follow the progress or cancel."
 
 #: packages/ui/src/career-flow.tsx
-msgid "Your career profile is the facts DraftLoop extracts from your documents: roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version."
-msgstr "Your career profile is the facts DraftLoop extracts from your documents: roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version."
+msgid "Your career profile is the facts Redakloop extracts from your documents: roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version."
+msgstr "Your career profile is the facts Redakloop extracts from your documents: roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version."
 
 #: apps/web/src/application-material-model.ts
 msgid "Your career record holds no dates, so this letter gives none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
@@ -11802,8 +11802,8 @@ msgid "Your documents"
 msgstr "Your documents"
 
 #: packages/ui/src/career-evidence-card.tsx
-msgid "Your documents are saved. DraftLoop reads them and lists the facts it finds for you to check. You can add more documents at any time."
-msgstr "Your documents are saved. DraftLoop reads them and lists the facts it finds for you to check. You can add more documents at any time."
+msgid "Your documents are saved. Redakloop reads them and lists the facts it finds for you to check. You can add more documents at any time."
+msgstr "Your documents are saved. Redakloop reads them and lists the facts it finds for you to check. You can add more documents at any time."
 
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Your documents could not be opened. Open their store under Advanced options below."
@@ -11814,8 +11814,8 @@ msgid "Your documents, applications and everything stored with them were deleted
 msgstr "Your documents, applications and everything stored with them were deleted."
 
 #: packages/ui/src/career-flow.tsx
-msgid "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them."
-msgstr "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them."
+msgid "Your documents: CVs, career-fact files, exports and links. Redakloop searches them and builds your profile from them."
+msgstr "Your documents: CVs, career-fact files, exports and links. Redakloop searches them and builds your profile from them."
 
 #. placeholder {0}: origin.round
 #: packages/ui/src/profile-fact-suggestions-model.ts

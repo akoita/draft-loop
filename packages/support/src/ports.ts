@@ -45,7 +45,7 @@ export interface SupportServiceStatus {
 
 /** The member's own account, already bound to them by the host. */
 /**
- * The member's next step, as DraftLoop's screens name it (#3227): the application they worked on
+ * The member's next step, as Redakloop's screens name it (#3227): the application they worked on
  * last and its stage code, or `job` when they have none.
  */
 export interface SupportNextStep {

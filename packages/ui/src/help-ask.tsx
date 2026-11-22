@@ -172,7 +172,7 @@ export function HelpAsk({ support, language, onShowSection }: HelpAskProps) {
       {handoff === "confirm" || handoff === "sending" ? (
         <div className="help-ask-handoff">
           <p>
-            {t`This sends the conversation above to the people who run DraftLoop, who will read it and get back to you. It is kept for 90 days.`}
+            {t`This sends the conversation above to the people who run Redakloop, who will read it and get back to you. It is kept for 90 days.`}
           </p>
           <div className="help-ask-actions">
             <button
@@ -196,7 +196,7 @@ export function HelpAsk({ support, language, onShowSection }: HelpAskProps) {
       ) : null}
       {handoff === "sent" ? (
         <p className="help-ask-thanks" role="status">
-          {t`Sent. The people who run DraftLoop will read it and get back to you.`}
+          {t`Sent. The people who run Redakloop will read it and get back to you.`}
         </p>
       ) : null}
       <form className="help-ask-form" onSubmit={(event) => void ask(event)}>

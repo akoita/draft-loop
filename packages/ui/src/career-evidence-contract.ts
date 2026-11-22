@@ -8,7 +8,7 @@ import { t } from "@lingui/core/macro";
  */
 
 /** How the created-base notice names the store's location, instead of a local path. */
-export const defaultKnowledgeStoreDestinationLabel = () => t`DraftLoop application data`;
+export const defaultKnowledgeStoreDestinationLabel = () => t`Redakloop application data`;
 
 /** Binds a runtime key list to its interface so a missing or extra key is a compile error. */
 function exactKeys<Shape extends object>() {

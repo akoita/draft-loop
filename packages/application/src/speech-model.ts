@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 /**
  * The pinned speech-to-text model the web screen runs in the browser (#1030, #2199): Whisper base,
  * multilingual, quantized, as ONNX files for transformers.js. The server serves these exact files
- * from its own origin, so the browser reaches only the DraftLoop server, and refuses any file whose
+ * from its own origin, so the browser reaches only the Redakloop server, and refuses any file whose
  * bytes differ from the pin. Audio never leaves the browser; only these files travel, once.
  */
 

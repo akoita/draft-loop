@@ -14,22 +14,22 @@ export const legalTextsEn: LegalTexts = {
     terms: {
       title: "Terms of use",
       description:
-        "The terms for using DraftLoop, a free public test that drafts CVs and cover letters from your own documents.",
+        "The terms for using Redakloop, a free public test that drafts CVs and cover letters from your own documents.",
       intro: [
-        "These terms govern your use of the DraftLoop test service. You accept them when you create your account. They come with the [privacy policy](/legal/privacy) and the [legal notice](/legal/notice).",
+        "These terms govern your use of the Redakloop test service. You accept them when you create your account. They come with the [privacy policy](/legal/privacy) and the [legal notice](/legal/notice).",
       ],
       sections: [
         {
           heading: "1. A free test service that can stop",
           blocks: [
-            "DraftLoop is offered as a free, invite-only test version. It is a test environment: features can change, the service can pause, and it can stop at any time.",
+            "Redakloop is offered as a free, invite-only test version. It is a test environment: features can change, the service can pause, and it can stop at any time.",
             "Before a planned stop, we will make an effort to announce it in the service or by email and to give you time to download your data. Keep your own copy of anything that matters to you: the service is not a storage service.",
           ],
         },
         {
           heading: "2. What the service does",
           blocks: [
-            "DraftLoop helps you prepare job applications from career material you supply: CVs, cover letters and interview preparation. An AI author writes a draft, an AI critic from another company reviews it, and you decide what to keep, edit and export.",
+            "Redakloop helps you prepare job applications from career material you supply: CVs, cover letters and interview preparation. An AI author writes a draft, an AI critic from another company reviews it, and you decide what to keep, edit and export.",
             "The service prepares documents. It never applies to a job, sends a message or contacts an employer for you.",
           ],
         },
@@ -94,9 +94,9 @@ export const legalTextsEn: LegalTexts = {
     privacy: {
       title: "Privacy policy",
       description:
-        "What DraftLoop keeps about you, why, where it is stored, which AI providers see it, and how to export or delete it.",
+        "What Redakloop keeps about you, why, where it is stored, which AI providers see it, and how to export or delete it.",
       intro: [
-        "DraftLoop stores the career material you choose to upload, sends selected parts of it to AI model providers to write and review your drafts, and keeps a record of each draft so you can see where every statement came from. This policy says what is processed, why, where, for how long, and what you can do about it.",
+        "Redakloop stores the career material you choose to upload, sends selected parts of it to AI model providers to write and review your drafts, and keeps a record of each draft so you can see where every statement came from. This policy says what is processed, why, where, for how long, and what you can do about it.",
       ],
       sections: [
         {
@@ -148,7 +148,7 @@ export const legalTextsEn: LegalTexts = {
               ],
             },
             "Each processor is bound by a data processing agreement. We do not sell your data, and we share it with authorities only when the law requires it.",
-            "Where the service sells credit packs, Stripe (Stripe Payments Europe, Limited, Ireland) sells them as the merchant of record, through its Link service. Stripe collects your payment details and billing address on its own page, under its own privacy policy, and sends the receipt. DraftLoop never sees your card; it receives only which pack your organisation bought, the amount and whether it was paid or refunded.",
+            "Where the service sells credit packs, Stripe (Stripe Payments Europe, Limited, Ireland) sells them as the merchant of record, through its Link service. Stripe collects your payment details and billing address on its own page, under its own privacy policy, and sends the receipt. Redakloop never sees your card; it receives only which pack your organisation bought, the amount and whether it was paid or refunded.",
           ],
         },
         {
@@ -195,7 +195,7 @@ export const legalTextsEn: LegalTexts = {
     },
     notice: {
       title: "Legal notice",
-      description: "Who publishes DraftLoop and how to contact them.",
+      description: "Who publishes Redakloop and how to contact them.",
       intro: ["Information required by French law 2004-575 of 21 June 2004 (LCEN), Article 6-III."],
       sections: [
         {

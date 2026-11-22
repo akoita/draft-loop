@@ -1,6 +1,6 @@
 # Drafting and review architecture
 
-This page explains how DraftLoop turns approved evidence into a CV: how the
+This page explains how Redakloop turns approved evidence into a CV: how the
 author drafts, which checks the draft must pass, how the critic reviews it, how
 a revision works, when the loop stops, and how an approved CV is rendered.
 
@@ -28,7 +28,7 @@ calls and rounds is in the [memory model](memory.md).
 
 ## A run at a glance
 
-DraftLoop applies the evaluator–optimizer pattern to a factual workflow. The
+Redakloop applies the evaluator–optimizer pattern to a factual workflow. The
 author generates, the independent critic evaluates against a visible rubric,
 and each revision is one bounded step. The screens say "author" and "critic"
 because that is clearer to candidates.

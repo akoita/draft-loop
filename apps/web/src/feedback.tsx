@@ -111,7 +111,7 @@ export function FeedbackContextFold({
   );
 }
 
-/** A short note about DraftLoop for the people who run it, with an optional kind (#2876). */
+/** A short note about Redakloop for the people who run it, with an optional kind (#2876). */
 export function FeedbackDialog({
   busy,
   problem,
@@ -168,7 +168,7 @@ export function FeedbackDialog({
         </h2>
         {sent ? (
           <>
-            <p role="status">{t`Thank you. The people who run DraftLoop read every note.`}</p>
+            <p role="status">{t`Thank you. The people who run Redakloop read every note.`}</p>
             {reference === undefined ? null : (
               <p>
                 {t`Your reference:`} <strong className="feedback-reference">{reference}</strong>
@@ -185,7 +185,7 @@ export function FeedbackDialog({
         ) : (
           <>
             <p>
-              {t`Tell the people who run DraftLoop what works, what breaks or what you miss. Your note goes with the technical details listed under What we include, never your CV, job descriptions, page text or screenshots.`}
+              {t`Tell the people who run Redakloop what works, what breaks or what you miss. Your note goes with the technical details listed under What we include, never your CV, job descriptions, page text or screenshots.`}
             </p>
             <fieldset className="feedback-kind">
               <legend className="feedback-label">{t`Kind of note (optional)`}</legend>

@@ -4,7 +4,7 @@ import type { WorkJournalNoteListItem } from "@draft-loop/schemas/work-journal";
 import { defaultAgentTokenPath, readAgentTokenFile } from "./agent-token.js";
 
 /**
- * The MCP server's HTTP client of the DraftLoop API (ADR 0011 D17): the self-hosted stack with
+ * The MCP server's HTTP client of the Redakloop API (ADR 0011 D17): the self-hosted stack with
  * an agent token that reaches only its scopes (#2160, #2438), the cloud with a signed-in token
  * later. It holds no domain logic and
  * never returns the token.
@@ -78,7 +78,7 @@ export class WorkJournalApiError extends Error {
 const notSignedIn = () =>
   new WorkJournalApiError(
     "not_signed_in",
-    `DraftLoop has no valid token for this server; run \`draftloop-mcp init\` again with the owner token that \`${signInCommand}\` prints.`,
+    `Redakloop has no valid token for this server; run \`draftloop-mcp init\` again with the owner token that \`${signInCommand}\` prints.`,
   );
 
 export interface RecordWorkResult {
@@ -141,7 +141,7 @@ export function createWorkspaceApiCall(config: WorkJournalApiConfig): WorkspaceA
     } catch {
       throw new WorkJournalApiError(
         "server_unreachable",
-        "The DraftLoop server did not answer; start it with `draft-loop-server up`.",
+        "The Redakloop server did not answer; start it with `draft-loop-server up`.",
         [],
         true,
       );
@@ -155,7 +155,7 @@ export function createWorkspaceApiCall(config: WorkJournalApiConfig): WorkspaceA
         typeof error?.code === "string" ? error.code : `http_${response.status}`,
         typeof error?.message === "string"
           ? error.message
-          : "The DraftLoop server refused the call.",
+          : "The Redakloop server refused the call.",
         (error?.issues ?? []).flatMap((issue) =>
           typeof issue.path === "string" ? [issue.path] : [],
         ),

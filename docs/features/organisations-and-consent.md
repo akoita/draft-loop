@@ -61,10 +61,10 @@ organisation; it erases everything with `draft-loop-server`
 
 ## Who reaches what
 
-On the public beta, only an invite creates a DraftLoop account. Where the
+On the public beta, only an invite creates a Redakloop account. Where the
 API holds the identity provider's account client, an invite also creates the
 person's sign-in, and Keycloak sends the only invite email: one button to
-choose a password, valid 7 days, worded by the realm's DraftLoop theme
+choose a password, valid 7 days, worded by the realm's Redakloop theme
 (`deploy/keycloak`). The realm can then refuse registration. A sign-in made
 any other way reaches nothing alone.
 
@@ -89,7 +89,7 @@ had a password, or failed; call it again for the failures.
 
 | Person                 | Joins the waitlist                                  | Signs in                                                                                |
 | ---------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| New visitor            | Gets a confirmation link, then waits once confirmed | Sees "Join the DraftLoop beta" and needs a code; every other route answers `no_account` |
+| New visitor            | Gets a confirmation link, then waits once confirmed | Sees "Join the Redakloop beta" and needs a code; every other route answers `no_account` |
 | Waiting, not confirmed | A fresh link, at most 3, 10 minutes apart           | Same as a new visitor                                                                   |
 | Waiting, confirmed     | Nothing changes and no mail is sent                 | Same as a new visitor                                                                   |
 | Holds an open invite   | Nothing is stored and no mail is sent               | Accepts the terms; the invite of the verified email is used, with no code               |

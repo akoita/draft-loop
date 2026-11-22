@@ -1,6 +1,6 @@
 # Architecture
 
-DraftLoop is a multi-model drafting and review workspace that keeps candidate
+Redakloop is a multi-model drafting and review workspace that keeps candidate
 material under the candidate's control. Its first artifact is a job-specific
 CV: an author model drafts from the candidate's evidence, an independent critic
 reviews the draft, and the candidate approves the result before anything is
@@ -32,7 +32,7 @@ One set of packages runs in four ways, which differ only at their adapters
 | CLI | Source only | Terminal commands | A local SQLite workspace store and portable CKB | Anthropic and OpenAI SDK adapters, plus opt-in development authors |
 | Hosted service ([architecture](hosted-service.md)) | Invite-only beta in production | The web screen, agents through `draftloop-mcp` | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and the OpenAI critic through the model gateway, each route recorded |
 
-![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the Electron desktop client over the server's web screen, and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service, an invite-only beta, runs the same server images in the EU.](../assets/ways-to-run.svg)
+![Ways to run Redakloop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the Electron desktop client over the server's web screen, and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service, an invite-only beta, runs the same server images in the EU.](../assets/ways-to-run.svg)
 
 The self-hosted server and the hosted service run the same images. Only their
 adapters differ: keys from local files or Secret Manager, files on disk or
@@ -55,7 +55,7 @@ flowchart LR
     cli["CLI<br/>apps/cli"]
   end
 
-  subgraph server [DraftLoop server]
+  subgraph server [Redakloop server]
     api["API<br/>apps/api"]
     support["Support assistant<br/>packages/support"]
     queue[("Run queue<br/>packages/run-queue")]
@@ -269,7 +269,7 @@ Detail: [Storage and tenancy](storage-and-tenancy.md).
 - **One runtime reaches the web**: the page fetcher, one approved hop at a
   time.
 - **Nothing leaves without approval.** Exports need an approved run, and
-  DraftLoop never submits applications, sends messages or publishes documents.
+  Redakloop never submits applications, sends messages or publishes documents.
 - **The API never drafts or reviews.** Its only model calls are intake
   screening and the support assistant; runs, briefs and profiles go to the
   worker.

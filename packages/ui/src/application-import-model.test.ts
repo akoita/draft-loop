@@ -33,8 +33,8 @@ describe("application import wording", () => {
     });
     expect(applicationImportErrorNotice(cancelled)).toBeNull();
     expect(
-      applicationImportErrorNotice(new Error("The selected folder is not a DraftLoop workspace.")),
-    ).toEqual({ kind: "error", message: "The selected folder is not a DraftLoop workspace." });
+      applicationImportErrorNotice(new Error("The selected folder is not a Redakloop workspace.")),
+    ).toEqual({ kind: "error", message: "The selected folder is not a Redakloop workspace." });
     expect(applicationImportErrorNotice(new Error("This workspace was already imported."))).toEqual(
       { kind: "error", message: "This workspace was already imported." },
     );

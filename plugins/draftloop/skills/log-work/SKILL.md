@@ -1,6 +1,6 @@
 ---
 name: log-work
-description: Record notable work merged in a date range into the DraftLoop work journal, for the candidate's review.
+description: Record notable work merged in a date range into the Redakloop work journal, for the candidate's review.
 ---
 
 # Log notable work
@@ -17,6 +17,6 @@ Use this when the candidate asks to log work, optionally with a date range such 
 3. Keep only notable work, by the rule in `draftloop://work-journal/guide`: shipped features, integrations, migrations, adopted technologies and measured improvements. Drop typo fixes, formatting, dependency bumps and refactors without an outcome.
 4. Call `list_work` for the project, and skip work that is already recorded.
 5. Call `record_work` once per remaining piece, with the commit or pull request links as https links. Write the summary as career evidence, in plain words: the problem, what shipped, and the outcome or scale. Library names go in `technologies`, not the summary. Ask the candidate when their role or the project's visibility is unclear.
-6. Say what you recorded and what you skipped. The notes wait for the candidate's review in DraftLoop.
+6. Say what you recorded and what you skipped. The notes wait for the candidate's review in Redakloop.
 
 Never include keys, tokens, passwords, customer or personal data, or private document text.

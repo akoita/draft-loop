@@ -16,7 +16,7 @@ import {
   runModelSuggestionPreflight,
 } from "./model-suggestion-preflight.js";
 
-const helpText = `DraftLoop model-suggestion preflight
+const helpText = `Redakloop model-suggestion preflight
 
 Usage:
   pnpm test:model-suggestions:live [--plan]

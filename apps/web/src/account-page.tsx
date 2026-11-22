@@ -28,7 +28,7 @@ export function AccountPage({ email, yourData, dangerZone, onClose }: AccountPag
           {t`Account`}
         </h1>
         <button type="button" className="secondary" onClick={onClose}>
-          {t`Back to DraftLoop`}
+          {t`Back to Redakloop`}
         </button>
       </div>
       {email === undefined ? null : <p className="muted">{t`Signed in as ${email}`}</p>}

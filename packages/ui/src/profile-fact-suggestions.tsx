@@ -108,7 +108,7 @@ export function useProfileFactSuggestions(
       capabilities
         .rejectFactSuggestion(workspaceId, profileId, suggestionId)
         .then(
-          () => setMessage(t`Rejected. DraftLoop will not suggest that change again.`),
+          () => setMessage(t`Rejected. Redakloop will not suggest that change again.`),
           () => setProblem(t`The suggestion was not rejected. Try again.`),
         )
         .finally(() => {
@@ -257,7 +257,7 @@ export function ProfileFactSuggestions({
         )}
       </h3>
       {suggestions.length === 0 ? null : (
-        <p className="muted">{t`DraftLoop noticed these from what was said. Nothing changes your profile until you accept it, and accepting counts as reviewing that change.`}</p>
+        <p className="muted">{t`Redakloop noticed these from what was said. Nothing changes your profile until you accept it, and accepting counts as reviewing that change.`}</p>
       )}
       {state.problem === undefined ? null : (
         <p className="problem" role="alert">

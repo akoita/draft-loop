@@ -806,7 +806,7 @@ export function WorkspaceSetupForm({
         </p>
       )}
       {showSuggestionNotice("author") || showSuggestionNotice("critic") ? (
-        <p className="setup-note model-suggestion-note">{t`Suggestions show only the tier and role registered in DraftLoop; they do not establish account or plan availability or CV quality. IDs are not guaranteed to work with your account, plan, or CLI version. You may type any exact model id. Catalog entries show their review dates; CLI-specific live availability has not been reverified. Provider documentation: Anthropic, OpenAI, DeepInfra, Google, and Mistral.`}</p>
+        <p className="setup-note model-suggestion-note">{t`Suggestions show only the tier and role registered in Redakloop; they do not establish account or plan availability or CV quality. IDs are not guaranteed to work with your account, plan, or CLI version. You may type any exact model id. Catalog entries show their review dates; CLI-specific live availability has not been reverified. Provider documentation: Anthropic, OpenAI, DeepInfra, Google, and Mistral.`}</p>
       ) : null}
       <div className="setup-sides">
         <ModelSideFields
@@ -2052,7 +2052,7 @@ export function App({
         <section className="panel boot-panel boot-panel-setup">
           <div className="boot-brand">
             <BrandMark />
-            <span className="brand-name">{t`DraftLoop`}</span>
+            <span className="brand-name">{t`Redakloop`}</span>
             <ThemeToggle />
           </div>
           <WorkspaceStartIntro error={error} />
@@ -2066,7 +2066,7 @@ export function App({
         <section className="panel boot-panel boot-panel-quiet">
           <div className="boot-brand">
             <BrandMark />
-            <span className="brand-name">{t`DraftLoop`}</span>
+            <span className="brand-name">{t`Redakloop`}</span>
             <ThemeToggle />
           </div>
           <p
@@ -2086,7 +2086,7 @@ export function App({
       <section className="panel boot-panel model-editor-panel">
         <div className="boot-brand">
           <BrandMark />
-          <span className="brand-name">{t`DraftLoop`}</span>
+          <span className="brand-name">{t`Redakloop`}</span>
           <ThemeToggle />
         </div>
         <p className="eyebrow">{t`Settings`}</p>
@@ -2388,7 +2388,7 @@ export function App({
 
   // Provider authentication is workspace-level, so it is offered on Home. Changing the OpenAI mode
   // also invalidates the model-profile support read, as it did when the application screen owned it.
-  /** Asks for a name while the default application still has the one DraftLoop derived. */
+  /** Asks for a name while the default application still has the one Redakloop derived. */
   const applicationNameNudge = (
     application: Extract<WorkspaceView, { kind: "application" }>,
   ): ReactNode => {

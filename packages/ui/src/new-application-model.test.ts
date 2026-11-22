@@ -30,7 +30,7 @@ describe("the new application's name and job", () => {
       /web address/u,
     );
     expect(newApplicationProblem({ ...named, jobUrl: "https://jobs.example.test/1" })).toMatch(
-      /Allow DraftLoop to fetch/u,
+      /Allow Redakloop to fetch/u,
     );
     expect(
       newApplicationProblem({ ...named, jobUrl: "https://jobs.example.test/1", urlApproved: true }),

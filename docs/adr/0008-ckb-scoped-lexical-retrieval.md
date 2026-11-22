@@ -2,11 +2,11 @@
 
 - Status: Accepted
 - Date: 2026-08-30
-- Decision owners: DraftLoop maintainers
+- Decision owners: Redakloop maintainers
 
 ## Context
 
-DraftLoop already has a SQLite FTS5/BM25 path for files copied into one
+Redakloop already has a SQLite FTS5/BM25 path for files copied into one
 application workspace. Issue #80 must instead retrieve reusable candidate
 knowledge from the exact CKB source versions selected for a run. The product
 also needs incremental rebuild and deletion, multi-CKB selection, visible stale

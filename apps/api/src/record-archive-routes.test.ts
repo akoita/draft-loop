@@ -136,7 +136,7 @@ describe("readable export route (#3036)", () => {
       createdAt: "2026-10-24T10:00:00.000Z",
       fileCount: 2,
       files: async function* (): AsyncGenerator<RecordArchiveFile> {
-        yield { path: "README.md", content: encoder.encode("# Your DraftLoop data\n") };
+        yield { path: "README.md", content: encoder.encode("# Your Redakloop data\n") };
         yield { path: "documents/cv.md", content: encoder.encode("# CV alder-quill\n") };
       },
     }),
@@ -149,7 +149,7 @@ describe("readable export route (#3036)", () => {
       const response = await download(server, caller, exportUrl);
       expect(response.statusCode).toBe(200);
       expect(response.headers["content-disposition"]).toBe(
-        'attachment; filename="draftloop-data.zip"',
+        'attachment; filename="redakloop-data.zip"',
       );
       expect(readZip(response.rawPayload).map((file) => file.path)).toEqual([
         "README.md",

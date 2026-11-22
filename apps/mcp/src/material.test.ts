@@ -78,7 +78,7 @@ describe("drafting tools", () => {
       kind: "cover-letter",
       created_at: "2026-11-09T10:00:00.000Z",
       items: [{ question: "", text: "A fictional opening paragraph." }],
-      next_step: "The draft is saved in DraftLoop, where the candidate reviews and edits it.",
+      next_step: "The draft is saved in Redakloop, where the candidate reviews and edits it.",
     });
     expect(requests).toEqual([
       {

@@ -104,7 +104,7 @@ export function createBrevoMailSender(options: BrevoMailOptions): MailSender {
           accept: "application/json",
         },
         body: JSON.stringify({
-          sender: { email: options.from, name: "DraftLoop" },
+          sender: { email: options.from, name: "Redakloop" },
           to: [{ email: message.to }],
           subject: message.subject,
           textContent: message.text,

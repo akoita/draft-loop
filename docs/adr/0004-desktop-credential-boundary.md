@@ -4,7 +4,7 @@
   The desktop credential store was retired with the v0.8 desktop on
   2026-11-04; the desktop client holds no provider keys
 - Date: 2026-08-15
-- Decision owners: DraftLoop maintainers
+- Decision owners: Redakloop maintainers
 - Supersedes: The credential-handling statements in
   [ADR 0002](0002-electron-native-host.md)
 

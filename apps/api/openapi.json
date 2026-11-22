@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "DraftLoop API",
+    "title": "Redakloop API",
     "version": "1"
   },
   "components": {
@@ -8043,7 +8043,7 @@
           },
           "reason": {
             "type": "string",
-            "description": "Why DraftLoop suggests it, in words the person can check."
+            "description": "Why Redakloop suggests it, in words the person can check."
           }
         },
         "required": [
@@ -17930,7 +17930,7 @@
           },
           "reason": {
             "type": "string",
-            "description": "Why DraftLoop suggests it, in words the person can check."
+            "description": "Why Redakloop suggests it, in words the person can check."
           }
         },
         "required": [
@@ -35569,7 +35569,7 @@
     },
     "/v1/feedback": {
       "post": {
-        "summary": "Send feedback about DraftLoop to the operator",
+        "summary": "Send feedback about Redakloop to the operator",
         "description": "Members only: owner-token mode has no members and answers 404. Stores the trimmed note in the caller's organisation for the operator to read, with its context and the server's own facts: source `web`, the server release and the plan. 400 invalid_input for an empty note, one over 2000 characters or a context over its bounds. 429 feedback_cap_reached, with Retry-After, once the member has sent 20 notes in 24 hours.",
         "requestBody": {
           "required": true,
@@ -35678,7 +35678,7 @@
     },
     "/v1/workspaces/{workspaceId}/feedback": {
       "post": {
-        "summary": "Send feedback about DraftLoop to the operator, from an agent",
+        "summary": "Send feedback about Redakloop to the operator, from an agent",
         "description": "As `POST /v1/feedback`, for an agent token of a member with the `journal` scope, which a token gets unless issued without it. The record in the path only admits the token; the note belongs to the organisation. Its context's source is `agent`.",
         "requestBody": {
           "required": true,
@@ -36646,7 +36646,7 @@
                 "properties": {
                   "consent": {
                     "type": "boolean",
-                    "description": "The member agreed to share this conversation with the people who run DraftLoop.",
+                    "description": "The member agreed to share this conversation with the people who run Redakloop.",
                     "enum": [
                       true
                     ]

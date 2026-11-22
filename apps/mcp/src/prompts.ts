@@ -12,11 +12,11 @@ export function applicationsPrompt(filter: string | undefined): string {
     filter === undefined || filter.trim() === ""
       ? "all of them that are not archived"
       : `only those matching "${filter.trim()}" (a folder, a status, a name, or archived)`;
-  return `List the candidate's DraftLoop job applications: call list_applications, with include_archived only when archived ones are asked for, and show ${scope}. Give each one's name, status and its latest run's state in a short table, newest first. Do not call any other tool unless the candidate asks about one application; then follow the application-status steps.`;
+  return `List the candidate's Redakloop job applications: call list_applications, with include_archived only when archived ones are asked for, and show ${scope}. Give each one's name, status and its latest run's state in a short table, newest first. Do not call any other tool unless the candidate asks about one application; then follow the application-status steps.`;
 }
 
 export function applicationStatusPrompt(application: string): string {
-  return `Tell the candidate where their DraftLoop application "${application.trim()}" stands. Call list_applications and find it by name or id; if several match, ask which one. Call get_application, then get_run_status with its latest run's id when it has one. Say its status, the run's state and round, how many findings wait, and next_step in your own words. Call get_job_text only if the candidate asks about the job itself. Approving the draft, deciding findings and exporting are the candidate's, in DraftLoop.`;
+  return `Tell the candidate where their Redakloop application "${application.trim()}" stands. Call list_applications and find it by name or id; if several match, ask which one. Call get_application, then get_run_status with its latest run's id when it has one. Say its status, the run's state and round, how many findings wait, and next_step in your own words. Call get_job_text only if the candidate asks about the job itself. Approving the draft, deciding findings and exporting are the candidate's, in Redakloop.`;
 }
 
 /** Registers the task prompts on the server. */
@@ -25,7 +25,7 @@ export function registerApplicationPrompts(server: McpServer): void {
     "applications",
     {
       title: "List my applications",
-      description: "List your DraftLoop job applications and where their CV runs stand.",
+      description: "List your Redakloop job applications and where their CV runs stand.",
       argsSchema: {
         filter: z
           .string()
@@ -43,7 +43,7 @@ export function registerApplicationPrompts(server: McpServer): void {
     "application-status",
     {
       title: "Application status",
-      description: "Say where one DraftLoop application and its CV run stand, and your next step.",
+      description: "Say where one Redakloop application and its CV run stand, and your next step.",
       argsSchema: {
         application: z.string().min(1).max(192).describe("The application's name or id."),
       },

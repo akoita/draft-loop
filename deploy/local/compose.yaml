@@ -1,4 +1,4 @@
-# DraftLoop's hosted service on your own machine (ADR 0011, D15): the same API, worker, page fetcher
+# Redakloop's hosted service on your own machine (ADR 0011, D15): the same API, worker, page fetcher
 # and Postgres as the cloud, with files on disk and your own provider keys. Every secret is random
 # and generated at first start; the API listens on 127.0.0.1 only. The images are the published
 # ones of DRAFT_LOOP_VERSION, which `draft-loop-server install` writes to .env; compose.build.yaml

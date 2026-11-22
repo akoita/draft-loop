@@ -3,7 +3,7 @@ import type { PostgresMigration } from "./migrations.js";
 import { recordNamesMigration } from "./record-names-migration.js";
 
 /**
- * Feedback notes (#2828): what a member sends about DraftLoop, for the operator to read.
+ * Feedback notes (#2828): what a member sends about Redakloop, for the operator to read.
  *
  * - A member inserts only into their own organisation; the operator reads every organisation's
  *   notes, so reading is deployment-wide, like the waitlist.

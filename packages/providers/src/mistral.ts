@@ -104,7 +104,7 @@ const silentLogger = {
  *
  * The server URL is pinned so no option can redirect candidate material, and a silent
  * logger replaces the SDK's `MISTRAL_DEBUG` console logger, which would otherwise print
- * request and response bodies. SDK retries are disabled (`strategy: "none"`); DraftLoop
+ * request and response bodies. SDK retries are disabled (`strategy: "none"`); Redakloop
  * retries through `executeWithRetry`.
  */
 export function createMistralClient(apiKey: string): MistralClient {

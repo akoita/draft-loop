@@ -75,7 +75,7 @@ async function readSourceWorkspace(
   try {
     return await dependencies.readWorkspace(sourceRoot);
   } catch {
-    throw new CliUserError("The selected folder is not a DraftLoop workspace.");
+    throw new CliUserError("The selected folder is not a Redakloop workspace.");
   }
 }
 
@@ -259,7 +259,7 @@ export async function importApplicationFromWorkspace(
         briefIds = await source.applications.listDefaultBriefIds(sourceWorkspace.id);
       } catch {
         throw new CliUserError(
-          "The history of the selected workspace could not be read. Open it once in DraftLoop, then try again.",
+          "The history of the selected workspace could not be read. Open it once in Redakloop, then try again.",
         );
       }
     }

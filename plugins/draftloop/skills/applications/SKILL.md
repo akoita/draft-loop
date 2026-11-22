@@ -1,11 +1,11 @@
 ---
 name: applications
-description: List the candidate's DraftLoop job applications with each one's status and latest CV run, optionally filtered by folder, status or name.
+description: List the candidate's Redakloop job applications with each one's status and latest CV run, optionally filtered by folder, status or name.
 ---
 
 # List my applications
 
-Use this when the candidate asks which job applications they have in DraftLoop, or how they stand overall.
+Use this when the candidate asks which job applications they have in Redakloop, or how they stand overall.
 
 1. Call `list_applications`. Pass `include_archived` only when the candidate asks for archived ones.
 2. If the candidate named a folder, a status or part of a name, keep only the matching applications.
@@ -16,4 +16,4 @@ Only list what the tool returns. Never guess an application or a run that is not
 
 ## When a call is refused
 
-A refusal that names the `applications:read` scope means the candidate's agent token lacks it. Tell them to create a token with **Read applications** ticked in DraftLoop's Settings > Agents, then run `draftloop-mcp save-token`.
+A refusal that names the `applications:read` scope means the candidate's agent token lacks it. Tell them to create a token with **Read applications** ticked in Redakloop's Settings > Agents, then run `draftloop-mcp save-token`.

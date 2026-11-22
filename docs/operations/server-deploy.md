@@ -367,7 +367,7 @@ typed.
 | `run credits settled`                                           | worker       | `INFO`                             | See [Margin line](#margin-line)                                                                                                                                                                                                                                                                                                        |
 | `run credit reconciliation failed`                              | worker       | `ERROR`                            | `tenantId` and the error's type, code and stack frames; the job is unaffected                                                                                                                                                                                                                                                          |
 
-When DraftLoop rejected a provider call's output, `provider call failed` also
+When Redakloop rejected a provider call's output, `provider call failed` also
 names the `failureStage` and the diagnostic codes and field paths, never a
 value. The run's failure keeps the same fields. The API returns them as the
 run's `lastError.failedCall`, so the web screen can name the call that failed

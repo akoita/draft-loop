@@ -93,7 +93,7 @@ export function FeedbackReplyForm({
         }}
       />
       <p id={`${id}-hint`} className="muted">
-        {t`DraftLoop emails this reply to the member who sent the note, in their language when known. Their address stays on the server.`}
+        {t`Redakloop emails this reply to the member who sent the note, in their language when known. Their address stays on the server.`}
       </p>
       {empty ? (
         <p className="problem" role="alert">

@@ -1,6 +1,6 @@
 /**
  * A pull request list the candidate exported themselves (#2261), turned into Markdown career
- * evidence. DraftLoop makes no network call: the person runs, for example,
+ * evidence. Redakloop makes no network call: the person runs, for example,
  *
  *   gh search prs --author=@me --merged --json title,body,closedAt,url,repository
  *

@@ -103,7 +103,7 @@ export const getProfileDescription = `Read the candidate's reviewed career profi
 
 Use the fact ids with suggest_profile_update. Never repeat a fact outside the conversation with the candidate.`;
 
-export const suggestProfileUpdateDescription = `Suggest one update to the candidate's reviewed career profile. It waits for the candidate, who accepts, edits or rejects it in DraftLoop; you never decide. Needs the profile:suggest scope.
+export const suggestProfileUpdateDescription = `Suggest one update to the candidate's reviewed career profile. It waits for the candidate, who accepts, edits or rejects it in Redakloop; you never decide. Needs the profile:suggest scope.
 
 Suggest only what you read in the candidate's own material or what the candidate told you, and quote those words. Set speaker to candidate when they said it, agent when you read it.
 change.kind: add (a new fact, no factId), correct (a new value), retire (no longer true), set-usage (cv, interview-only or never-say) or confirm (the fact is right). Every kind but add names the factId from get_profile.

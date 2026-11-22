@@ -1,6 +1,6 @@
 # Third-party notice: Carlito
 
-DraftLoop embeds the Carlito Regular and Bold fonts in the PDFs it exports. Carlito is
+Redakloop embeds the Carlito Regular and Bold fonts in the PDFs it exports. Carlito is
 metric-compatible with Calibri, so the PDF lays out like the DOCX that names Calibri.
 
 - **Licence:** SIL Open Font License 1.1, in [`OFL.txt`](OFL.txt).

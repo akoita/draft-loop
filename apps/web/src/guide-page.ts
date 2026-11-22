@@ -25,11 +25,11 @@ export const siteOriginToken = "__SITE_ORIGIN__";
 /** The page's own words around the guide, in each language. */
 const chrome = {
   en: {
-    title: "DraftLoop user guide: how to draft a CV for a job",
+    title: "Redakloop user guide: how to draft a CV for a job",
     description:
-      "How to use DraftLoop: add your career evidence, add a job, run a draft, review and export your CV, prepare for the job, and keep your data private.",
+      "How to use Redakloop: add your career evidence, add a job, run a draft, review and export your CV, prepare for the job, and keep your data private.",
     tag: "[ User guide ]",
-    heading: "How to use DraftLoop",
+    heading: "How to use Redakloop",
     contents: "Contents",
     language: "Language",
     about: "About",
@@ -38,22 +38,22 @@ const chrome = {
     more: "Still stuck? Once you are signed in, select Send feedback in the header and tell us what happened.",
     footer:
       "Tailored CVs and cover letters from your own career documents, checked by a second AI before you approve them.",
-    site: "DraftLoop",
+    site: "Redakloop",
     contact: "Contact and legal",
     sample: "Sample screens",
     privacy: "Privacy policy",
     terms: "Terms of use",
     notice: "Legal notice",
     source: "Source code (GitHub)",
-    rights: "DraftLoop. All rights reserved.",
+    rights: "Redakloop. All rights reserved.",
     locale: "en_GB",
   },
   fr: {
-    title: "Guide d’utilisation de DraftLoop : rédiger un CV pour une offre",
+    title: "Guide d’utilisation de Redakloop : rédiger un CV pour une offre",
     description:
-      "Comment utiliser DraftLoop : ajouter vos éléments de parcours, ajouter une offre, lancer une rédaction, relire et exporter votre CV, préparer l’entretien et protéger vos données.",
+      "Comment utiliser Redakloop : ajouter vos éléments de parcours, ajouter une offre, lancer une rédaction, relire et exporter votre CV, préparer l’entretien et protéger vos données.",
     tag: "[ Guide d’utilisation ]",
-    heading: "Comment utiliser DraftLoop",
+    heading: "Comment utiliser Redakloop",
     contents: "Sommaire",
     language: "Langue",
     about: "À propos",
@@ -62,14 +62,14 @@ const chrome = {
     more: "Toujours bloqué ? Une fois connecté, sélectionnez Envoyer un avis dans l’en-tête et racontez-nous ce qui s’est passé.",
     footer:
       "Des CV et lettres de motivation adaptés, tirés de vos propres documents de carrière et vérifiés par une seconde IA avant que vous ne les validiez.",
-    site: "DraftLoop",
+    site: "Redakloop",
     contact: "Contact et mentions",
     sample: "Exemples d’écrans",
     privacy: "Politique de confidentialité",
     terms: "Conditions d’utilisation",
     notice: "Mentions légales",
     source: "Code source (GitHub)",
-    rights: "DraftLoop. Tous droits réservés.",
+    rights: "Redakloop. Tous droits réservés.",
     locale: "fr_FR",
   },
 } as const satisfies Record<HelpGuideLanguage, Record<string, string>>;
@@ -165,9 +165,9 @@ ${alternates.join("\n")}
 <body>
 <header class="top">
 <div class="wrap top-row">
-<a class="brand" href="${aboutPaths[language]}" aria-label="DraftLoop">
+<a class="brand" href="${aboutPaths[language]}" aria-label="Redakloop">
 <img src="/showcase/mark.svg" alt="" width="32" height="32" />
-<span>DraftLoop</span>
+<span>Redakloop</span>
 </a>
 <nav class="top-nav" aria-label="${e(words.site)}">
 <a href="${aboutPaths[language]}">${e(words.about)}</a>
@@ -207,7 +207,7 @@ ${sections.join("\n")}
 <footer class="foot">
 <div class="wrap foot-grid">
 <div>
-<p class="foot-brand">DraftLoop</p>
+<p class="foot-brand">Redakloop</p>
 <p>${e(words.footer)}</p>
 </div>
 <div>

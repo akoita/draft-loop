@@ -69,7 +69,7 @@ describe("New application form", () => {
     const draft = { ...emptyNewApplicationDraft, name: "Acme", jobKind: "url" as const };
     const html = renderToStaticMarkup(<NewApplicationFormView {...props} draft={draft} />);
     expect(html).toContain("Job page address");
-    expect(html).toContain("I approve DraftLoop fetching this page");
+    expect(html).toContain("I approve Redakloop fetching this page");
     expect(html).toContain("never before");
     expect(html).toContain("web address");
     expect(html).toMatch(submitDisabled);
@@ -79,7 +79,7 @@ describe("New application form", () => {
         draft={{ ...draft, jobUrl: "https://jobs.example.test/1" }}
       />,
     );
-    expect(unapproved).toContain("Allow DraftLoop to fetch this page");
+    expect(unapproved).toContain("Allow Redakloop to fetch this page");
     expect(unapproved).toMatch(submitDisabled);
     const approved = renderToStaticMarkup(
       <NewApplicationFormView
@@ -216,7 +216,7 @@ describe("creating the application", () => {
         },
         create,
       ),
-    ).toMatchObject({ kind: "invalid", problem: expect.stringMatching(/Allow DraftLoop/u) });
+    ).toMatchObject({ kind: "invalid", problem: expect.stringMatching(/Allow Redakloop/u) });
     expect(create).not.toHaveBeenCalled();
   });
 

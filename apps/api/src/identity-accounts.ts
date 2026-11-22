@@ -10,7 +10,7 @@ export interface IdentityAccounts {
    * Makes sure an invited email has a sign-in account, since the realm lets nobody register
    * (#3082). A new account, or one without a password yet, gets the provider's own email with a
    * link to choose a password: `password-email`. That email is the invite itself, worded by the
-   * realm's DraftLoop theme (deploy/keycloak). An account that has a password gets nothing:
+   * realm's Redakloop theme (deploy/keycloak). An account that has a password gets nothing:
    * `exists`.
    */
   readonly prepareInvitedAccount: (input: {

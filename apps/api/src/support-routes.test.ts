@@ -194,7 +194,7 @@ describe("the support routes (#2882)", () => {
         updated_at: "2026-11-01T01:00:00Z",
       },
     ]);
-    expect(requests[0]?.systemPrompt).toContain("DraftLoop user guide");
+    expect(requests[0]?.systemPrompt).toContain("Redakloop user guide");
   });
 
   it("tell the assistant the member's next step as the screens name it", async () => {

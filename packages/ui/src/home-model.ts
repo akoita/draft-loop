@@ -81,7 +81,7 @@ export function profileStatusPresentation(status: HomeProfileStatus): HomeStatus
       return {
         chip: t`Unavailable`,
         tone: "neutral",
-        description: t`This version of DraftLoop cannot manage a career profile.`,
+        description: t`This version of Redakloop cannot manage a career profile.`,
         action: t`Open profile`,
       };
     case "unavailable":
@@ -130,7 +130,7 @@ export const profileGenerationPresentation = (): HomeStatusPresentation =>
   Object.freeze({
     chip: t`In progress`,
     tone: "progress",
-    description: t`Your career profile is being generated. You can keep using DraftLoop meanwhile; open the profile to follow the progress or cancel.`,
+    description: t`Your career profile is being generated. You can keep using Redakloop meanwhile; open the profile to follow the progress or cancel.`,
     action: t`View progress`,
   });
 
@@ -215,7 +215,7 @@ export function evidencePresentation(
   status: CareerEvidenceStatus,
   legacySourceCount: number,
 ): HomeEvidencePresentation {
-  const emptyDetail = t`Add a CV, portfolio or other source so DraftLoop can quote you accurately.`;
+  const emptyDetail = t`Add a CV, portfolio or other source so Redakloop can quote you accurately.`;
   switch (status.kind) {
     case "loading":
       return {
