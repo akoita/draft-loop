@@ -2,9 +2,10 @@ import { text } from "node:stream/consumers";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import { defaultAgentTokenPath, saveTokenFromInput } from "./agent-token.js";
-import { configFromEnvironment } from "./client.js";
+import { configFromEnvironment, createWorkJournalApi } from "./client.js";
 import { journalHookMode, runStopHook } from "./hook.js";
 import { parseInitArguments, runInit } from "./init.js";
+import { runSessionStartHook, systemGit } from "./session-hook.js";
 import {
   createDraftLoopMcpServer,
   mayBeOperatorToken,
@@ -30,6 +31,15 @@ if (command === "init") {
   // The hook never fails the turn: any problem prints nothing.
   const mode = journalHookMode(process.env.REDAKLOOP_JOURNAL_HOOK);
   const output = await runStopHook(await text(process.stdin), mode).catch(() => "");
+  if (output !== "") process.stdout.write(`${output}\n`);
+} else if (command === "hook" && rest[0] === "session-start") {
+  // Like the Stop hook, it never fails the session: any problem prints nothing.
+  const mode = journalHookMode(process.env.REDAKLOOP_JOURNAL_HOOK);
+  const api = createWorkJournalApi(configFromEnvironment());
+  const output = await runSessionStartHook(await text(process.stdin), mode, {
+    git: systemGit,
+    listWork: (project) => api.list({ project, limit: 50 }),
+  }).catch(() => "");
   if (output !== "") process.stdout.write(`${output}\n`);
 } else if (command === "save-token" && rest.length === 0) {
   if (process.stdin.isTTY)
@@ -58,7 +68,7 @@ if (command === "init") {
   await server.connect(new StdioServerTransport());
 } else {
   process.stderr.write(
-    "Usage: redakloop-mcp            serve the MCP tools over stdio\n       redakloop-mcp serve-http  serve the same tools over HTTP for assistants that connect by address\n       redakloop-mcp init --host claude-code|codex|generic [--hook] [--scope <scope>]... [--no-token]\n       redakloop-mcp save-token  keep a token from Agents in Settings, read from standard input\n       redakloop-mcp hook stop   the Claude Code Stop hook: asks the agent to record merged work, never a failure\n",
+    "Usage: redakloop-mcp            serve the MCP tools over stdio\n       redakloop-mcp serve-http  serve the same tools over HTTP for assistants that connect by address\n       redakloop-mcp init --host claude-code|codex|generic [--hook] [--scope <scope>]... [--no-token]\n       redakloop-mcp save-token  keep a token from Agents in Settings, read from standard input\n       redakloop-mcp hook stop   the Claude Code Stop hook: asks the agent to record merged work, never a failure\n       redakloop-mcp hook session-start  the SessionStart hook: points at merges missing from the journal\n",
   );
   process.exitCode = 2;
 }

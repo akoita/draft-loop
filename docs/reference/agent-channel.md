@@ -42,7 +42,7 @@ You need a running [self-hosted server](../operations/self-hosted.md) and
 
 | Way                    | For                     | What it adds                                        |
 | ---------------------- | ----------------------- | --------------------------------------------------- |
-| The Claude Code plugin | Claude Code             | The tools, the [commands](#commands), the Stop hook |
+| The Claude Code plugin | Claude Code             | The tools, the [commands](#commands), the hooks     |
 | A copied configuration | Claude Code, Codex, any | The tools only                                      |
 | `redakloop-mcp init`   | Claude Code, Codex      | The tools, `/log-work` and the hook, in one project |
 
@@ -219,6 +219,15 @@ add-repo` or `git log`, reads only allowlisted files, shows the card, and
 
   The hook never fails the turn and never continues it twice. Every note it
   leads to still waits for the candidate's review.
+
+- **The SessionStart hook** (the plugin only) runs when a Claude Code session
+  starts or is cleared in a git repository. It counts first-parent commits on
+  the default branch since the newest note for the project, named after the
+  repository's folder: at most 30 days back, 14 without a note. If some are
+  missing, the agent is told to offer `/redakloop:log-work since <date>`, so
+  work merged in a cloud session, on GitHub or by another agent is caught.
+  `advise` shows the person that line instead and `off` silences it. Without
+  a token, with intake off or with the server out of reach, it stays quiet.
 
 ## What the agent records
 
