@@ -1,0 +1,1022 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "kind": "synthetic",
+    "commit": "a5a61e34",
+    "authorProfile": "economy-anthropic-author@5",
+    "criticProfile": "economy-openai-critic@1",
+    "authorModel": "claude-haiku-5-5",
+    "criticModel": "gpt-6-luna",
+    "authorPromptVersion": "cli-author-v21",
+    "criticPromptVersion": "cli-critic-v12",
+    "rounds": 40,
+    "costUsd": 2.137
+  },
+  "modes": [
+    {
+      "id": "unsupported-claim",
+      "definition": "States a qualification, title, award or responsibility the source lacks (a prohibitedClaims hit)."
+    },
+    {
+      "id": "altered-number",
+      "definition": "Changes a number, percentage, money amount, ordinal or date."
+    },
+    {
+      "id": "chronology-drift",
+      "definition": "Merges periods, shifts dates, puts work under the wrong role, or hides a recorded gap."
+    },
+    {
+      "id": "attribution-inflation",
+      "definition": "Turns team, supervised or shared work into sole ownership or leadership."
+    },
+    {
+      "id": "scope-stretch",
+      "definition": "Turns attendance, a booked course, occasional duty or partial evidence into a held credential or a regular role."
+    },
+    {
+      "id": "must-cover-omission",
+      "definition": "Leaves out a mustCover fact the job needs (other than a whole role, which is role-omission)."
+    },
+    {
+      "id": "requirement-overclaim",
+      "definition": "Presents an unsupported requirement as met."
+    },
+    {
+      "id": "no-draft",
+      "definition": "Produces no admitted draft (validator rejection, budget stop, error)."
+    },
+    {
+      "id": "role-omission",
+      "definition": "Leaves out a whole dated employment role the source records. Added: seen in 19 rounds."
+    },
+    {
+      "id": "placeholder-left",
+      "definition": "Leaves template placeholders such as [Your name], [Email] or [Phone] in the header. Added: seen in 37 rounds."
+    }
+  ],
+  "rounds": [
+    {
+      "id": "case-c-r1",
+      "caseId": "fresh-cohort-case-c",
+      "cohort": "fresh-software-engineering-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "chronology-drift": false,
+        "role-omission": false,
+        "must-cover-omission": false,
+        "placeholder-left": true
+      }
+    },
+    {
+      "id": "case-c-r2",
+      "caseId": "fresh-cohort-case-c",
+      "cohort": "fresh-software-engineering-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "chronology-drift": false,
+        "role-omission": true,
+        "must-cover-omission": false,
+        "placeholder-left": true
+      }
+    },
+    {
+      "id": "case-c-r3",
+      "caseId": "fresh-cohort-case-c",
+      "cohort": "fresh-software-engineering-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "chronology-drift": false,
+        "role-omission": false,
+        "must-cover-omission": false,
+        "placeholder-left": true
+      }
+    },
+    {
+      "id": "case-d-r1",
+      "caseId": "fresh-cohort-case-d",
+      "cohort": "fresh-software-engineering-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "chronology-drift": true,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-d-r2",
+      "caseId": "fresh-cohort-case-d",
+      "cohort": "fresh-software-engineering-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "chronology-drift": true,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-d-r3",
+      "caseId": "fresh-cohort-case-d",
+      "cohort": "fresh-software-engineering-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "chronology-drift": true,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-e-r1",
+      "caseId": "independent-cohort-case-e",
+      "cohort": "independent-software-engineering-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": false,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-e-r2",
+      "caseId": "independent-cohort-case-e",
+      "cohort": "independent-software-engineering-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": false,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-e-r3",
+      "caseId": "independent-cohort-case-e",
+      "cohort": "independent-software-engineering-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": false,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-f-r1",
+      "caseId": "independent-cohort-case-f",
+      "cohort": "independent-software-engineering-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "chronology-drift": false,
+        "role-omission": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-f-r2",
+      "caseId": "independent-cohort-case-f",
+      "cohort": "independent-software-engineering-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-f-r3",
+      "caseId": "independent-cohort-case-f",
+      "cohort": "independent-software-engineering-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-electrician-r1",
+      "caseId": "non-tech-cv-cohort-case-electrician",
+      "cohort": "non-tech-cv-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": false,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-electrician-r2",
+      "caseId": "non-tech-cv-cohort-case-electrician",
+      "cohort": "non-tech-cv-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "pass",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": false,
+        "chronology-drift": false
+      }
+    },
+    {
+      "id": "case-electrician-r3",
+      "caseId": "non-tech-cv-cohort-case-electrician",
+      "cohort": "non-tech-cv-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": false,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-electrician-r4",
+      "caseId": "non-tech-cv-cohort-case-electrician",
+      "cohort": "non-tech-cv-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "pass",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": false,
+        "chronology-drift": false
+      }
+    },
+    {
+      "id": "case-nurse-r1",
+      "caseId": "non-tech-cv-cohort-case-nurse",
+      "cohort": "non-tech-cv-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "fail",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "chronology-drift": false,
+        "must-cover-omission": false,
+        "scope-stretch": true
+      }
+    },
+    {
+      "id": "case-nurse-r2",
+      "caseId": "non-tech-cv-cohort-case-nurse",
+      "cohort": "non-tech-cv-cohort",
+      "split": "train",
+      "runState": "provider-error",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "pass",
+        "requirement-overclaim": "pass",
+        "no-draft": "fail",
+        "role-omission": "pass",
+        "placeholder-left": "pass"
+      },
+      "criticFlagged": {
+        "no-draft": false
+      }
+    },
+    {
+      "id": "case-nurse-r3",
+      "caseId": "non-tech-cv-cohort-case-nurse",
+      "cohort": "non-tech-cv-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-nurse-r4",
+      "caseId": "non-tech-cv-cohort-case-nurse",
+      "cohort": "non-tech-cv-cohort",
+      "split": "train",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-sales-r1",
+      "caseId": "non-tech-cv-cohort-case-sales",
+      "cohort": "non-tech-cv-cohort",
+      "split": "dev",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-sales-r2",
+      "caseId": "non-tech-cv-cohort-case-sales",
+      "cohort": "non-tech-cv-cohort",
+      "split": "dev",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-sales-r3",
+      "caseId": "non-tech-cv-cohort-case-sales",
+      "cohort": "non-tech-cv-cohort",
+      "split": "dev",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-sales-r4",
+      "caseId": "non-tech-cv-cohort-case-sales",
+      "cohort": "non-tech-cv-cohort",
+      "split": "dev",
+      "runState": "provider-error",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-teacher-r1",
+      "caseId": "non-tech-cv-cohort-case-teacher",
+      "cohort": "non-tech-cv-cohort",
+      "split": "held-out",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-teacher-r2",
+      "caseId": "non-tech-cv-cohort-case-teacher",
+      "cohort": "non-tech-cv-cohort",
+      "split": "held-out",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-teacher-r3",
+      "caseId": "non-tech-cv-cohort-case-teacher",
+      "cohort": "non-tech-cv-cohort",
+      "split": "held-out",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-teacher-r4",
+      "caseId": "non-tech-cv-cohort-case-teacher",
+      "cohort": "non-tech-cv-cohort",
+      "split": "held-out",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-g-r1",
+      "caseId": "reference-cohort-case-g",
+      "cohort": "reference-software-engineering-cohort",
+      "split": "dev",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": false,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-g-r2",
+      "caseId": "reference-cohort-case-g",
+      "cohort": "reference-software-engineering-cohort",
+      "split": "dev",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": true,
+        "chronology-drift": true,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-g-r3",
+      "caseId": "reference-cohort-case-g",
+      "cohort": "reference-software-engineering-cohort",
+      "split": "dev",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": true,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-h-r1",
+      "caseId": "reference-cohort-case-h",
+      "cohort": "reference-software-engineering-cohort",
+      "split": "dev",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-h-r2",
+      "caseId": "reference-cohort-case-h",
+      "cohort": "reference-software-engineering-cohort",
+      "split": "dev",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": true,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-h-r3",
+      "caseId": "reference-cohort-case-h",
+      "cohort": "reference-software-engineering-cohort",
+      "split": "dev",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "pass",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "fail",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "role-omission": false,
+        "must-cover-omission": true
+      }
+    },
+    {
+      "id": "case-a-r1",
+      "caseId": "nila-event-platform",
+      "cohort": "reserved-software-engineering-cohort",
+      "split": "held-out",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-a-r2",
+      "caseId": "nila-event-platform",
+      "cohort": "reserved-software-engineering-cohort",
+      "split": "held-out",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-a-r3",
+      "caseId": "nila-event-platform",
+      "cohort": "reserved-software-engineering-cohort",
+      "split": "held-out",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-b-r1",
+      "caseId": "ivo-developer-platform",
+      "cohort": "reserved-software-engineering-cohort",
+      "split": "held-out",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "fail",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "fail"
+      },
+      "criticFlagged": {
+        "placeholder-left": true,
+        "attribution-inflation": true,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-b-r2",
+      "caseId": "ivo-developer-platform",
+      "cohort": "reserved-software-engineering-cohort",
+      "split": "held-out",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "fail",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "pass"
+      },
+      "criticFlagged": {
+        "attribution-inflation": true,
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    },
+    {
+      "id": "case-b-r3",
+      "caseId": "ivo-developer-platform",
+      "cohort": "reserved-software-engineering-cohort",
+      "split": "held-out",
+      "runState": "awaiting-approval",
+      "labels": {
+        "unsupported-claim": "pass",
+        "altered-number": "pass",
+        "chronology-drift": "fail",
+        "attribution-inflation": "pass",
+        "scope-stretch": "pass",
+        "must-cover-omission": "fail",
+        "requirement-overclaim": "pass",
+        "no-draft": "pass",
+        "role-omission": "pass",
+        "placeholder-left": "pass"
+      },
+      "criticFlagged": {
+        "chronology-drift": false,
+        "must-cover-omission": false
+      }
+    }
+  ]
+}
