@@ -125,7 +125,7 @@ Observations:
 
 `packages/evaluations/src/cohort-scorer.ts` (#3287) decides four modes from
 the draft text and the case's own profile, with no model call. The model
-judge (#3288) covers the rest.
+judge (#3288, below) covers the rest.
 
 | Mode | Fails when |
 | --- | --- |
@@ -154,3 +154,50 @@ Agreement with the labels on the 39 rounds that have a draft:
 - The three held-out misses came from a parsing bug: case b's gap id has no
   number. The fix only widens the id pattern, but it was found by looking at
   held-out results, so held-out is no longer a clean measure for this mode.
+
+## Model judge
+
+`packages/evaluations/src/cohort-judge.ts` (#3288) covers the four modes a
+rule cannot decide. It sends the source profile, the draft and the case's
+unsupported claims to a decision model, which answers each question with a
+probability. Code turns probabilities into verdicts by threshold.
+
+| Mode | Question | Fails when |
+| --- | --- | --- |
+| `must-cover-omission` | One per `mustCover` fact: the draft states it and keeps its meaning | Any fact is below the threshold |
+| `attribution-inflation` | Shared, supervised or someone else's work becomes the candidate's own | The probability reaches the threshold |
+| `scope-stretch` | Attended, booked or partial evidence becomes a held credential | The probability reaches the threshold |
+| `unsupported-claim` | A qualification, title, award or responsibility the profile lacks | The probability reaches the threshold |
+
+A refused question fails closed. Thresholds are tuned on train, per mode,
+by balanced accuracy; a mode with only one label on train keeps 0.5.
+
+To run it, with an OpenAI key in the shell. Answers are cached under
+`<rounds>/judge/`, so a second run with the same version and model is free:
+
+```sh
+pnpm exec tsx packages/evaluations/src/cohort-judge-command.ts ~/draft-loop-ftx --max-usd 0.5
+```
+
+### Result: `cohort-judge-v1` on `gpt-6-luna`
+
+Commit 6df979d0, train and dev only (29 rounds with a draft), $0.0074.
+Thresholds tuned on train: 0.7 for `scope-stretch`, 0.5 for the rest.
+
+| Mode | Train agreement | Train TPR / TNR | Dev agreement | Dev TPR / TNR |
+| --- | --- | --- | --- | --- |
+| `must-cover-omission` | 89% | 100% / 0% | 100% | 100% / - |
+| `attribution-inflation` | 84% | - / 84% | 100% | - / 100% |
+| `scope-stretch` | 95% | 0% / 100% | 100% | - / 100% |
+| `unsupported-claim` | 79% | - / 79% | 100% | - / 100% |
+
+- **Not yet usable as a gate.** Dev holds no failing round for three modes
+  and no passing round for `must-cover-omission`, so its 100% says little.
+- **False alarms on train.** About 3 rounds for `attribution-inflation` and
+  4 for `unsupported-claim`, which no train round fails. The 2 train rounds
+  that keep every must-cover fact were both judged as omitting one.
+- **One miss.** The only `scope-stretch` fail (an occasional duty stated as
+  a standing one) passed at 0.7.
+- **Next.** Measuring these modes needs drafts that fail them. Seed known
+  failures into copies of passing drafts, then re-tune on train before any
+  held-out measure.
