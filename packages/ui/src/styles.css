@@ -8728,10 +8728,12 @@ button.career-tab .career-step-number {
   list-style: none;
 }
 
+/* Cards in a row share the row's height, and their actions sit on the bottom edge, so the Open
+   and Archive buttons line up across a row whatever the title's length. */
 .application-card {
   position: relative;
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
   min-width: 0;
   border: 1px solid var(--border);
@@ -8820,6 +8822,10 @@ button.career-tab .career-step-number {
 
 .application-card-actions .button {
   min-height: 28px;
+}
+
+.application-card > :is(.application-card-actions, .application-card-confirm):last-child {
+  margin-top: auto;
 }
 
 .application-card-confirm {
