@@ -198,6 +198,48 @@ Thresholds tuned on train: 0.7 for `scope-stretch`, 0.5 for the rest.
   that keep every must-cover fact were both judged as omitting one.
 - **One miss.** The only `scope-stretch` fail (an occasional duty stated as
   a standing one) passed at 0.7.
-- **Next.** Measuring these modes needs drafts that fail them. Seed known
-  failures into copies of passing drafts, then re-tune on train before any
-  held-out measure.
+- **Next.** Measuring these modes needs drafts that fail them: see
+  planted failures below.
+
+### Planted failures
+
+`fixtures/failure-taxonomy/seeds.json` (#3291) holds draft-style sentences
+for the nine train and dev cases. Each real draft yields copies, labelled by
+construction, and only the planted mode is scored on a copy:
+
+- one copy per mode the real draft passes, with one sentence that fails it:
+  inflated credit, a booked course stated as held, or an invented title;
+- one copy that appends a sentence for every must-cover fact.
+
+Add `--seeded` to the judge command to send them. The run on commit
+6a2df8b9 sent 115 copies for $0.0299. Thresholds tuned on train, real and
+planted together: 0.1 for `must-cover-omission`, 0.9 for
+`attribution-inflation`, 0.7 for `scope-stretch` and 0.8 for
+`unsupported-claim`.
+
+| Mode | Train planted (75) | Dev planted (40) | Real train (19) | Real dev (10) |
+| --- | --- | --- | --- | --- |
+| `must-cover-omission` | TNR 68% | TNR 70% | TPR 100%, TNR 0% | TPR 100% |
+| `attribution-inflation` | TPR 95% | TPR 70% | TNR 95% | TNR 100% |
+| `scope-stretch` | TPR 78% | TPR 100% | TPR 0%, TNR 100% | TNR 100% |
+| `unsupported-claim` | TPR 100% | TPR 100% | TNR 84% | TNR 100% |
+
+- **Planted claims are caught.** Invented titles and stretched credentials
+  are found on dev every time; inflated credit 7 times in 10.
+- **Modes blur.** Almost any planted sentence also scores high on
+  `unsupported-claim`, and a planted EICR qualification scores as
+  unsupported rather than stretched. Read the four statements as one
+  "claim the source does not support" signal, not four.
+- **Real false alarms have one cause.** A label audit of the six real rounds
+  with high scores found no inflated or unsupported claim in any. Each one
+  places a role's work under the wrong employer, which the codebook files as
+  `chronology-drift` or `role-omission`.
+- **Must-cover is not usable yet.** Appending every fact does not make a
+  draft pass: the chronology and attribution facts still score low when the
+  rest of the draft contradicts them. A per-fact question cannot tell
+  "missing" from "stated and contradicted".
+
+The judge is not yet a gate. A `cohort-judge-v2` would tell the model that
+misplaced work is a chronology problem, merge the claim statements, and ask
+must-cover as "stated anywhere" separately from "contradicted". Held-out is
+still unsent.
