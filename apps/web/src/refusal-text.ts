@@ -65,7 +65,11 @@ function knownText(refusal: Refusal): string | undefined {
     case "unreadable-error": {
       const status = refusal.params?.status;
       if (status === undefined) return undefined;
-      // A bare 5xx is Cloud Run's answer while the server restarts or starts: it passes.
+      // A bare 504 is Cloud Run ending a request that ran past its time limit: waiting does not
+      // fix it, but the next try often finishes, since model calls vary in length.
+      if (status === 504)
+        return t`The server stopped waiting before this finished (error 504). It does not recover on its own: try again. Nothing you saved is lost.`;
+      // Any other bare 5xx is Cloud Run's answer while the server restarts or starts: it passes.
       if (typeof status === "number" && status >= 500)
         return t`Redakloop's server did not answer (error ${status}). It recovers on its own within a minute; try again then. Nothing you saved is lost.`;
       return t`The API answered ${status}.`;

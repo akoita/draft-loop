@@ -10149,6 +10149,10 @@ msgstr ""
 msgid "The server refused the edit. Check the title, summary and technologies."
 msgstr ""
 
+#: apps/web/src/refusal-text.ts
+msgid "The server stopped waiting before this finished (error 504). It does not recover on its own: try again. Nothing you saved is lost."
+msgstr ""
+
 #: apps/web/src/sign-in.tsx
 msgid "The service cannot be reached. Check your connection and reload the page."
 msgstr ""

@@ -10150,6 +10150,10 @@ msgstr "The server adds its version and your organisation's plan. Never included
 msgid "The server refused the edit. Check the title, summary and technologies."
 msgstr "The server refused the edit. Check the title, summary and technologies."
 
+#: apps/web/src/refusal-text.ts
+msgid "The server stopped waiting before this finished (error 504). It does not recover on its own: try again. Nothing you saved is lost."
+msgstr "The server stopped waiting before this finished (error 504). It does not recover on its own: try again. Nothing you saved is lost."
+
 #: apps/web/src/sign-in.tsx
 msgid "The service cannot be reached. Check your connection and reload the page."
 msgstr "The service cannot be reached. Check your connection and reload the page."
