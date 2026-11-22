@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "caseId": "non-tech-cv-cohort-case-electrician",
+  "profileSource": "candidate-profile.md",
+  "opportunitySource": "job-description.md",
+  "mustCover": [
+    {
+      "id": "e-chronology",
+      "fact": "Keep the apprenticeship, the electrician periods and the March–August 2022 travel gap.",
+      "sourceIds": ["e-role-1", "e-gap-1", "e-role-2"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "e-qualifications",
+      "fact": "Level 3 NVQ Diploma, AM2 in 2019, 18th Edition and a gold ECS card.",
+      "sourceIds": ["e-qualifications"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "e-inspection-scope",
+      "fact": "Initial verification is qualified; periodic inspection (EICR) is not.",
+      "sourceIds": ["e-inspection"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "e-ev",
+      "fact": "Keep 40 domestic EV charge points in 2023.",
+      "sourceIds": ["e-role-2"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "e-team-role",
+      "fact": "Works in a two-person team under a site supervisor who signs off design.",
+      "sourceIds": ["e-role-2"],
+      "boundary": "semantic"
+    }
+  ],
+  "requirementExpectations": [
+    {
+      "requirementId": "r1",
+      "status": "supported",
+      "sourceIds": ["e-qualifications"],
+      "rationale": "Level 3 NVQ Diploma and AM2."
+    },
+    {
+      "requirementId": "r2",
+      "status": "supported",
+      "sourceIds": ["e-qualifications"],
+      "rationale": "18th Edition certificate."
+    },
+    {
+      "requirementId": "r3",
+      "status": "supported",
+      "sourceIds": ["e-role-2", "e-inspection"],
+      "rationale": "Commercial lighting and power, and initial verification."
+    },
+    {
+      "requirementId": "r4",
+      "status": "supported",
+      "sourceIds": ["e-role-2"],
+      "rationale": "40 domestic EV charge points."
+    },
+    {
+      "requirementId": "r5",
+      "status": "unsupported",
+      "sourceIds": ["e-inspection"],
+      "rationale": "No EICR qualification."
+    },
+    {
+      "requirementId": "r6",
+      "status": "unsupported",
+      "sourceIds": ["e-role-2"],
+      "rationale": "Works under a supervisor in a pair."
+    }
+  ],
+  "prohibitedClaims": [
+    {
+      "id": "e-eicr",
+      "claim": "Liam is qualified for periodic inspection (EICR).",
+      "sourceIds": ["e-inspection"],
+      "reason": "Only initial verification is listed."
+    },
+    {
+      "id": "e-lead",
+      "claim": "Liam led a team or signed off designs.",
+      "sourceIds": ["e-role-2"],
+      "reason": "The supervisor schedules and signs off."
+    },
+    {
+      "id": "e-wrong-edition",
+      "claim": "Liam holds the 17th Edition or a different card colour.",
+      "sourceIds": ["e-qualifications"],
+      "reason": "18th Edition and gold card are recorded."
+    },
+    {
+      "id": "e-altered-ev",
+      "claim": "Liam installed a different number of charge points or commercial ones.",
+      "sourceIds": ["e-role-2"],
+      "reason": "40 domestic charge points in 2023."
+    },
+    {
+      "id": "e-continuous",
+      "claim": "Liam worked continuously from 2015.",
+      "sourceIds": ["e-role-1", "e-gap-1", "e-role-2"],
+      "reason": "A 2022 travel gap is recorded."
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "id": "e-exact-periods",
+      "check": "Keep the dates and the 2022 gap.",
+      "sourceIds": ["e-role-1", "e-gap-1", "e-role-2"]
+    },
+    {
+      "id": "e-exact-ordinals",
+      "check": "Keep 18th Edition, Level 3 and 40 charge points unchanged.",
+      "sourceIds": ["e-qualifications", "e-role-2"]
+    }
+  ],
+  "semanticChecks": [
+    {
+      "id": "e-verification-vs-periodic",
+      "check": "Do not stretch initial verification into periodic inspection.",
+      "sourceIds": ["e-inspection"]
+    }
+  ],
+  "executionBoundary": {
+    "providerRunPerformed": false,
+    "plannedRoundsPerProfile": 1,
+    "maximumProviderCallsForCohort": 8,
+    "requiresSeparateAuthorization": true
+  }
+}

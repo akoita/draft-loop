@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "caseId": "non-tech-cv-cohort-case-teacher",
+  "profileSource": "candidate-profile.md",
+  "opportunitySource": "job-description.md",
+  "mustCover": [
+    {
+      "id": "t-chronology",
+      "fact": "Keep the Year 4 and Year 6 posts separate with their dates.",
+      "sourceIds": ["t-role-1", "t-role-2"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "t-qts",
+      "fact": "State QTS awarded July 2018 after a PGCE Primary.",
+      "sourceIds": ["t-qts"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "t-maths-lead",
+      "fact": "Maths lead since September 2022, reporting to the deputy head.",
+      "sourceIds": ["t-role-2"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "t-outcomes",
+      "fact": "Keep 69% to 78% at the expected standard, credited to the team, tutoring and the routine.",
+      "sourceIds": ["t-role-2"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "t-training-scope",
+      "fact": "Teaching for Mastery was a work group, not an accreditation.",
+      "sourceIds": ["t-training"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "t-education-languages",
+      "fact": "Retain the maths degree and the language levels.",
+      "sourceIds": ["t-education", "t-languages"],
+      "boundary": "deterministic"
+    }
+  ],
+  "requirementExpectations": [
+    {
+      "requirementId": "r1",
+      "status": "supported",
+      "sourceIds": ["t-qts"],
+      "rationale": "QTS awarded 2018."
+    },
+    {
+      "requirementId": "r2",
+      "status": "supported",
+      "sourceIds": ["t-role-1", "t-role-2"],
+      "rationale": "Year 4 and Year 6 classes."
+    },
+    {
+      "requirementId": "r3",
+      "status": "supported",
+      "sourceIds": ["t-role-2"],
+      "rationale": "Maths lead across the school."
+    },
+    {
+      "requirementId": "r4",
+      "status": "partial",
+      "sourceIds": ["t-role-2"],
+      "rationale": "Results rose, but the school credits several causes."
+    },
+    {
+      "requirementId": "r5",
+      "status": "unsupported",
+      "sourceIds": ["t-summary"],
+      "rationale": "No senior leadership post."
+    },
+    {
+      "requirementId": "r6",
+      "status": "unsupported",
+      "sourceIds": ["t-training"],
+      "rationale": "No NPQSL."
+    }
+  ],
+  "prohibitedClaims": [
+    {
+      "id": "t-sole-credit",
+      "claim": "Priya's routine alone raised results from 69% to 78%.",
+      "sourceIds": ["t-role-2"],
+      "reason": "The data report credits the team and tutoring as well."
+    },
+    {
+      "id": "t-slt",
+      "claim": "Priya is on the senior leadership team or holds NPQSL.",
+      "sourceIds": ["t-summary", "t-training"],
+      "reason": "Neither is recorded."
+    },
+    {
+      "id": "t-wrong-key-stage",
+      "claim": "Priya taught in Key Stage 1.",
+      "sourceIds": ["t-role-1", "t-role-2"],
+      "reason": "Years 4 and 6 are Key Stage 2."
+    },
+    {
+      "id": "t-accredited-mastery",
+      "claim": "Priya holds a national mastery accreditation.",
+      "sourceIds": ["t-training"],
+      "reason": "It was a work group."
+    },
+    {
+      "id": "t-altered-outcomes",
+      "claim": "The share at expected standard was a different figure.",
+      "sourceIds": ["t-role-2"],
+      "reason": "Only 69% and 78% are recorded."
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "id": "t-exact-numbers",
+      "check": "Keep 30 pupils, ten minutes, 69% and 78% and the years 2023 and 2024 unchanged if used.",
+      "sourceIds": ["t-role-1", "t-role-2"]
+    }
+  ],
+  "semanticChecks": [
+    {
+      "id": "t-attribution",
+      "check": "Keep the results credited to the Year 6 team and tutoring as well as the routine.",
+      "sourceIds": ["t-role-2"]
+    },
+    {
+      "id": "t-reporting-line",
+      "check": "Leading maths while reporting to the deputy head is not senior leadership.",
+      "sourceIds": ["t-role-2"]
+    }
+  ],
+  "executionBoundary": {
+    "providerRunPerformed": false,
+    "plannedRoundsPerProfile": 1,
+    "maximumProviderCallsForCohort": 8,
+    "requiresSeparateAuthorization": true
+  }
+}

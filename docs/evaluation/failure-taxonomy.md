@@ -1,0 +1,122 @@
+# Failure taxonomy
+
+This page is for whoever runs or extends the labelled rounds behind the eval
+suite (#1105, then #1107). It says how rounds are produced, how they are
+labelled, and how the split works.
+
+**Status:** labelled. 40 Economy rounds ran on 2026-11-22 and are labelled in
+`packages/evaluations/fixtures/failure-taxonomy/labels.json`. See Results.
+
+## Produce the rounds
+
+The rounds use the fictional full-CV cohorts in
+`packages/evaluations/fixtures/*-cohort/`: eight software cases and four
+non-tech cases. Each round is one ordinary author–critic round on the Economy
+pair.
+
+```sh
+# Free dry run with the deterministic offline agents
+node scripts/failure-taxonomy-rounds.mjs --out ~/draft-loop-ftx-dry --fixture
+
+# Paid run: needs the owner's go and a named cap
+node scripts/failure-taxonomy-rounds.mjs --out ~/draft-loop-ftx \
+  --preset economy --per-run-cap-usd 0.25 --total-cap-usd 3
+```
+
+- To sign in with the signed-in `claude` or `codex` CLI instead of an API key, export
+  `DRAFT_LOOP_ANTHROPIC_AUTH_MODE=user-session` or `DRAFT_LOOP_OPENAI_AUTH_MODE=user-session`.
+- `--out` must be outside the repository. Each round gets `round.json` with
+  the run state, cost, draft and critic findings.
+- The script stops before a round that could pass the total cap, and skips
+  rounds that already have `round.json`, so it can resume.
+- Software cases run three times, non-tech cases four times: 40 rounds.
+- Keep the per-run cap at $0.25 or more. Each call reserves its worst case
+  first (up to $0.16), so a lower cap can stop before the first call.
+
+## Label the rounds
+
+1. **Open-code.** Read each draft against its case's `expectations.json`
+   and the source profile. Write one short note per problem seen.
+2. **Group.** Merge the notes into named failure modes. Start from the
+   codebook below and add a mode only when at least two rounds show it.
+3. **Label.** For every round and every mode, record `pass` or `fail`.
+   A round fails a mode when at least one instance appears in the draft.
+4. **Critic agreement.** For each failure, record whether the critic flagged it.
+
+| Mode | Fails when the draft |
+| --- | --- |
+| `unsupported-claim` | States a qualification, title, award or responsibility the source lacks (a `prohibitedClaims` hit) |
+| `altered-number` | Changes a number, percentage, money amount, ordinal or date |
+| `chronology-drift` | Merges periods, shifts dates or hides a recorded gap |
+| `attribution-inflation` | Turns team, supervised or shared work into sole ownership or leadership |
+| `scope-stretch` | Turns attendance, a booked course or partial evidence into a held credential |
+| `must-cover-omission` | Leaves out a `mustCover` fact the job needs |
+| `requirement-overclaim` | Presents an `unsupported` requirement as met |
+| `no-draft` | Produces no admitted draft (validator rejection, budget stop, error) |
+
+## Labels file
+
+Labels go in `packages/evaluations/fixtures/failure-taxonomy/labels.json`.
+They hold no draft text: only round ids, case ids, the split, one label per
+mode, and whether the critic agreed.
+
+## Split
+
+The split is by case, so a case never sits on both sides.
+
+| Split | Cases | Use |
+| --- | --- | --- |
+| train | c, d, e, f, nurse, electrician | Write and tune judges |
+| dev | g, h, sales | Check judges while tuning |
+| held-out | a, b, teacher | Measure once, never tune on it |
+
+The reserved cohort (a, b) is the held-out side because its README forbids
+tuning on its results.
+
+## Record
+
+The results section names the commit, the Economy author and critic profiles,
+the author and critic prompt versions, the round count and the actual cost.
+
+## Results
+
+- Commit: `a5a61e34`.
+- Author: `economy-anthropic-author@5` (`claude-haiku-5-5`), prompt
+  `cli-author-v21`.
+- Critic: `economy-openai-critic@1` (`gpt-6-luna`), prompt `cli-critic-v12`.
+- Rounds: 40 (24 software, 16 non-tech). 38 ended awaiting approval. Two ended
+  in a provider error; one of them has no draft.
+- Cost: $2.14 in total. The 40 rounds cost $2.12. An earlier pilot lost to an
+  expired OpenAI key cost $0.014 and is not labelled.
+
+Two modes were added during grouping: `role-omission` (a whole dated role is
+missing) and `placeholder-left` (`[Your name]` or `[Email]` left in the
+header). "Critic flagged" counts any stored finding for the round, from the
+critic model or the deterministic checks, that names the failure.
+
+| Mode | Fail, all | Software | Non-tech | Critic flagged |
+| --- | --- | --- | --- | --- |
+| `unsupported-claim` | 0/40 | 0/24 | 0/16 | - |
+| `altered-number` | 0/40 | 0/24 | 0/16 | - |
+| `chronology-drift` | 26/40 (65%) | 19/24 (79%) | 7/16 (44%) | 4/26 |
+| `attribution-inflation` | 2/40 (5%) | 2/24 (8%) | 0/16 | 2/2 |
+| `scope-stretch` | 1/40 (3%) | 0/24 | 1/16 (6%) | 1/1 |
+| `must-cover-omission` | 37/40 (93%) | 24/24 (100%) | 13/16 (81%) | 1/37 |
+| `requirement-overclaim` | 0/40 | 0/24 | 0/16 | - |
+| `no-draft` | 1/40 (3%) | 0/24 | 1/16 (6%) | 0/1 |
+| `role-omission` | 19/40 (48%) | 15/24 (63%) | 4/16 (25%) | 4/19 |
+| `placeholder-left` | 37/40 (93%) | 22/24 (92%) | 15/16 (94%) | 37/37 |
+
+Observations:
+
+- No round invented a credential, changed a number or claimed an unsupported
+  requirement. The failures are omissions and misplaced facts.
+- Drafts drop facts the job needs, most often languages, training scope,
+  studies and side projects. The critic flagged this in 1 of 37 rounds.
+- A whole role is often missing, and its work can move under another
+  employer's dates. The critic caught 4 of 19 missing roles and none of the
+  moved work.
+- Recorded gaps are usually hidden. The critic's gap check fired in 4 of 26
+  chronology failures.
+- The deterministic header check caught every placeholder, and the critic
+  caught both cases of team work stated as solo work.
