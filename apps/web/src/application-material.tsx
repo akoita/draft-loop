@@ -32,6 +32,17 @@ import {
   recordGapsNotice,
 } from "./application-material-model.js";
 import {
+  CoverLetterModelLabel,
+  CoverLetterRiskChoice,
+  CoverLetterRiskNotice,
+} from "./cover-letter-risk.js";
+import {
+  isUneditedModelLetter,
+  letterExportQuestion,
+  readLetterRiskAccepted,
+  saveLetterRiskAccepted,
+} from "./cover-letter-risk-model.js";
+import {
   InterviewGuideForm,
   InterviewGuideReader,
   useInterviewGuideDrafting,
@@ -108,12 +119,17 @@ export interface ApplicationMaterialViewProps {
   readonly guideResearching?: boolean;
   /** Writes one part of the open extensive guide again. */
   readonly onGuidePart?: ((part: InterviewGuidePart) => void) | undefined;
+  /** False until the candidate accepts, for this application, the risk of a full AI letter (#3277). */
+  readonly letterRiskAccepted?: boolean;
+  readonly onAcceptLetterRisk?: () => void;
 }
 
 const kinds = (): readonly ApplicationMaterialPanelKind[] => ["cover-letter", "interview-guide"];
 
 export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
   const { kind, draft, problem, busy, versions, guidance } = props;
+  const [askingRisk, setAskingRisk] = useState(false);
+  const mustAcceptRisk = kind === "cover-letter" && props.letterRiskAccepted === false;
   const change = (field: keyof ApplicationMaterialGuidance, value: string) => {
     const { [field]: _dropped, ...rest } = guidance;
     props.onGuidance(value === "" ? rest : { ...rest, [field]: value });
@@ -169,6 +185,7 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
           ))}
         </fieldset>
         <p className="application-material-lead">{t`A cover letter or an interview preparation guide for this application, when you need them. Your CV does not depend on them.`}</p>
+        {kind === "cover-letter" ? <CoverLetterRiskNotice /> : null}
         {props.research}
         {draft === undefined && kind === "cover-letter" ? (
           <p className="application-material-note">{applicationMaterialDisclosure()}</p>
@@ -293,12 +310,23 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
             <p className="application-material-note">{t`Guidance shapes the writing only. Every claim still comes from your career record.`}</p>
           ) : null}
         </details>
-        <div className="application-material-actions">
+        {mustAcceptRisk && askingRisk ? (
+          <CoverLetterRiskChoice
+            busy={busy}
+            onAccept={() => {
+              setAskingRisk(false);
+              props.onAcceptLetterRisk?.();
+              props.onDraft();
+            }}
+            onCancel={() => setAskingRisk(false)}
+          />
+        ) : null}
+        <div className="application-material-actions" hidden={mustAcceptRisk && askingRisk}>
           <button
             type="button"
             className="button button-primary"
             disabled={busy}
-            onClick={props.onDraft}
+            onClick={mustAcceptRisk ? () => setAskingRisk(true) : props.onDraft}
           >
             {props.guideResearching === true
               ? t`Researching…`
@@ -340,6 +368,9 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
                   ))}
                 </select>
               </label>
+            ) : null}
+            {isUneditedModelLetter(draft) && props.edits === undefined ? (
+              <CoverLetterModelLabel />
             ) : null}
             {draft.kind === "interview-guide" ? (
               <InterviewGuideReader
@@ -567,6 +598,9 @@ export function ApplicationMaterialSection({
   const [samplesSaved, setSamplesSaved] = useState(true);
   const [edits, setEdits] = useState<readonly string[] | undefined>(undefined);
   const [template, setTemplate] = useState<ExportTemplate>(defaultExportTemplate);
+  const [letterRiskAccepted, setLetterRiskAccepted] = useState(() =>
+    readLetterRiskAccepted(applicationId),
+  );
   const [modelId, setModelId] = useState<ApplicationMaterialModel["model_id"] | undefined>();
   const everything = useShowEverything();
   const [collapsed, setCollapsed] = useState(() => readPrepareCollapsed(everything));
@@ -807,9 +841,15 @@ export function ApplicationMaterialSection({
       }}
       template={template}
       onTemplate={setTemplate}
+      letterRiskAccepted={letterRiskAccepted}
+      onAcceptLetterRisk={() => {
+        saveLetterRiskAccepted(applicationId);
+        setLetterRiskAccepted(true);
+      }}
       onDocument={async (format) => {
         const id = draft?.id;
         if (id === undefined || draft === undefined) return;
+        if (isUneditedModelLetter(draft) && !globalThis.confirm?.(letterExportQuestion())) return;
         setBusy(true);
         setProblem(undefined);
         try {
@@ -888,6 +928,7 @@ export function ApplicationMaterialSection({
       }}
       onDownload={() => {
         if (draft === undefined) return;
+        if (isUneditedModelLetter(draft) && !globalThis.confirm?.(letterExportQuestion())) return;
         saveFile(
           new Blob([applicationMaterialMarkdown(draft)], { type: "text/markdown" }),
           applicationMaterialFileName(draft.kind),

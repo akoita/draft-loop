@@ -80,6 +80,7 @@ export const englishHelpGuide: HelpGuide = {
       title: "Prepare for the job",
       paragraphs: [
         "On an application, open Prepare to draft a cover letter or an interview preparation guide from the same evidence. It is folded by default.",
+        "Write your cover letter yourself. Recruiters and AI-detection tools, such as Pangram, often spot a letter written entirely by AI, and it can count against you. Use the draft as material: the facts it picks, its sources and its structure, then rewrite it in your own words. A letter still marked AI draft asks once more before you download it.",
         "Each paid application includes 20 Prepare drafts, guides and research runs.",
       ],
       keywords: ["cover letter", "letter", "interview", "questions", "preparation"],

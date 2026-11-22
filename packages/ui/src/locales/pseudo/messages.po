@@ -1369,6 +1369,10 @@ msgstr ""
 msgid "Agents cannot add notes yet."
 msgstr ""
 
+#: apps/web/src/cover-letter-risk.tsx
+msgid "AI draft: rewrite before sending"
+msgstr ""
+
 #: apps/web/src/refusal-text.ts
 msgid "AI features are paused for a short while. They come back on their own; your work is saved."
 msgstr ""
@@ -4476,6 +4480,10 @@ msgid "https://www.linkedin.com/in/…\n"
 "https://your-portfolio.example/…"
 msgstr ""
 
+#: apps/web/src/cover-letter-risk.tsx
+msgid "I accept the risk, draft it"
+msgstr ""
+
 #: apps/web/src/beta-sign-up.tsx
 msgid "I accept the terms of use and the privacy policy."
 msgstr ""
@@ -6112,6 +6120,7 @@ msgstr ""
 msgid "Not named in the job posting"
 msgstr ""
 
+#: apps/web/src/cover-letter-risk.tsx
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Not now"
 msgstr ""
@@ -7315,6 +7324,10 @@ msgstr ""
 msgid "Recording… speak your answer."
 msgstr ""
 
+#: apps/web/src/cover-letter-risk.tsx
+msgid "Recruiters and AI-detection tools often spot a letter written entirely by AI, and it can count against you. Use what DraftLoop gives you here as material, then write the letter in your own words."
+msgstr ""
+
 #: apps/web/src/operator-model.ts
 #: apps/web/src/operator.tsx
 msgid "Redeemed"
@@ -8515,6 +8528,10 @@ msgstr ""
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Send the job description to the writing model?"
+msgstr ""
+
+#: apps/web/src/cover-letter-risk.tsx
+msgid "Sending it as it is can be spotted and can count against you. Draft it to read and rewrite in your own words."
 msgstr ""
 
 #: apps/web/src/consent-model.ts
@@ -10483,6 +10500,14 @@ msgstr ""
 msgid "This job posting looks {label}."
 msgstr ""
 
+#: apps/web/src/cover-letter-risk-model.ts
+msgid "This letter is still the AI draft. Sent as it is, it can be spotted and can count against you. Download it anyway?"
+msgstr ""
+
+#: apps/web/src/cover-letter-risk.tsx
+msgid "This letter is written by AI."
+msgstr ""
+
 #: packages/ui/src/career-interview-live.tsx
 msgid "This live conversation reached its time limit. Start it again to go on."
 msgstr ""
@@ -11510,6 +11535,10 @@ msgstr ""
 
 #: apps/web/src/interview-guide-model.ts
 msgid "Write the interview, company, role and market again"
+msgstr ""
+
+#: apps/web/src/cover-letter-risk.tsx
+msgid "Write the letter yourself."
 msgstr ""
 
 #: apps/web/src/interview-guide-model.ts
