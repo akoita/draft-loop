@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { saveTokenFromInput } from "./agent-token.js";
 
-describe("draftloop-mcp save-token", () => {
+describe("redakloop-mcp save-token", () => {
   it("keeps a pasted agent token readable by this user only", async () => {
     const path = join(await mkdtemp(join(tmpdir(), "draftloop-save-")), "draftloop", "agent-token");
     // A fictional token of the issued shape.

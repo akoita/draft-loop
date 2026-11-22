@@ -10,14 +10,15 @@
     }
   },
   "bin": {
-    "draftloop-mcp": "./bin/draftloop-mcp.mjs"
+    "redakloop-mcp": "./bin/redakloop-mcp.mjs",
+    "draftloop-mcp": "./bin/redakloop-mcp.mjs"
   },
   "files": [
     "bin",
     "src"
   ],
   "scripts": {
-    "start": "node bin/draftloop-mcp.mjs",
+    "start": "node bin/redakloop-mcp.mjs",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {

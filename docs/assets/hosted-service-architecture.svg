@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="820" viewBox="0 0 1200 820" role="img" aria-labelledby="title desc">
   <title id="title">Redakloop hosted service architecture (as built)</title>
-  <desc id="desc">The hosted service as it runs in November 2026, from ADR 0011. The web screen with the public pages, AI agents through draftloop-mcp reach a Fastify API on Cloud Run in Google Cloud europe-west1. The API also serves the operator screen, runs intake screening and the support assistant, and signs people in through a self-hosted Keycloak on Cloud Run that scales to zero, with a passkey or one-time code as second factor where required. It queues run ids for the worker, a Cloud Run job that a scheduler sweep also starts, which drafts and reviews through the model gateway. The gateway sends only approved context to the Anthropic author on Vertex AI in the EU, with a recorded fallback, and to the OpenAI critic, which can switch once to a recorded fallback critic. Data lives in Cloud SQL Postgres with pgvector, row-level security per tenant, the run queue, backups and point-in-time recovery, and in Cloud Storage with a customer-managed key. The page fetcher is the only part that reaches public job pages. Monitoring raises alerts and an uptime check. Brevo sends invites, waitlist confirmations and sign-in mail, and Stripe sells credit packs. A separate operator app, a load balancer with Cloud Armor and Business single sign-on are planned. On your machine, the self-hosted server runs the same images with Docker Compose, the Electron desktop client is a window over that server, and the CLI imports old desktop workspaces.</desc>
+  <desc id="desc">The hosted service as it runs in November 2026, from ADR 0011. The web screen with the public pages, AI agents through redakloop-mcp reach a Fastify API on Cloud Run in Google Cloud europe-west1. The API also serves the operator screen, runs intake screening and the support assistant, and signs people in through a self-hosted Keycloak on Cloud Run that scales to zero, with a passkey or one-time code as second factor where required. It queues run ids for the worker, a Cloud Run job that a scheduler sweep also starts, which drafts and reviews through the model gateway. The gateway sends only approved context to the Anthropic author on Vertex AI in the EU, with a recorded fallback, and to the OpenAI critic, which can switch once to a recorded fallback critic. Data lives in Cloud SQL Postgres with pgvector, row-level security per tenant, the run queue, backups and point-in-time recovery, and in Cloud Storage with a customer-managed key. The page fetcher is the only part that reaches public job pages. Monitoring raises alerts and an uptime check. Brevo sends invites, waitlist confirmations and sign-in mail, and Stripe sells credit packs. A separate operator app, a load balancer with Cloud Armor and Business single sign-on are planned. On your machine, the self-hosted server runs the same images with Docker Compose, the Electron desktop client is a window over that server, and the CLI imports old desktop workspaces.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0f1319"/>
@@ -33,7 +33,7 @@
 <text x="48" y="248" font-size="14" fill="#9aa7b4">showcase pages</text>
 <rect x="30" y="276" width="210" height="80" rx="12" fill="#1d232c" stroke="#2fd0b8" stroke-width="1.5"/>
 <text x="48" y="304" font-size="17" font-weight="700" fill="#f2fbf8">AI agents</text>
-<text x="48" y="326" font-size="14" fill="#9aa7b4">draftloop-mcp over /v1</text>
+<text x="48" y="326" font-size="14" fill="#9aa7b4">redakloop-mcp over /v1</text>
 <text x="48" y="345" font-size="14" fill="#9aa7b4">Claude Code, Codex</text>
 <rect x="262" y="120" width="640" height="512" rx="22" fill="none" stroke="#2fd0b8" stroke-width="1.5" stroke-dasharray="10 6" opacity="0.7"/>
 <text x="298" y="148" font-size="14" fill="#6ae3cf" font-weight="700" letter-spacing="2">GOOGLE CLOUD</text>
@@ -126,7 +126,7 @@
 <text x="774" y="769" font-size="14" fill="#9aa7b4">server import</text>
 <rect x="956" y="700" width="190" height="76" rx="12" fill="#1d232c" stroke="#2fd0b8" stroke-width="1.5"/>
 <text x="974" y="728" font-size="17" font-weight="700" fill="#f2fbf8">Agents</text>
-<text x="974" y="750" font-size="14" fill="#9aa7b4">draftloop-mcp</text>
+<text x="974" y="750" font-size="14" fill="#9aa7b4">redakloop-mcp</text>
 <text x="974" y="769" font-size="14" fill="#9aa7b4">over stdio</text>
 </g>
 </svg>

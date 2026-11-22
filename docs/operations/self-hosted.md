@@ -152,9 +152,9 @@ Replace the owner token when it may have leaked, or to retire every copy of it.
    - **Desktop app:** it asks for the token at its next request.
    - **Web screen:** reload the page and sign in.
    - **Terminal:** update `DRAFT_LOOP_SERVER_TOKEN` or your shell's export.
-   - **Agents:** nothing to do. `draftloop-mcp init` gave them an agent
+   - **Agents:** nothing to do. `redakloop-mcp init` gave them an agent
      token, which keeps working. A configuration made before 0.15.0 holds the
-     owner token, so rerun `draftloop-mcp init` there.
+     owner token, so rerun `redakloop-mcp init` there.
 
 Expected result: a request with the old token answers `401`. If the API does
 not come back, run `draft-loop-server logs api`.
@@ -241,7 +241,7 @@ review them, and only an approved note becomes career evidence.
   base, edit it, merge it with a likely duplicate shown beside it, or discard
   it.
 - **Review from the CLI** with the owner token. Put `draft-loop` on your
-  `PATH` from a clone once, from inside `apps/cli` (as for `draftloop-mcp` in
+  `PATH` from a clone once, from inside `apps/cli` (as for `redakloop-mcp` in
   the [agent channel](../reference/agent-channel.md#set-it-up) reference):
 
 ```text
@@ -263,10 +263,10 @@ draft-loop work-journal merge <note> --into <note> [--keep-summary this]
 draft-loop work-journal discard <note>
 ```
 
-Agents reach the server through `draftloop-mcp`, with an agent token
+Agents reach the server through `redakloop-mcp`, with an agent token
 that reaches only the scopes ticked for it. **Agents** in Workspace
 settings creates one and shows the configuration to paste into the agent;
-`draftloop-mcp init` issues one from the owner token. The address comes from `DRAFT_LOOP_SERVER_URL`. The
+`redakloop-mcp init` issues one from the owner token. The address comes from `DRAFT_LOOP_SERVER_URL`. The
 [agent channel](../reference/agent-channel.md) reference covers its setup per
 agent and what it records.
 

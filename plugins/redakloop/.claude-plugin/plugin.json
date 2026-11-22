@@ -1,5 +1,5 @@
 {
-  "name": "draftloop",
+  "name": "redakloop",
   "version": "0.4.0",
   "description": "Record notable work as career evidence, see your job applications, add a job, and start and follow a CV run within a monthly spend cap in your Redakloop server. Approvals stay in Redakloop.",
   "author": { "name": "Redakloop contributors" },

@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
 /**
- * The agent token (#2147, #2160): what `draftloop-mcp` sends instead of the owner token. It reaches
+ * The agent token (#2147, #2160): what `redakloop-mcp` sends instead of the owner token. It reaches
  * only its scopes in one workspace (#2438), so an agent that reads an untrusted repository
  * cannot use it to reach the candidate's records or decisions. `init` asks the server for
  * one with the owner token and keeps it in a file outside the project, which no project file names.
@@ -97,7 +97,7 @@ export function isAgentTokenShape(token: string): boolean {
 }
 
 /**
- * `draftloop-mcp save-token` (#2441): keeps a token created under Agents in Workspace
+ * `redakloop-mcp save-token` (#2441): keeps a token created under Agents in Workspace
  * settings where the server reads it, so a plugin install needs no file in the project. The
  * token comes on standard input, never as an argument, so it stays out of the shell history.
  * Returns the line to print.

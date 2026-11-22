@@ -447,7 +447,7 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
 - **Agent channel (D17, #1403).** An MCP channel, local first. The work journal
   sprint (#2018, #2019–#2025) added `record_work`, which files notes from the
   candidate's coding agent into a pending inbox for approval, with
-  `draftloop-mcp init` for Claude Code and Codex and the
+  `redakloop-mcp init` for Claude Code and Codex and the
   [agent channel](reference/agent-channel.md) reference. Built 2026-11-03.
   Assistant directories as a first channel (#2646–#2650, #2653): the remote
   MCP server, OAuth sign-in and a spend limit per assistant are built, and the

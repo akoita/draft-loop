@@ -4,7 +4,7 @@ This record says whether a coding agent can use the work journal with an
 agent token instead of the owner token. It is for anyone deciding whether the
 [agent channel](../reference/agent-channel.md) is ready for a candidate.
 
-**Result: passed, with two gaps.** `draftloop-mcp init` issued an agent token
+**Result: passed, with two gaps.** `redakloop-mcp init` issued an agent token
 and kept it out of the project. A real Claude Code session filed a note with
 it, and the server refused it everywhere else. The token stopped working once
 revoked. Approval was not walked, and the two screen checks rest on
@@ -41,8 +41,8 @@ flowchart LR
 
 | #   | Step                                                 | Result                                                                                                                       |
 | --- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Link `draft-loop` and `draftloop-mcp` from the clone | Pass: both run from another folder (#2150)                                                                                   |
-| 2   | `draftloop-mcp init --host claude-code`              | Pass: `issued: agent token dlat_…, saved to ~/.config/draftloop/agent-token`; the file has mode 600                          |
+| 1   | Link `draft-loop` and `redakloop-mcp` from the clone | Pass: both run from another folder (#2150)                                                                                   |
+| 2   | `redakloop-mcp init --host claude-code`              | Pass: `issued: agent token dlat_…, saved to ~/.config/draftloop/agent-token`; the file has mode 600                          |
 | 3   | Project files hold no token                          | Pass: neither token appears in `.mcp.json`, `CLAUDE.md` or `.claude/`                                                        |
 | 4   | A real session, without the owner token in its shell | Pass: `list_work`, then one `record_work`; status `pending`, screening `clear`, `review_url` `/#work-journal`                |
 | 5   | The agent token on other routes                      | Pass: the workspace 403, whole notes (`fields=summary`) 403, the agent-token routes 403; title listing 200                   |

@@ -29,7 +29,7 @@ The release covers the 56 commits merged since v0.8.0-alpha.5:
 - **Server on your own machine** (milestones 62 and 63): published server
   images, the `draft-loop-server` install, upgrade, backup and restore script,
   and the desktop import.
-- **Work journal** (milestone 64): the `draftloop-mcp` agent channel that files
+- **Work journal** (milestone 64): the `redakloop-mcp` agent channel that files
   notes from a coding agent into a pending inbox for approval.
 - **Release sprint** (milestone 66): next steps printed by
   `draft-loop-server up`, the work journal in the record archive, and

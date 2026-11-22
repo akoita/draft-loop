@@ -161,7 +161,7 @@ export function createWorkJournalMcpServer(
   profile?: ProfileApi,
 ): McpServer {
   const server = new McpServer(
-    { name: "draftloop", version: serverVersion },
+    { name: "redakloop", version: serverVersion },
     { instructions: serverInstructions },
   );
 

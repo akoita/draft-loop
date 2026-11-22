@@ -2,7 +2,7 @@ import { t } from "@lingui/core/macro";
 
 /**
  * The ready-to-copy configuration that connects an agent to this server (#2427), and the
- * scopes a new agent token may hold (#2439). Each agent reads the same `draftloop-mcp` process with the same variables; only the
+ * scopes a new agent token may hold (#2439). Each agent reads the same `redakloop-mcp` process with the same variables; only the
  * file or command that holds them differs.
  */
 
@@ -160,7 +160,7 @@ export function agentConfiguration(host: AgentHost, connection: AgentConnection)
         "/plugin marketplace add akoita/draft-loop",
         "/plugin install draftloop@draftloop",
         "# In a terminal: paste the token, then press Enter and Ctrl-D",
-        "draftloop-mcp save-token",
+        "redakloop-mcp save-token",
         ...(exports.length === 0
           ? []
           : [
@@ -173,17 +173,17 @@ export function agentConfiguration(host: AgentHost, connection: AgentConnection)
       return [
         "claude mcp add draftloop --scope user \\",
         ...env.map(([name, value]) => `  --env ${name}=${value} \\`),
-        "  -- draftloop-mcp",
+        "  -- redakloop-mcp",
       ].join("\n");
     case "codex":
       return [
-        "[mcp_servers.draftloop]",
-        'command = "draftloop-mcp"',
+        "[mcp_servers.redakloop]",
+        'command = "redakloop-mcp"',
         `env = { ${env.map(([name, value]) => `${name} = ${JSON.stringify(value)}`).join(", ")} }`,
       ].join("\n");
     case "json":
       return JSON.stringify(
-        { mcpServers: { draftloop: { command: "draftloop-mcp", env: Object.fromEntries(env) } } },
+        { mcpServers: { draftloop: { command: "redakloop-mcp", env: Object.fromEntries(env) } } },
         null,
         2,
       );

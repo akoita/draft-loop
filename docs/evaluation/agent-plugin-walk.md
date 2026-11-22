@@ -27,7 +27,7 @@ setup traps the docs now name. Issue:
 
 ```mermaid
 flowchart LR
-    L[Link draftloop-mcp] --> T["init --scope:<br/>scoped token saved"]
+    L[Link redakloop-mcp] --> T["init --scope:<br/>scoped token saved"]
     T --> P["/plugin marketplace add,<br/>/plugin install"]
     P --> C["claude -p:<br/>six tools"]
     C --> R[Journal-only token<br/>refused on applications]
@@ -37,7 +37,7 @@ flowchart LR
 | #   | Step                                          | Result                                                                                                        |
 | --- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | 1   | Build and start the clone's stack             | Pass: every container healthy, `/v1/health` 200 on 8081; the installed stack on 8080 untouched                |
-| 2   | Put `draftloop-mcp` on `PATH`                 | Pass with `npm link`; `pnpm link --global` answered `ERR_PNPM_NO_GLOBAL_BIN_DIR`                              |
+| 2   | Put `redakloop-mcp` on `PATH`                 | Pass with `npm link`; `pnpm link --global` answered `ERR_PNPM_NO_GLOBAL_BIN_DIR`                              |
 | 3   | `init --host generic --scope journal --scope applications:read --scope jobs:write` | Pass: token issued with the three scopes, saved with mode 600; only its id printed       |
 | 4   | `claude plugin marketplace add akoita/draft-loop`, then `claude plugin install draftloop@draftloop` | Pass: plugin 0.1.0 installed for the user; `claude mcp list` shows the server connected |
 | 5   | Tools offered                                 | Pass: `add_job`, `get_application`, `get_run_status`, `list_applications`, `list_work`, `record_work`         |
@@ -58,7 +58,7 @@ flowchart LR
 | 2   | `pnpm link --global` needs `pnpm setup`, which edits the shell's startup file                             | The set-up steps now offer `npm link`                             |
 | 3   | With nvm, the link lands in one Node version's folder; a shell on another version misses it or `claude`   | The set-up steps now say so                                       |
 | 4   | The plugin calls 8080; a clone's stack on 8081 needs `DRAFT_LOOP_SERVER_URL` before Claude Code starts    | The set-up steps now say so                                       |
-| 5   | `draftloop-mcp --help` did not list `hook stop`                                                           | Fixed with this record                                            |
+| 5   | `redakloop-mcp --help` did not list `hook stop`                                                           | Fixed with this record                                            |
 
 ## Not covered
 

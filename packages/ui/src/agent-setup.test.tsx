@@ -24,7 +24,7 @@ describe("agent configuration", () => {
         "claude mcp add draftloop --scope user \\",
         "  --env DRAFT_LOOP_SERVER_URL=http://127.0.0.1:8080 \\",
         "  --env DRAFT_LOOP_SERVER_TOKEN=dlagent_fictional-token \\",
-        "  -- draftloop-mcp",
+        "  -- redakloop-mcp",
       ].join("\n"),
     );
   });
@@ -32,8 +32,8 @@ describe("agent configuration", () => {
   it("is a Codex table", () => {
     expect(agentConfiguration("codex", connection)).toBe(
       [
-        "[mcp_servers.draftloop]",
-        'command = "draftloop-mcp"',
+        "[mcp_servers.redakloop]",
+        'command = "redakloop-mcp"',
         'env = { DRAFT_LOOP_SERVER_URL = "http://127.0.0.1:8080", DRAFT_LOOP_SERVER_TOKEN = "dlagent_fictional-token" }',
       ].join("\n"),
     );
@@ -45,7 +45,7 @@ describe("agent configuration", () => {
     ).toEqual({
       mcpServers: {
         draftloop: {
-          command: "draftloop-mcp",
+          command: "redakloop-mcp",
           env: {
             DRAFT_LOOP_SERVER_URL: "http://127.0.0.1:8080",
             DRAFT_LOOP_SERVER_TOKEN: "dlagent_fictional-token",
@@ -63,7 +63,7 @@ describe("agent configuration", () => {
         "/plugin marketplace add akoita/draft-loop",
         "/plugin install draftloop@draftloop",
         "# In a terminal: paste the token, then press Enter and Ctrl-D",
-        "draftloop-mcp save-token",
+        "redakloop-mcp save-token",
       ].join("\n"),
     );
     expect(agentConfigurationHoldsToken("plugin")).toBe(false);
@@ -126,7 +126,7 @@ describe("AgentSetup", () => {
     expect(html).toContain("Create agent token");
     // The plugin comes first; its steps hold no token, so they can be copied at once.
     expect(html).toContain("/plugin marketplace add akoita/draft-loop");
-    expect(html).toContain("draftloop-mcp save-token");
+    expect(html).toContain("redakloop-mcp save-token");
     expect(html).not.toContain("&lt;agent-token&gt;");
     expect(html).toMatch(/<button type="button">Copy<\/button>/u);
     expect(html).toContain("No agent is connected yet");
@@ -211,7 +211,7 @@ describe("AgentSetup", () => {
     expect(html).toContain("is not available yet");
     expect(html).toContain("/guide/#connect-agent");
     expect(html).not.toContain("Create agent token");
-    expect(html).not.toContain("draftloop-mcp");
+    expect(html).not.toContain("redakloop-mcp");
     expect(html).toContain("<h3>Agents</h3>");
   });
 

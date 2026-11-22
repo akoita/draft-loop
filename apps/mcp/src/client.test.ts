@@ -16,7 +16,7 @@ describe("configFromEnvironment", () => {
   let agentTokenPath: string;
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), "draftloop-mcp-client-"));
+    root = await mkdtemp(join(tmpdir(), "redakloop-mcp-client-"));
     agentTokenPath = join(root, "agent-token");
   });
 

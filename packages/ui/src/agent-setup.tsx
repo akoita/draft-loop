@@ -183,7 +183,7 @@ export function AgentSetup({
         <summary>{t`Connect an agent`}</summary>
         <ol>
           <li>
-            {t`Install draftloop-mcp once on this computer.`}{" "}
+            {t`Install redakloop-mcp once on this computer.`}{" "}
             <GuideLink>{t`Setup guide`}</GuideLink>
           </li>
           <li>

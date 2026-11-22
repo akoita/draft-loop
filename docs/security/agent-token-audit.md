@@ -62,7 +62,7 @@ sees which ones still work.
 - **Sign-in mode:** agent tokens are refused; they exist in owner mode only.
 - **Refusal answers:** unknown, revoked and expired tokens all answer the same
   401, so the answer reveals nothing about the token. The log keeps the reason.
-- **Client handling:** `draftloop-mcp` turns a 401 into "run `init` again", so
+- **Client handling:** `redakloop-mcp` turns a 401 into "run `init` again", so
   an expired token tells the agent what to do.
 - **Owner token rotation** does not revoke agent tokens. This is by design: they
   are separate credentials, each revoked on its own.

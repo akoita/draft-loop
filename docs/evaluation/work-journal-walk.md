@@ -30,7 +30,7 @@ and no fictional note became career evidence. Approval is covered by
 
 ```mermaid
 flowchart LR
-    I[draftloop-mcp init] --> S[Accept notes: on]
+    I[redakloop-mcp init] --> S[Accept notes: on]
     S --> L1["/log-work: list_work,<br/>record_work once"]
     L1 --> L2["/log-work again:<br/>already recorded"]
     L2 --> R[Owner discards<br/>in the panel]
@@ -41,8 +41,8 @@ flowchart LR
 | #   | Step                                           | Result                                                                                                                                       |
 | --- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Stack healthy at `server-v0.14.0`              | Pass                                                                                                                                         |
-| 2   | Install, then link `draftloop-mcp`             | Install passed. The documented link command failed (defect 1)                                                                                |
-| 3   | `draftloop-mcp init --host claude-code --hook` | Pass: wrote `.mcp.json`, `CLAUDE.md`, the `log-work` skill and `.claude/settings.json`. A rerun changed nothing, and no file holds the token |
+| 2   | Install, then link `redakloop-mcp`             | Install passed. The documented link command failed (defect 1)                                                                                |
+| 3   | `redakloop-mcp init --host claude-code --hook` | Pass: wrote `.mcp.json`, `CLAUDE.md`, the `log-work` skill and `.claude/settings.json`. A rerun changed nothing, and no file holds the token |
 | 4   | Turn on "Accept notes from coding agents"      | Pass, through `PUT /v1/workspaces/owner/work-journal/intake`                                                                                 |
 | 5   | First `/log-work`                              | Pass in 25 s: the server connected, `list_work` then one `record_work`, status `pending`, screening `clear`                                  |
 | 6   | Second `/log-work`                             | Pass: skipped as already recorded; still one note                                                                                            |
@@ -54,12 +54,12 @@ flowchart LR
 
 | #   | Finding                                                                                                          | Follow-up                                                    |
 | --- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| 1   | `pnpm --dir apps/mcp link --global` links the root package, so `draftloop-mcp` is not on `PATH`                  | Fixed in this change: the guide links from inside `apps/mcp` |
+| 1   | `pnpm --dir apps/mcp link --global` links the root package, so `redakloop-mcp` is not on `PATH`                  | Fixed in this change: the guide links from inside `apps/mcp` |
 | 2   | `record_work`'s `review_url`, `/career-evidence#work-journal`, answers 404: the web screen is served at `/` only | [#2149](https://github.com/akoita/draft-loop/issues/2149)    |
 | 3   | The self-hosted guide's `draft-loop work-journal` command has no `bin` entry, so it does not run from a clone    | [#2150](https://github.com/akoita/draft-loop/issues/2150)    |
 | 4   | Nothing on the workspace home says a note waits; the panel is at the bottom of the Career evidence page          | [#2151](https://github.com/akoita/draft-loop/issues/2151)    |
 
-`draftloop-mcp --help` prints its usage but exits 2. That is harmless and not
+`redakloop-mcp --help` prints its usage but exits 2. That is harmless and not
 filed.
 
 ## Not covered

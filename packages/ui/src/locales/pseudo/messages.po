@@ -4546,7 +4546,7 @@ msgid "Inputs"
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Install draftloop-mcp once on this computer."
+msgid "Install redakloop-mcp once on this computer."
 msgstr ""
 
 #: packages/ui/src/agent-setup-model.ts
