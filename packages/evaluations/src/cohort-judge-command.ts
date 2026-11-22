@@ -1,9 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import process from "node:process";
 import { parseArgs } from "node:util";
-
-import { createDecisionModel } from "@draft-loop/providers/decisions";
 
 import {
   type CohortCaseExpectations,
@@ -11,10 +9,10 @@ import {
   cohortJudgeQuestions,
   cohortJudgeVerdicts,
   cohortJudgeVersion,
-  type JudgeProbabilities,
   judgedFailureModes,
   tuneJudgeThresholds,
 } from "./cohort-judge.js";
+import { judgeItems } from "./cohort-judge-run.js";
 import { type CaseSeeds, seededDrafts } from "./cohort-judge-seeds.js";
 import { agreementWithLabels, draftText, type ModeVerdict } from "./cohort-scorer.js";
 
@@ -44,9 +42,6 @@ const splits = values.splits.split(",");
 const maxUsd = Number(values["max-usd"]);
 if (!Number.isFinite(maxUsd) || maxUsd <= 0) throw new Error("--max-usd must be positive.");
 const model = values.model;
-// gpt-6-luna list prices; a pessimistic estimate counts the input once per question.
-const inputUsdPerMillion = 0.1;
-const outputUsdPerMillion = 0.5;
 
 interface LabelledRound {
   readonly id: string;
@@ -91,58 +86,14 @@ const rounds = labels.rounds.flatMap((round) => {
   ];
 });
 
-const cacheDirectory = join(resolve(directory), "judge");
-const cachePath = join(cacheDirectory, `${cohortJudgeVersion}-${model}.json`);
-const cache: Record<string, JudgeProbabilities> = existsSync(cachePath)
-  ? (JSON.parse(readFileSync(cachePath, "utf8")) as Record<string, JudgeProbabilities>)
-  : {};
-
-const pending = rounds.filter(({ round }) => cache[round.id] === undefined);
-const estimate = pending.reduce(
-  (sum, { input, questions }) =>
-    sum + ((JSON.stringify(input).length / 3) * questions.length * inputUsdPerMillion) / 1_000_000,
-  0,
-);
-if (estimate > maxUsd) {
-  throw new Error(`Estimated $${estimate.toFixed(4)} exceeds the $${maxUsd} cap.`);
-}
-
-let spentUsd = 0;
-if (pending.length > 0) {
-  const apiKey = process.env.OPENAI_API_KEY ?? "";
-  if (apiKey.trim() === "") throw new Error("Set OPENAI_API_KEY first.");
-  const decisionModel = createDecisionModel({ vendor: "openai-decisions", apiKey, model });
-  mkdirSync(cacheDirectory, { recursive: true });
-  for (const { round, input, questions } of pending) {
-    if (spentUsd >= maxUsd) {
-      process.stdout.write(`stop: $${spentUsd.toFixed(4)} reached the cap\n`);
-      break;
-    }
-    const result = await decisionModel.decide({
-      input,
-      questions,
-      // Fictional cohort cases only: no candidate material is sent.
-      dataPolicy: {
-        allowTransmission: true,
-        allowedVendors: ["openai-decisions"],
-        sensitiveData: false,
-        sensitiveDataAcknowledged: false,
-      },
-    });
-    spentUsd +=
-      ((result.usage?.inputTokens ?? 0) * inputUsdPerMillion +
-        (result.usage?.outputTokens ?? 0) * outputUsdPerMillion) /
-      1_000_000;
-    cache[round.id] = Object.fromEntries(
-      questions.map(({ name }) => {
-        const answer = result.answers[name];
-        return [name, answer?.kind === "predicate" ? answer.probability : null];
-      }),
-    );
-    writeFileSync(cachePath, `${JSON.stringify(cache, null, 2)}\n`);
-    process.stdout.write(`${round.id}: answered by ${result.model}, $${spentUsd.toFixed(4)}\n`);
-  }
-}
+const { answers: cache, spentUsd } = await judgeItems({
+  items: rounds.map(({ round, input, questions }) => ({ id: round.id, input, questions })),
+  cachePath: join(resolve(directory), "judge", `${cohortJudgeVersion}-${model}.json`),
+  model,
+  maxUsd,
+  apiKey: process.env.OPENAI_API_KEY ?? "",
+  log: (line) => process.stdout.write(`${line}\n`),
+});
 
 const judged = rounds.flatMap(({ round }) => {
   const probabilities = cache[round.id];

@@ -243,3 +243,26 @@ The judge is not yet a gate. A `cohort-judge-v2` would tell the model that
 misplaced work is a chronology problem, merge the claim statements, and ask
 must-cover as "stated anywhere" separately from "contradicted". Held-out is
 still unsent.
+
+## Live evaluation
+
+`pnpm eval:live` (#3289) runs fresh Economy rounds over cohort cases and
+scores every draft with the deterministic scorer and the model judge. It
+prints each mode's fail rate and exits 1 when a rate rose by more than one
+round's worth against the last result recorded for the same models, prompt
+versions and judge. It is manual and paid, and never runs in hosted CI.
+
+| Step | Command |
+| --- | --- |
+| Free dry run | `pnpm eval:live --out ~/draft-loop-eval/dry --fixture` |
+| Paid run, recorded | `pnpm eval:live --out ~/draft-loop-eval/<label> --label <label> --total-cap-usd 1 --record` |
+| Before run on earlier prompts | Prefix the paid run with `DRAFT_LOOP_EVAL_AUTHOR_PROMPT_VERSION=cli-author-v20 DRAFT_LOOP_EVAL_CRITIC_PROMPT_VERSION=cli-critic-v11` |
+
+- **Needs:** `ANTHROPIC_API_KEY` for the writer, `OPENAI_API_KEY` for the
+  critic and the judge, and a fresh `--out` outside the repository per run.
+- **Tracks:** every mode except `must-cover-omission`, which waits for the
+  v2 judge (#3293). Judge thresholds are the ones tuned on planted failures.
+- **Records:** `packages/evaluations/fixtures/eval-live/results.json` holds
+  only counts, rates, models, prompt versions, commit and cost.
+- **Pins:** only the current and the previous prompt version of each role
+  can be pinned; any other value stops the run.
