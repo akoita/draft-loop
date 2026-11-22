@@ -57,6 +57,7 @@
     "test:model-suggestions:live": "tsx packages/application/src/model-suggestion-preflight-command.ts",
     "test:profile-windows:live": "tsx packages/application/src/profile-window-live-check-command.ts",
     "test:profile-details:live": "tsx packages/application/src/profile-detail-live-check-command.ts",
+    "eval:live": "tsx packages/evaluations/src/eval-live-command.ts",
     "test:decision-shadow:live": "tsx packages/evaluations/src/decision-screening-shadow-command.ts",
     "test:gateway:live": "tsx apps/worker/src/gateway-live-check.ts",
     "test:support:live": "tsx apps/worker/src/support-golden-set-check.ts",

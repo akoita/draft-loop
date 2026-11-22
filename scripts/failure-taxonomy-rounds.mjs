@@ -37,6 +37,7 @@ const { values } = parseArgs({
     "per-run-cap-usd": { type: "string", default: "0.07" },
     "total-cap-usd": { type: "string", default: "3" },
     only: { type: "string" },
+    repetitions: { type: "string" },
   },
 });
 if (values.out === undefined) throw new Error("--out <private directory> is required.");
@@ -68,6 +69,9 @@ function collect(workspace) {
     const artifact = database
       .prepare("select payload_json from artifact_versions order by version desc limit 1")
       .get();
+    const snapshot = database.prepare("select payload_json from context_snapshots limit 1").get();
+    const models =
+      snapshot === undefined ? null : JSON.parse(snapshot.payload_json).modelConfiguration;
     const findings = database
       .prepare(
         "select code, category, severity, message, requirement_id from findings order by created_at",
@@ -75,6 +79,19 @@ function collect(workspace) {
       .all();
     return {
       run: runRow ?? null,
+      models:
+        models === null || models === undefined
+          ? null
+          : {
+              author: {
+                modelId: models.author?.modelId,
+                promptTemplateVersion: models.author?.promptTemplateVersion,
+              },
+              critic: {
+                modelId: models.critic?.modelId,
+                promptTemplateVersion: models.critic?.promptTemplateVersion,
+              },
+            },
       artifact: artifact === undefined ? null : JSON.parse(artifact.payload_json),
       findings,
     };
@@ -94,7 +111,10 @@ let spent = readdirSync(out)
   );
 const summary = [];
 rounds: for (const testCase of cases) {
-  const count = repetitions[testCase.cohort] ?? defaultRepetitions;
+  const count =
+    values.repetitions === undefined
+      ? (repetitions[testCase.cohort] ?? defaultRepetitions)
+      : Number(values.repetitions);
   for (let repetition = 1; repetition <= count; repetition += 1) {
     const id = `${testCase.name}-r${repetition}`;
     const roundDirectory = join(out, id);

@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "results": [
+    {
+      "recordedAt": "2026-11-22T05:49:11.329Z",
+      "label": "track-a-before",
+      "commit": "0e0a18fb",
+      "models": {
+        "author": {
+          "modelId": "claude-haiku-5-5",
+          "promptTemplateVersion": "cli-author-v20"
+        },
+        "critic": {
+          "modelId": "gpt-6-luna",
+          "promptTemplateVersion": "cli-critic-v11"
+        }
+      },
+      "judge": {
+        "version": "cohort-judge-v1",
+        "model": "gpt-6-luna"
+      },
+      "cases": ["case-nurse", "case-sales", "case-teacher", "case-electrician"],
+      "rounds": 8,
+      "costUsd": 0.3738,
+      "failRates": {
+        "no-draft": 0,
+        "placeholder-left": 1,
+        "altered-number": 0,
+        "role-omission": 0.25,
+        "chronology-drift": 0.5,
+        "attribution-inflation": 0,
+        "scope-stretch": 0,
+        "unsupported-claim": 0
+      }
+    },
+    {
+      "recordedAt": "2026-11-22T06:00:26.654Z",
+      "label": "track-a-after",
+      "commit": "0e0a18fb",
+      "models": {
+        "author": {
+          "modelId": "claude-haiku-5-5",
+          "promptTemplateVersion": "cli-author-v21"
+        },
+        "critic": {
+          "modelId": "gpt-6-luna",
+          "promptTemplateVersion": "cli-critic-v12"
+        }
+      },
+      "judge": {
+        "version": "cohort-judge-v1",
+        "model": "gpt-6-luna"
+      },
+      "cases": ["case-nurse", "case-sales", "case-teacher", "case-electrician"],
+      "rounds": 8,
+      "costUsd": 0.3888,
+      "failRates": {
+        "no-draft": 0,
+        "placeholder-left": 1,
+        "altered-number": 0,
+        "role-omission": 0.25,
+        "chronology-drift": 0.5,
+        "attribution-inflation": 0,
+        "scope-stretch": 0,
+        "unsupported-claim": 0.125
+      }
+    }
+  ]
+}
