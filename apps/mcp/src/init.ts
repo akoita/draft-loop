@@ -29,6 +29,12 @@ export interface InitOptions {
   readonly command: string;
   /** Claude Code only: the advisory Stop hook. */
   readonly hook: boolean;
+  /**
+   * Codex only (#3311): write the rule and the skills for every project, under the home folder
+   * (`~/.codex/AGENTS.md` and `~/.agents/skills`), instead of into the current project. The server
+   * entry stays the one the person copied from Settings, so no second server is added.
+   */
+  readonly user?: boolean;
 }
 
 export interface PlannedFile {
@@ -185,6 +191,16 @@ export function planInit(
   read: (path: string) => string | undefined,
 ): PlannedFile[] {
   const files: { path: string; content: string }[] = [];
+  if (options.user === true) {
+    const path = ".codex/AGENTS.md";
+    files.push({
+      path,
+      content: withBlock(read(path), snippetStart, snippetEnd, instructionsSnippet),
+    });
+    files.push({ path: ".agents/skills/log-work/SKILL.md", content: logWorkSkill });
+    files.push({ path: ".agents/skills/add-project/SKILL.md", content: addProjectSkill });
+    return withChanges(files, read);
+  }
   const instructions = options.host === "claude-code" ? "CLAUDE.md" : "AGENTS.md";
   if (options.host === "claude-code" || options.host === "generic") {
     files.push({ path: ".mcp.json", content: mergeMcpJson(read(".mcp.json"), options) });
@@ -204,6 +220,13 @@ export function planInit(
     const path = ".claude/settings.json";
     files.push({ path, content: mergeClaudeSettings(read(path), options) });
   }
+  return withChanges(files, read);
+}
+
+function withChanges(
+  files: readonly { path: string; content: string }[],
+  read: (path: string) => string | undefined,
+): PlannedFile[] {
   return files.map((file) => {
     const before = read(file.path);
     return {
@@ -220,12 +243,16 @@ export const initScopes = ["journal", "applications:read", "jobs:write", "drafts
 export const initDefaultScopes: readonly string[] = ["journal", "applications:read", "jobs:write"];
 
 export const initUsage = `Usage: redakloop-mcp init --host claude-code|codex|generic [--hook] [--command <command>] [--scope <scope>]... [--no-token] [--dry-run]
+       redakloop-mcp init --host codex --user [--dry-run]
 
 Sets up Redakloop in the current project. With the owner token in DRAFT_LOOP_SERVER_TOKEN, it
 also issues an agent token and saves it outside the project; --no-token skips that. The token
 gets ${initDefaultScopes.join(", ")} unless --scope names scopes from: ${initScopes.join(", ")}.
 It always keeps the work journal, which the skill and hook need; drafts:read, which lets the
-agent read exported CVs and saved drafts, is only given when named.`;
+agent read exported CVs and saved drafts, is only given when named.
+
+With --user, Codex gets the work journal rule in ~/.codex/AGENTS.md and the skills in
+~/.agents/skills for every project; it issues no token and leaves ~/.codex/config.toml alone.`;
 
 export interface InitArguments extends InitOptions {
   readonly dryRun: boolean;
@@ -247,6 +274,7 @@ export function parseInitArguments(argv: readonly string[]): InitArguments | { p
   let host: string | undefined;
   let command = "redakloop-mcp";
   let hook = false;
+  let user = false;
   let dryRun = false;
   let token = true;
   const scopes: string[] = [];
@@ -255,6 +283,7 @@ export function parseInitArguments(argv: readonly string[]): InitArguments | { p
     if (argument === "--host") host = argv[++index];
     else if (argument === "--command") command = argv[++index] ?? "";
     else if (argument === "--hook") hook = true;
+    else if (argument === "--user") user = true;
     else if (argument === "--dry-run") dryRun = true;
     else if (argument === "--no-token") token = false;
     else if (argument === "--scope") {
@@ -270,12 +299,17 @@ export function parseInitArguments(argv: readonly string[]): InitArguments | { p
   if (hook && host !== "claude-code") {
     return { problem: "--hook is for Claude Code only; other hosts get the skill and snippet." };
   }
+  if (user && host !== "codex") {
+    return { problem: "--user is for Codex only; Claude Code gets the same through the plugin." };
+  }
   return {
     host: host as InitHost,
     command,
     hook,
+    ...(user ? { user } : {}),
     dryRun,
-    token,
+    // The rule for every project needs no new token: the server entry already holds one.
+    token: user ? false : token,
     // Without --scope the token can do all the plugin offers (#2534); the skill and the hook init
     // writes use the journal, so a token it issues always keeps it.
     scopes:
@@ -355,6 +389,7 @@ export async function runInit(
     ".claude/skills/add-project/SKILL.md",
     ".agents/skills/add-project/SKILL.md",
     ".claude/settings.json",
+    ".codex/AGENTS.md",
   ];
   for (const path of paths) {
     existing.set(path, await readFile(join(root, path), "utf8").catch(() => undefined));

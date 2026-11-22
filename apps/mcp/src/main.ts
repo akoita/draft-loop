@@ -1,3 +1,4 @@
+import { homedir } from "node:os";
 import { text } from "node:stream/consumers";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
@@ -23,7 +24,8 @@ if (command === "init") {
     process.exitCode = 2;
   } else {
     const setup = { environment: process.env, tokenPath: defaultAgentTokenPath() };
-    for (const line of await runInit(process.cwd(), parsed, setup)) {
+    const root = parsed.user === true ? homedir() : process.cwd();
+    for (const line of await runInit(root, parsed, setup)) {
       process.stdout.write(`${line}\n`);
     }
   }
@@ -68,7 +70,7 @@ if (command === "init") {
   await server.connect(new StdioServerTransport());
 } else {
   process.stderr.write(
-    "Usage: redakloop-mcp            serve the MCP tools over stdio\n       redakloop-mcp serve-http  serve the same tools over HTTP for assistants that connect by address\n       redakloop-mcp init --host claude-code|codex|generic [--hook] [--scope <scope>]... [--no-token]\n       redakloop-mcp save-token  keep a token from Agents in Settings, read from standard input\n       redakloop-mcp hook stop   the Claude Code Stop hook: asks the agent to record merged work, never a failure\n       redakloop-mcp hook session-start  the SessionStart hook: points at merges missing from the journal\n",
+    "Usage: redakloop-mcp            serve the MCP tools over stdio\n       redakloop-mcp serve-http  serve the same tools over HTTP for assistants that connect by address\n       redakloop-mcp init --host claude-code|codex|generic [--hook] [--scope <scope>]... [--no-token]\n       redakloop-mcp init --host codex --user  the work journal rule for every Codex project\n       redakloop-mcp save-token  keep a token from Agents in Settings, read from standard input\n       redakloop-mcp hook stop   the Claude Code Stop hook: asks the agent to record merged work, never a failure\n       redakloop-mcp hook session-start  the SessionStart hook: points at merges missing from the journal\n",
   );
   process.exitCode = 2;
 }

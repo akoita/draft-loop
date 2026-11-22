@@ -156,6 +156,18 @@ in `DRAFT_LOOP_SERVER_TOKEN` as before, which still works.
 Codex reads a project's `.codex/config.toml` only in a trusted project; copy
 the marked block into `~/.codex/config.toml` otherwise.
 
+Codex has no hooks the plugin can ship, so its rule is how it learns when to
+record. To give it the rule in every project, not one, run:
+
+```text
+redakloop-mcp init --host codex --user
+```
+
+It merges the work journal rule into `~/.codex/AGENTS.md` and writes the
+`/log-work` and `/add-project` skills to `~/.agents/skills`. It issues no token
+and leaves `~/.codex/config.toml` alone, so the server entry you copied from
+Settings stays the only one. Running it again changes nothing.
+
 The server reads its token, in order, from `DRAFT_LOOP_SERVER_TOKEN_FILE`, the
 saved agent token, then `DRAFT_LOOP_SERVER_TOKEN`. The saved token is in
 `$XDG_CONFIG_HOME/draftloop/agent-token`, by default

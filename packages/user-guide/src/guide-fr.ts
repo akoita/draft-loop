@@ -207,7 +207,7 @@ export const frenchHelpGuide: HelpGuide = {
         "2. Dans les Réglages, ouvrez Agents, puis Connecter un agent. Cochez ce que l’agent peut faire et sélectionnez Créer un jeton d'agent. Le jeton ne s’affiche qu’une fois.",
         "3. Choisissez l’onglet de votre agent et copiez ce qu’il affiche. Il contient déjà l’adresse de ce serveur et, une fois créé, le jeton.",
         "Plugin Claude Code : lancez les deux lignes /plugin dans Claude Code, puis redakloop-mcp save-token dans un terminal, collez le jeton, appuyez sur Entrée puis Ctrl-D. Si l’onglet affiche une ligne export, ajoutez-la au profil de votre shell. Le plugin ajoute les outils Redakloop, les commandes /redakloop: et des hooks qui demandent à l’agent de noter le travail marquant après une fusion ou au début d’une session.",
-        "Claude Code : lancez la commande claude mcp add dans un terminal. Codex : ajoutez la table à ~/.codex/config.toml. Tout autre agent MCP : ajoutez l’entrée JSON au fichier de réglages MCP de l’agent.",
+        "Claude Code : lancez la commande claude mcp add dans un terminal. Codex : ajoutez la table à ~/.codex/config.toml, puis lancez redakloop-mcp init --host codex --user pour que Codex sache noter le travail marquant dans tous vos projets. Tout autre agent MCP : ajoutez l’entrée JSON au fichier de réglages MCP de l’agent.",
         "4. Redémarrez votre agent et demandez en langage courant, par exemple « liste mes candidatures Redakloop ». Dans Claude Code, /mcp liste les outils Redakloop. Pour les notes sur le travail livré, activez aussi Accepter les notes des agents dans Agents.",
       ],
       keywords: [
