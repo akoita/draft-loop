@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
-  <title id="title">How DraftLoop works</title>
+  <title id="title">How Redakloop works</title>
   <desc id="desc">Inside your workspace, on your own server or the hosted service in the EU, the job description and candidate sources pass a visible transmission approval, then a grounded author drafts and an independent critic evaluates in bounded rounds. Anthropic is the default author and OpenAI the default critic; each receives only approved context. The candidate reviews every claim and exports the approved CV.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -30,7 +30,7 @@
 
   <g font-family="Inter, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
     <!-- Header -->
-    <text x="40" y="54" font-size="14" font-weight="700" letter-spacing="2.5" fill="#f0b53c">HOW DRAFTLOOP WORKS</text>
+    <text x="40" y="54" font-size="14" font-weight="700" letter-spacing="2.5" fill="#f0b53c">HOW REDAKLOOP WORKS</text>
     <text x="40" y="88" font-size="26" font-weight="700" fill="#f2fbf8">An evidence-grounded author–critic loop, under your control</text>
 
     <!-- Model providers, outside the local boundary -->

@@ -9,7 +9,7 @@ const samplePortfolio: PortfolioManifest = {
     "Specialized in high-performance backends, local-first architectures, and resilient distributed databases.",
   projects: [
     {
-      name: "DraftLoop Engine",
+      name: "Redakloop Engine",
       role: "Lead Architect",
       dateRange: "2024 - Present",
       description:
@@ -50,7 +50,7 @@ describe("Structured Developer Portfolio Ingestion", () => {
     const project1 = chunks[1];
     expect(project1).toBeDefined();
     if (project1) {
-      expect(project1.text).toContain("Project: DraftLoop Engine");
+      expect(project1.text).toContain("Project: Redakloop Engine");
       expect(project1.text).toContain("Role: Lead Architect");
       expect(project1.text).toContain("Technologies: TypeScript, Node.js, SQLite, Electron");
       expect(project1.text).toContain("Optimized retrieval latency to under 15ms");

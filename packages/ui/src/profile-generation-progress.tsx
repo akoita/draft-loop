@@ -115,7 +115,7 @@ export function ProfileGenerationProgress({
           </span>
         )}
       </div>
-      <p className="profile-generation-note">{t`Large knowledge bases are processed in parts, so this can take several minutes. Keep DraftLoop open.`}</p>
+      <p className="profile-generation-note">{t`Large knowledge bases are processed in parts, so this can take several minutes. Keep Redakloop open.`}</p>
     </div>
   );
 }

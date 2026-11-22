@@ -431,7 +431,7 @@ describe("the operator page", () => {
     const html = render(<OperatorPage client={fakeClient({})} onClose={() => {}} />);
 
     expect(html).toContain("<h1");
-    expect(html).toContain("Back to DraftLoop");
+    expect(html).toContain("Back to Redakloop");
     expect(html).toContain(">Refresh</button>");
     expect(html).toContain("The lists update every 30 seconds.");
     expect(html).toContain('aria-pressed="true">Feedback</button>');

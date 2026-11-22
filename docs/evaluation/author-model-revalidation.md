@@ -690,7 +690,7 @@ Local investigation confirmed a stale source attribution contradicted by later
 candidate corrections. A private next-run copy corrected that stale bullet;
 historical sources, proposals and captures remained unchanged.
 
-The candidate then capped DraftLoop reasoning at medium and authorized the
+The candidate then capped Redakloop reasoning at medium and authorized the
 prepared revision. The new input retained complete normalized profile text,
 corrected attribution and explicit instructions to omit unsettled timing,
 preserve role contributions and meet 950 words. Both authentication probes

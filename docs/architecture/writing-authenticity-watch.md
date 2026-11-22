@@ -1,10 +1,10 @@
 # Writing authenticity watch
 
-For a maintainer who wants to know how DraftLoop keeps its cover letter help
+For a maintainer who wants to know how Redakloop keeps its cover letter help
 current, and how to act on what the watch reports.
 
 A letter written entirely by a model can be spotted by recruiters and
-AI-detection tools and can count against the application (#3276). DraftLoop
+AI-detection tools and can count against the application (#3276). Redakloop
 therefore helps candidates write their own letter: a writing kit, a check of
 their own text, and a warning before any full AI draft. The watch is a
 scheduled review of new research that could make that help better, tracked

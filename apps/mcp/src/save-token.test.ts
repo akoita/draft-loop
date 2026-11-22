@@ -20,7 +20,7 @@ describe("draftloop-mcp save-token", () => {
   it("refuses anything else, such as the owner token", async () => {
     const path = join(await mkdtemp(join(tmpdir(), "draftloop-save-")), "agent-token");
     await expect(saveTokenFromInput("owner-token-0123456789abcdef0123", path)).rejects.toThrow(
-      "not a DraftLoop agent token",
+      "not a Redakloop agent token",
     );
     await expect(readFile(path, "utf8")).rejects.toThrow();
   });

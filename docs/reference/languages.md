@@ -1,7 +1,7 @@
 # Languages
 
-This page is for a candidate or coach who wants DraftLoop in another language.
-DraftLoop has two separate language choices: the **screen language** of menus
+This page is for a candidate or coach who wants Redakloop in another language.
+Redakloop has two separate language choices: the **screen language** of menus
 and messages, and the **document language** of each CV, cover letter and set of
 interview questions.
 
@@ -38,7 +38,7 @@ Where the choice is kept:
 - **Desktop app:** on this computer, for every server you open. The app's own
   menus, dialogs and server picker follow it too.
 
-With nothing saved, DraftLoop uses the first browser or system language it has,
+With nothing saved, Redakloop uses the first browser or system language it has,
 and English otherwise.
 
 ## Choose the document language

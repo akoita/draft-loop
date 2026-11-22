@@ -7,7 +7,7 @@ import { WorkJournalApiError, type WorkspaceApiCall } from "./client.js";
 /**
  * The agent channel's run tools (#2600): price a CV run and start one on an application's
  * reviewed brief, within the agent token's monthly spend cap (`runs:start`, #2599). Approving
- * the draft, deciding findings and choosing the models stay with the candidate in DraftLoop.
+ * the draft, deciding findings and choosing the models stay with the candidate in Redakloop.
  */
 
 export interface AgentSpend {
@@ -69,7 +69,7 @@ const idPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/u;
 
 function pathId(id: string): string {
   if (!idPattern.test(id)) {
-    throw new WorkJournalApiError("invalid_id", "That is not a DraftLoop application id.", [
+    throw new WorkJournalApiError("invalid_id", "That is not a Redakloop application id.", [
       "application_id",
     ]);
   }
@@ -111,14 +111,14 @@ export function createRunsApi(call: WorkspaceApiCall): RunsApi {
       const application = (await call(`/applications/${pathId(applicationId)}`, {
         method: "GET",
       })) as ApplicationBody;
-      // The newest brief the candidate reviewed, as DraftLoop's own start button picks it.
+      // The newest brief the candidate reviewed, as Redakloop's own start button picks it.
       const brief = application.briefs
         .filter(({ status }) => status === "reviewed")
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
       if (brief === undefined) {
         throw new WorkJournalApiError(
           "brief_not_reviewed",
-          "The candidate has not reviewed this job's requirements yet; they review them in DraftLoop before a run can start.",
+          "The candidate has not reviewed this job's requirements yet; they review them in Redakloop before a run can start.",
         );
       }
       const run = (await call("/runs", {
@@ -136,7 +136,7 @@ export function createRunsApi(call: WorkspaceApiCall): RunsApi {
         brief_id: brief.briefId,
         brief_version: brief.latestVersion,
         next_step:
-          "The run drafts and critiques the CV on its own; follow it with get_run_status. The candidate approves the draft and decides findings in DraftLoop.",
+          "The run drafts and critiques the CV on its own; follow it with get_run_status. The candidate approves the draft and decides findings in Redakloop.",
       };
     },
   };
@@ -146,7 +146,7 @@ export const estimateRunDescription =
   "Price a CV run on the workspace's current settings before starting one: the most credits it can need, its round limit, and what remains of this agent token's monthly spend cap with what one run reserves against it. It starts nothing and costs nothing. Needs the runs:start scope.";
 
 export const startCvRunDescription =
-  "Start a CV run for one job application, on the job requirements the candidate reviewed, with the models they chose. It spends money: call estimate_run first, start a run only when the candidate asked for one, and never start the same run twice. It reserves the workspace's per-run cost limit against this token's monthly cap and is refused past it. The candidate approves the draft in DraftLoop. Needs the runs:start scope.";
+  "Start a CV run for one job application, on the job requirements the candidate reviewed, with the models they chose. It spends money: call estimate_run first, start a run only when the candidate asked for one, and never start the same run twice. It reserves the workspace's per-run cost limit against this token's monthly cap and is refused past it. The candidate approves the draft in Redakloop. Needs the runs:start scope.";
 
 type Failure = (error: unknown) => {
   isError: boolean;

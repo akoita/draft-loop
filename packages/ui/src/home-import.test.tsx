@@ -55,7 +55,7 @@ describe("Home: import from another workspace", () => {
   });
 
   it.each([
-    "The selected folder is not a DraftLoop workspace.",
+    "The selected folder is not a Redakloop workspace.",
     'This workspace was already imported as the application "First Job".',
   ])("announces the refusal %j as an alert", (message) => {
     const html = render({ importNotice: { kind: "error", message } });

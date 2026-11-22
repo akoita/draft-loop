@@ -74,7 +74,7 @@ Before you build or rework a component, overlay, layout, animation, form,
 media control, or a performance or accessibility fix, read
 [`building-draftloop-web-ui`](../../.agents/skills/building-draftloop-web-ui/SKILL.md).
 It looks the pattern up in [Modern Web Guidance](https://github.com/GoogleChrome/modern-web-guidance)
-and lists where DraftLoop's rules take precedence. Prefer a native element or
+and lists where Redakloop's rules take precedence. Prefer a native element or
 API over a hand-built one or a new dependency, with a fallback for browsers
 that lack it.
 

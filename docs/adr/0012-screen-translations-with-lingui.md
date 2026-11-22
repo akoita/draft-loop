@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-06
-- Decision owners: DraftLoop maintainers
+- Decision owners: Redakloop maintainers
 
 ## Context
 

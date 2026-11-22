@@ -23,7 +23,7 @@ export interface AgentApplication {
   readonly latest_run: { readonly run_id: string; readonly state: string } | null;
   readonly run_count: number;
   readonly export_count: number;
-  /** Where the application stands and what the candidate does next, as DraftLoop's screens say. */
+  /** Where the application stands and what the candidate does next, as Redakloop's screens say. */
   readonly next_step: { readonly stage: string; readonly action: string };
 }
 
@@ -117,38 +117,38 @@ function applicationOf(body: ApplicationBody): AgentApplication {
 export function applicationNextAction(stage: string): string {
   switch (stage) {
     case "start-review":
-      return "No run yet: the candidate starts the review in DraftLoop to get a first draft.";
+      return "No run yet: the candidate starts the review in Redakloop to get a first draft.";
     case "drafting":
       return "The first draft is being written; nothing waits for the candidate yet.";
     case "reviewing":
-      return "A draft waits for the candidate: they read it, decide each finding and approve it in DraftLoop.";
+      return "A draft waits for the candidate: they read it, decide each finding and approve it in Redakloop.";
     case "review-ended":
-      return "The last review stopped before an approval: the candidate starts a new review from Run details in DraftLoop.";
+      return "The last review stopped before an approval: the candidate starts a new review from Run details in Redakloop.";
     case "export":
-      return "The CV is approved: the candidate picks a template and exports it in DraftLoop.";
+      return "The CV is approved: the candidate picks a template and exports it in Redakloop.";
     case "done":
       return "The CV is exported; a new application is the next job.";
     default:
-      return "Open the application in DraftLoop to see what comes next.";
+      return "Open the application in Redakloop to see what comes next.";
   }
 }
 
-/** What the candidate does next in DraftLoop, from a run's state; the agent never decides it. */
+/** What the candidate does next in Redakloop, from a run's state; the agent never decides it. */
 export function runNextStep(run: Pick<RunBody, "state" | "approval" | "hasDraft">): string {
   if (run.state === "exported") return "The candidate approved and exported this draft.";
   if (run.approval === "approved" || run.state === "approved") {
-    return "The candidate approved this draft; they can export it in DraftLoop.";
+    return "The candidate approved this draft; they can export it in Redakloop.";
   }
   if (run.state === "stopped" || run.state === "budget-exhausted") {
     return run.hasDraft
-      ? "This run ended; its last draft can still be reviewed in DraftLoop."
-      : "This run ended without a draft; the candidate can start another in DraftLoop.";
+      ? "This run ended; its last draft can still be reviewed in Redakloop."
+      : "This run ended without a draft; the candidate can start another in Redakloop.";
   }
   if (run.state === "awaiting-approval") {
-    return "A draft waits for the candidate's review in DraftLoop; approval and finding decisions are theirs.";
+    return "A draft waits for the candidate's review in Redakloop; approval and finding decisions are theirs.";
   }
   if (run.state === "paused")
-    return "The candidate paused this run; they can resume it in DraftLoop.";
+    return "The candidate paused this run; they can resume it in Redakloop.";
   return "The run is still working; check again in a minute.";
 }
 
@@ -171,7 +171,7 @@ const idPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/u;
 
 function pathId(id: string, what: string): string {
   if (!idPattern.test(id)) {
-    throw new WorkJournalApiError("invalid_id", `That is not a DraftLoop ${what} id.`, [what]);
+    throw new WorkJournalApiError("invalid_id", `That is not a Redakloop ${what} id.`, [what]);
   }
   return encodeURIComponent(id);
 }
@@ -222,16 +222,16 @@ export function createApplicationsApi(call: WorkspaceApiCall): ApplicationsApi {
 }
 
 export const listApplicationsDescription =
-  "List the candidate's job applications in DraftLoop: name, status, folder, whether it is archived, and its latest run's state. It never returns drafts, career evidence or job text. Needs an agent token with the applications:read scope.";
+  "List the candidate's job applications in Redakloop: name, status, folder, whether it is archived, and its latest run's state. It never returns drafts, career evidence or job text. Needs an agent token with the applications:read scope.";
 
 export const getApplicationDescription =
   "Read one job application by id: name, status, folder, chosen run and latest run. Needs the applications:read scope.";
 
 export const getJobTextDescription =
-  "Read the job description one job application keeps, as the candidate gave it: the pasted text, or the approved job page's address with the copy of the page saved when DraftLoop read it (saved_at; text is null when no copy was saved). The copy stays readable after the page expires. Use it to compare the job with the candidate's request; never rewrite it in DraftLoop. Needs the applications:read scope.";
+  "Read the job description one job application keeps, as the candidate gave it: the pasted text, or the approved job page's address with the copy of the page saved when Redakloop read it (saved_at; text is null when no copy was saved). The copy stays readable after the page expires. Use it to compare the job with the candidate's request; never rewrite it in Redakloop. Needs the applications:read scope.";
 
-export const addJobDescription = `Add a job application to DraftLoop from a job description the candidate gave you, pasted as text. DraftLoop keeps the text and screens it like an upload; the candidate then extracts the requirements, reviews them and starts the CV run in DraftLoop.
-Pass the job text exactly as the candidate gave it; never invent or summarise requirements. A job page address is refused: fetching a page needs the candidate's approval in DraftLoop. Needs the jobs:write scope.`;
+export const addJobDescription = `Add a job application to Redakloop from a job description the candidate gave you, pasted as text. Redakloop keeps the text and screens it like an upload; the candidate then extracts the requirements, reviews them and starts the CV run in Redakloop.
+Pass the job text exactly as the candidate gave it; never invent or summarise requirements. A job page address is refused: fetching a page needs the candidate's approval in Redakloop. Needs the jobs:write scope.`;
 
 export const getRunStatusDescription =
   "Read where a CV run stands: state, round, current step, approval, finding count, whether a draft exists, and the candidate's next step. It never returns the draft. Needs the applications:read scope.";

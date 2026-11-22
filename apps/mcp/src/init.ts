@@ -44,19 +44,19 @@ export const snippetEnd = "<!-- /draftloop:work-journal -->";
 /** The lines the project's agent instructions get. */
 export const instructionsSnippet = [
   snippetStart,
-  "## DraftLoop work journal",
+  "## Redakloop work journal",
   "",
   "- After a merge or release a hiring manager would care about, call `record_work` once per user-visible feature; skip typo fixes, dependency bumps and work in progress.",
   "- Write the summary in plain words: the problem, what shipped, and the outcome or scale; library names go in `technologies`.",
   "- Call `list_work` first so the same work is not recorded twice, and use `amends` to correct a pending note.",
   "- Never include keys, tokens, passwords, customer or personal data, or private document text; set `visibility` to `private` for a private project.",
-  "- State the candidate's role as it was; the candidate reviews every note in DraftLoop.",
+  "- State the candidate's role as it was; the candidate reviews every note in Redakloop.",
   snippetEnd,
 ].join("\n");
 
 export const logWorkSkill = `---
 name: log-work
-description: Record notable work merged in a date range into the DraftLoop work journal, for the candidate's review.
+description: Record notable work merged in a date range into the Redakloop work journal, for the candidate's review.
 ---
 
 # Log notable work
@@ -73,7 +73,7 @@ Use this when the candidate asks to log work, optionally with a date range such 
 3. Keep only notable work, by the rule in \`draftloop://work-journal/guide\`: shipped features, integrations, migrations, adopted technologies and measured improvements. Drop typo fixes, formatting, dependency bumps and refactors without an outcome.
 4. Call \`list_work\` for the project, and skip work that is already recorded.
 5. Call \`record_work\` once per remaining piece, with the commit or pull request links as https links. Write the summary as career evidence, in plain words: the problem, what shipped, and the outcome or scale. Library names go in \`technologies\`, not the summary. Ask the candidate when their role or the project's visibility is unclear.
-6. Say what you recorded and what you skipped. The notes wait for the candidate's review in DraftLoop.
+6. Say what you recorded and what you skipped. The notes wait for the candidate's review in Redakloop.
 
 Never include keys, tokens, passwords, customer or personal data, or private document text.
 `;
@@ -217,7 +217,7 @@ export const initDefaultScopes: readonly string[] = ["journal", "applications:re
 
 export const initUsage = `Usage: draftloop-mcp init --host claude-code|codex|generic [--hook] [--command <command>] [--scope <scope>]... [--no-token] [--dry-run]
 
-Sets up DraftLoop in the current project. With the owner token in DRAFT_LOOP_SERVER_TOKEN, it
+Sets up Redakloop in the current project. With the owner token in DRAFT_LOOP_SERVER_TOKEN, it
 also issues an agent token and saves it outside the project; --no-token skips that. The token
 gets ${initDefaultScopes.join(", ")} unless --scope names scopes from: ${initScopes.join(", ")}.
 It always keeps the work journal, which the skill and hook need; drafts:read, which lets the

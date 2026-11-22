@@ -1,6 +1,6 @@
 # Security policy
 
-DraftLoop handles sensitive career history and may process confidential
+Redakloop handles sensitive career history and may process confidential
 employer information. The default design is local-first: source files,
 evidence links, drafts, and run history should remain local unless the user
 explicitly enables a provider and accepts its data policy.

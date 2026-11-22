@@ -524,7 +524,7 @@ function stateLabel(value: ReviewScreenState["state"]): string {
   return value.replaceAll("-", " ");
 }
 
-/** DraftLoop mark: the author–critic loop, drawn as a returning spiral. */
+/** Redakloop mark: the author–critic loop, drawn as a returning spiral. */
 export function BrandMark({ className = "rail-mark" }: { readonly className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
@@ -2739,7 +2739,7 @@ export function ReviewWorkspace({
                 <>
                   <p className="eyebrow">{t`Before the first run`}</p>
                   <h2 id="onboarding-title">{t`Bring your career evidence into the loop`}</h2>
-                  <p className="onboarding-copy">{t`Add the career evidence DraftLoop is allowed to use. Your files stay in this workspace. DraftLoop will not invent missing experience or start an agent run until the target job and career evidence are present.`}</p>
+                  <p className="onboarding-copy">{t`Add the career evidence Redakloop is allowed to use. Your files stay in this workspace. Redakloop will not invent missing experience or start an agent run until the target job and career evidence are present.`}</p>
                   <div className="setup-grid">
                     <article
                       id={startJobCardId}
@@ -3377,7 +3377,7 @@ export function ReviewWorkspace({
                           </span>
                         )}
                         {claim.evidence.length === 0 ? (
-                          <p className="warning-copy">{t`This claim is not linked to the candidate materials supplied to DraftLoop.`}</p>
+                          <p className="warning-copy">{t`This claim is not linked to the candidate materials supplied to Redakloop.`}</p>
                         ) : (
                           claim.evidence.map((reference) => (
                             <div

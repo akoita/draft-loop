@@ -180,7 +180,7 @@ export function Records({
     return (
       <>
         {topBar(null)}
-        <p role="status">{t`Opening DraftLoop…`}</p>
+        <p role="status">{t`Opening Redakloop…`}</p>
       </>
     );
   if (state.kind === "failed")

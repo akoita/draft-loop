@@ -46,7 +46,7 @@ if (command === "init") {
   const listening = await serveRemoteMcp(options);
   const address = listening.address();
   const port = typeof address === "object" && address !== null ? address.port : options.port;
-  process.stderr.write(`DraftLoop MCP tools on http://${options.host}:${port}${remoteMcpPath}\n`);
+  process.stderr.write(`Redakloop MCP tools on http://${options.host}:${port}${remoteMcpPath}\n`);
 } else if (command === undefined) {
   // Stdout carries the protocol; nothing else may write to it. The operator's feedback tools are
   // offered when the token at start is not an agent token: the owner token is the operator's.

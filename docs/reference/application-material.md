@@ -1,6 +1,6 @@
 # Application material
 
-This guide is for the developer or reviewer who changes how DraftLoop drafts a
+This guide is for the developer or reviewer who changes how Redakloop drafts a
 cover letter or a set of interview questions for one application (#2215). It
 states what the drafter sends to the model and which drafts it refuses. The
 code is `packages/application/src/application-material.ts` and its model

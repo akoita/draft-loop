@@ -4,7 +4,7 @@ status: partial
 
 # Feedback
 
-A signed-in member sends a short note about DraftLoop to the operator: a bug,
+A signed-in member sends a short note about Redakloop to the operator: a bug,
 an idea or anything else, from **Send feedback** in the web header's Help menu, through the API or through their agent's `send_feedback` tool. Each
 note carries a bounded technical context, so the operator can tell what broke
 without asking. The operator reads every organisation's notes, newest first,
@@ -171,7 +171,7 @@ Postgres store, its triage policy and its erasure are tested in
   sweep at each start. Notes stay until their organisation is erased.
 - The operator triages notes on the
   [operator screen](organisations-and-consent.md#operator-screen), through
-  the API or with the MCP tools. They cannot answer them from DraftLoop yet
+  the API or with the MCP tools. They cannot answer them from Redakloop yet
   (#2878).
 - Only the operator's triage updates a note. The database refuses any other
   update.

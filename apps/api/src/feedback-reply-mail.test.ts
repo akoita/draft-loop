@@ -23,7 +23,7 @@ describe("the feedback reply email (#2878)", () => {
       serviceUrl: "https://app.example.test",
     };
     const english = feedbackReplyMessage({ ...input, locale: "en" });
-    expect(english.subject).toBe("About your DraftLoop note FB-1A2B3C4D");
+    expect(english.subject).toBe("About your Redakloop note FB-1A2B3C4D");
     expect(english.text).toContain("Fixed.");
     expect(english.text).toContain("https://app.example.test");
     expect(feedbackReplyMessage({ ...input, locale: "fr" }).subject).toContain("avis");

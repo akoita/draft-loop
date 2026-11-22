@@ -21,10 +21,10 @@ describe("the invite email", () => {
     const french = inviteMessage({ code, serviceUrl, locale: "fr" });
     const both = inviteMessage({ code, serviceUrl });
 
-    expect(english.subject).toBe("Your DraftLoop beta invite");
+    expect(english.subject).toBe("Your Redakloop beta invite");
     expect(english.text).toContain(inviteLink(serviceUrl, code));
     expect(english.text).toContain(`enter this code: ${code}`);
-    expect(french.subject).toBe("Votre invitation à la beta de DraftLoop");
+    expect(french.subject).toBe("Votre invitation à la beta de Redakloop");
     expect(french.text).toContain(`saisissez ce code : ${code}`);
     expect(both.text.indexOf("Bonjour")).toBeLessThan(both.text.indexOf("Hello"));
   });
@@ -52,7 +52,7 @@ describe("the invite mailer", () => {
     await expect(mailer({ email: "ada@example.test", code, locale: "en" })).resolves.toBe(true);
 
     expect(send).toHaveBeenCalledWith(
-      expect.objectContaining({ to: "ada@example.test", subject: "Your DraftLoop beta invite" }),
+      expect.objectContaining({ to: "ada@example.test", subject: "Your Redakloop beta invite" }),
     );
     expect(JSON.stringify(lines)).not.toContain("ada@");
     expect(JSON.stringify(lines)).not.toContain(code);
@@ -85,7 +85,7 @@ describe("the invite email with a prepared sign-in (#3082)", () => {
   it("tells someone who has a password to sign in with it", () => {
     const en = inviteMessage({ code: "ABC", serviceUrl, locale: "en", signIn: "exists" });
 
-    expect(en.text).toContain("sign in with your existing DraftLoop password");
+    expect(en.text).toContain("sign in with your existing Redakloop password");
     expect(en.text).not.toContain("Forgot password");
   });
 

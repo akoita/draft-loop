@@ -79,7 +79,7 @@ export function registerAccountDeletionRoutes(
           .send(
             apiError(
               "operator_account",
-              "This account runs DraftLoop as an operator; remove its operator role before deleting it.",
+              "This account runs Redakloop as an operator; remove its operator role before deleting it.",
             ),
           );
       }

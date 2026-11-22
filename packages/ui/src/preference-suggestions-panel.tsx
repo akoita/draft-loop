@@ -3,7 +3,7 @@ import { useId, useState } from "react";
 
 /**
  * Writing preferences suggested from the person's own review choices (#2265), beside Edit
- * policy. DraftLoop suggests; the person decides. A host that serves the suggestions provides
+ * policy. Redakloop suggests; the person decides. A host that serves the suggestions provides
  * this as a host panel, and it shows nothing while there is nothing to decide.
  */
 
@@ -52,7 +52,7 @@ export function PreferenceSuggestionsPanel({
   return (
     <section className="panel host-panel preference-suggestions" aria-labelledby={`${id}-heading`}>
       <h3 id={`${id}-heading`}>{t`Suggested preferences`}</h3>
-      <p className="muted">{t`DraftLoop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs.`}</p>
+      <p className="muted">{t`Redakloop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs.`}</p>
       {problem === undefined ? null : (
         <p className="problem" role="alert">
           {problem}

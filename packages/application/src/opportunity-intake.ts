@@ -40,7 +40,7 @@ import {
 export const minimumJobPageTextCharacters = 400;
 
 export const opportunityJobPageUnreadableMessage =
-  "DraftLoop could not read enough job text from this page. It may show the job only with JavaScript. Paste the job text instead.";
+  "Redakloop could not read enough job text from this page. It may show the job only with JavaScript. Paste the job text instead.";
 
 /** A job page yielded too little text to extract from; nothing was sent and no brief was saved. */
 export class OpportunityJobPageUnreadableError extends CliUserError {
@@ -51,7 +51,7 @@ export class OpportunityJobPageUnreadableError extends CliUserError {
 }
 
 export const opportunityJobTextGarbledMessage =
-  "The job text looks garbled, so DraftLoop did not extract requirements from it. Import the job again from the original PDF, or paste the job text from the careers page.";
+  "The job text looks garbled, so Redakloop did not extract requirements from it. Import the job again from the original PDF, or paste the job text from the careers page.";
 
 /** A job source's text looks garbled; nothing was sent and no brief was saved. */
 export class OpportunityJobTextGarbledError extends CliUserError {

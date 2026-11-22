@@ -231,4 +231,4 @@ The key validation question is not “can agents generate a CV?” They clearly 
 
 **A quality-control loop for important documents.** Start with CVs: give the application your target role and your evidence, then let two independent AI reviewers work until the document is ready for your approval.
 
-Possible working names: **CrossDraft**, **Concord**, **DraftLoop**, or **Two-Pass**.
+Possible working names: **CrossDraft**, **Concord**, **Redakloop**, or **Two-Pass**.

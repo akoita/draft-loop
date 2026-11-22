@@ -7,7 +7,7 @@ import type { WorkspaceApiCall } from "./client.js";
 
 /**
  * The agent channel's project card tool (#2895): an agent that read a repository on the
- * candidate's machine files a short, cited card about it. The card waits in DraftLoop's Work
+ * candidate's machine files a short, cited card about it. The card waits in Redakloop's Work
  * journal until the candidate approves it. Needs the token's `evidence:write` scope.
  */
 
@@ -39,7 +39,7 @@ export function createProjectsApi(call: WorkspaceApiCall): ProjectsApi {
   };
 }
 
-export const addProjectDescription = `File a project card about one code repository the candidate wrote or led, for their career evidence. The card waits in DraftLoop's Work journal until the candidate approves, edits or discards it. Needs the evidence:write scope.
+export const addProjectDescription = `File a project card about one code repository the candidate wrote or led, for their career evidence. The card waits in Redakloop's Work journal until the candidate approves, edits or discards it. Needs the evidence:write scope.
 
 Show the card to the candidate and get their yes before you call this tool.
 Send card fields only. Never send source code, file contents, diffs, keys, tokens, passwords or customer data.
@@ -50,7 +50,7 @@ role is sole-author, lead or contributor, as the candidate confirms. Each highli
 For a private repository set visibility private and send no repository_url, live_url or release_url.
 Use dry_run to check a card without storing it. Read draftloop://projects/guide for the full steps.`;
 
-export const projectGuideText = `# DraftLoop project cards: how to file one
+export const projectGuideText = `# Redakloop project cards: how to file one
 
 A project card is a short, cited summary of one repository. It is evidence for the candidate to review, never code and never a CV claim on its own.
 
@@ -73,7 +73,7 @@ A project card is a short, cited summary of one repository. It is evidence for t
 /** The plugin's and \`init\`'s \`/add-project\` skill: the guide as steps the agent follows. */
 export const addProjectSkill = `---
 name: add-project
-description: Turn the current code repository into a DraftLoop project card the candidate reviews before it is sent.
+description: Turn the current code repository into a Redakloop project card the candidate reviews before it is sent.
 ---
 
 # Add this repository as a project card
@@ -86,7 +86,7 @@ Use this when the candidate asks to add the current repository to their career e
 4. Draft the card: a one-line purpose, a summary a hiring manager reads (the problem, what it does, its scale), the stack, scale signals, and up to eight highlights, each citing the file or pull request it came from.
 5. Show the whole card to the candidate and apply their changes. Send nothing until they say yes.
 6. Call \`add_project\` with the card. Never include code, file contents, keys, or any email address, and send no links for a private repository.
-7. Say that the card waits for the candidate's approval in DraftLoop's Work journal.
+7. Say that the card waits for the candidate's approval in Redakloop's Work journal.
 `;
 
 /** The same card sent twice in one session replays the first answer instead of filing again. */

@@ -63,7 +63,7 @@ flowchart LR
 
 ## Stage 1: Discovery and qualification
 
-**Goal:** turn "a professional, hosted DraftLoop" into qualified use cases
+**Goal:** turn "a professional, hosted Redakloop" into qualified use cases
 with structural ROI per plan (ADR 0011, D13).
 
 - **Decisions:**

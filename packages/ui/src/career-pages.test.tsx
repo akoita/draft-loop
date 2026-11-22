@@ -199,7 +199,7 @@ describe("Career profile page", () => {
   it("starts with the tabs, Career profile current, then the one-sentence intro", () => {
     const html = profilePage();
     expect(html).toContain(`<p class="career-page-intro">${careerProfileIntro()}</p>`);
-    expect(careerProfileIntro()).toMatch(/^Your career profile is the facts DraftLoop extracts/u);
+    expect(careerProfileIntro()).toMatch(/^Your career profile is the facts Redakloop extracts/u);
     expect(html).toMatch(
       /<span class="career-tab career-tab-current" aria-current="page"><span[^>]*>2<\/span>Career profile<\/span>/u,
     );
@@ -257,8 +257,8 @@ describe("career flow", () => {
   it("keeps the Home card subtitles consistent with the intros", () => {
     expect(careerEvidenceCardSubtitle()).toContain("CVs, career-fact files, exports and links");
     expect(careerEvidenceIntro()).toContain("CVs, career-fact files, exports and links");
-    expect(careerProfileCardSubtitle()).toContain("facts DraftLoop extracts from your documents");
-    expect(careerProfileIntro()).toContain("facts DraftLoop extracts from your documents");
+    expect(careerProfileCardSubtitle()).toContain("facts Redakloop extracts from your documents");
+    expect(careerProfileIntro()).toContain("facts Redakloop extracts from your documents");
   });
 });
 
@@ -367,7 +367,7 @@ describe("career pages in another screen language", () => {
   it("draws every visible text from the message catalogs", () => {
     activateScreenLocale("pseudo");
     for (const html of [evidencePage(), profilePage()]) {
-      expect(untranslatedRuns(html, ["DraftLoop", "Job search 2026"])).toEqual([]);
+      expect(untranslatedRuns(html, ["Redakloop", "Job search 2026"])).toEqual([]);
     }
   });
 });

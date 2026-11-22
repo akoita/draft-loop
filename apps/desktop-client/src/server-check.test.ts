@@ -54,7 +54,7 @@ describe("checkServer", () => {
       await checkServer(origin, fakeFetch({ [`${origin}/v1/health`]: { status: 200 } })),
     ).toMatchObject({
       reachable: false,
-      reason: "This does not look like a DraftLoop server.",
+      reason: "This does not look like a Redakloop server.",
     });
     const odd = fakeFetch({
       [`${origin}/v1/health`]: { status: 200 },

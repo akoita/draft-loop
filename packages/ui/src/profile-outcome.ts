@@ -9,9 +9,9 @@ import {
 const absoluteUrlPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/iu;
 const genericProfileOperationFailure = () => t`The profile operation could not be completed.`;
 const historicalMalformedStreamFailure = () =>
-  t`DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved.`;
+  t`DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update Redakloop to the latest supported version; no facts were saved.`;
 const safeMalformedStreamFailure = () =>
-  t`DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved.`;
+  t`DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update Redakloop; no facts were saved.`;
 
 export type CanonicalCandidateProfileOutcomeKind =
   | "unloaded"

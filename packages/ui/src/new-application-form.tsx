@@ -98,7 +98,7 @@ export function NewApplicationFormView({
             className="modal-copy"
             id="new-application-copy"
           >{t`Name the role and give its job posting. The application then opens on its three steps, starting with extracting and reviewing the requirements.`}</p>
-          <p className="subtle">{t`DraftLoop is tuned and tested on software and tech roles so far. It works for other jobs too, so check those drafts a little more closely. Support for more professions is on our roadmap.`}</p>
+          <p className="subtle">{t`Redakloop is tuned and tested on software and tech roles so far. It works for other jobs too, so check those drafts a little more closely. Support for more professions is on our roadmap.`}</p>
           <label className="new-application-field">
             <span>{t`Name`}</span>
             <input
@@ -193,7 +193,7 @@ export function NewApplicationFormView({
                       onDraftChange({ ...draft, urlApproved: event.target.checked })
                     }
                   />
-                  <span>{t`I approve DraftLoop fetching this page. It is read only when you extract requirements on the application's first step, never before.`}</span>
+                  <span>{t`I approve Redakloop fetching this page. It is read only when you extract requirements on the application's first step, never before.`}</span>
                 </label>
               </div>
             )}

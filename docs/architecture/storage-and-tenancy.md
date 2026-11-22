@@ -1,6 +1,6 @@
 # Storage and tenancy architecture
 
-This page is for a developer who changes how DraftLoop stores workspaces,
+This page is for a developer who changes how Redakloop stores workspaces,
 candidate knowledge, exports and run history, or how the hosted service keeps
 tenants apart. Application code names storage ports only. A local driver and a
 hosted driver implement them (ADR 0011, D3 and D15).

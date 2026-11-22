@@ -6,9 +6,9 @@ import { guideMarkdown } from "./markdown.js";
 describe("the user guide as Markdown (#2881)", () => {
   it("puts the title, the intro and every section heading in reading order", () => {
     const guide = helpGuide("en");
-    const text = guideMarkdown(guide, "DraftLoop user guide");
+    const text = guideMarkdown(guide, "Redakloop user guide");
 
-    expect(text.startsWith("# DraftLoop user guide\n\n")).toBe(true);
+    expect(text.startsWith("# Redakloop user guide\n\n")).toBe(true);
     const positions = guide.sections.map((section) => text.indexOf(`## ${section.title}`));
     expect(positions.every((position) => position > 0)).toBe(true);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);

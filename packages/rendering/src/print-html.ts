@@ -51,7 +51,7 @@ export interface PrintHtmlOptions {
   readonly templateId?: string | undefined;
 }
 
-const fontFamily = "DraftLoop Carlito";
+const fontFamily = "Redakloop Carlito";
 /** The navy of the person's own hand-made CVs, for the name and the section headings. */
 const inkColor = "#1f3a5f";
 

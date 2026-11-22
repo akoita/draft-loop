@@ -62,7 +62,7 @@ describe("the Brevo sender", () => {
     expect(url).toBe(brevoEndpoint);
     expect(init?.headers).toMatchObject({ "api-key": "key-123" });
     expect(JSON.parse(String(init?.body))).toEqual({
-      sender: { email: "beta@mail.example.test", name: "DraftLoop" },
+      sender: { email: "beta@mail.example.test", name: "Redakloop" },
       to: [{ email: "owner@example.test" }],
       subject: "Hi",
       textContent: "Body",

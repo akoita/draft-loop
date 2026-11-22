@@ -44,10 +44,10 @@ export function BetaSignUpView({
     <>
       <PreferencesBar />
       <main className="sign-in">
-        <h1>{t`Create your DraftLoop account`}</h1>
+        <h1>{t`Create your Redakloop account`}</h1>
         <p>
           {askCode
-            ? t`You are signed in, but this sign-in has no DraftLoop account yet. Enter the invite code you received by email to create it.`
+            ? t`You are signed in, but this sign-in has no Redakloop account yet. Enter the invite code you received by email to create it.`
             : t`Your invite is ready. Accept the terms to create your account.`}
         </p>
         {notice === undefined ? null : (
@@ -77,8 +77,8 @@ export function BetaSignUpView({
               />
             </>
           ) : null}
-          <p>{t`This is a free test version: it can stop at any time, and we will make an effort to let you download your data first. To write and review your drafts, DraftLoop sends the parts of your material you select to Anthropic and OpenAI, which process them outside the European Union.`}</p>
-          <p>{t`DraftLoop is tuned and tested on software and tech roles so far. It works for other jobs too, so check those drafts a little more closely. Support for more professions is on our roadmap.`}</p>
+          <p>{t`This is a free test version: it can stop at any time, and we will make an effort to let you download your data first. To write and review your drafts, Redakloop sends the parts of your material you select to Anthropic and OpenAI, which process them outside the European Union.`}</p>
+          <p>{t`Redakloop is tuned and tested on software and tech roles so far. It works for other jobs too, so check those drafts a little more closely. Support for more professions is on our roadmap.`}</p>
           <div className="terms-acceptance">
             <input
               id="accept-terms"

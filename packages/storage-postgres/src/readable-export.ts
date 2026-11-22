@@ -452,9 +452,9 @@ function readme(createdAt: string, paths: readonly string[]): string {
     ]);
   }
   return [
-    "# Your DraftLoop data",
+    "# Your Redakloop data",
     "",
-    `This copy was made on ${createdAt.slice(0, 10)}. It holds what you added and what DraftLoop made for you.`,
+    `This copy was made on ${createdAt.slice(0, 10)}. It holds what you added and what Redakloop made for you.`,
     "",
     "| File or folder | What it holds |",
     "| --- | --- |",

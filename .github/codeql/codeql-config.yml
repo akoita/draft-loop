@@ -1,5 +1,5 @@
 # CodeQL scans the shipped code, not build output or vendored files.
-name: DraftLoop CodeQL
+name: Redakloop CodeQL
 paths-ignore:
   - "**/node_modules/**"
   - "**/dist/**"

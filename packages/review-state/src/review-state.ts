@@ -73,7 +73,7 @@ function folderName(root: string): string {
     root
       .split(/[\\/]/u)
       .filter((segment) => segment !== "")
-      .at(-1) ?? "DraftLoop workspace"
+      .at(-1) ?? "Redakloop workspace"
   );
 }
 

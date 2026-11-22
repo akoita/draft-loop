@@ -2,14 +2,14 @@ import type { HelpGuide } from "./guide.js";
 
 export const frenchHelpGuide: HelpGuide = {
   intro:
-    "DraftLoop transforme vos éléments de parcours en un CV pour une offre. La première fois, suivez les cinq premières étapes dans l’ordre, ou cherchez ce dont vous avez besoin.",
+    "Redakloop transforme vos éléments de parcours en un CV pour une offre. La première fois, suivez les cinq premières étapes dans l’ordre, ou cherchez ce dont vous avez besoin.",
   sections: [
     {
       id: "evidence",
       title: "Ajouter vos éléments de parcours",
       paragraphs: [
         "Depuis l’accueil, ouvrez Éléments de parcours. Ajoutez un CV ou d’autres documents, collez du texte, ou lancez une conversation pour raconter votre parcours si vous n’avez pas de CV.",
-        "DraftLoop lit ce que vous ajoutez et liste les faits trouvés. Ouvrez ensuite Profil professionnel et confirmez ou corrigez chaque fait. Vos CV n’utilisent que les faits que vous gardez.",
+        "Redakloop lit ce que vous ajoutez et liste les faits trouvés. Ouvrez ensuite Profil professionnel et confirmez ou corrigez chaque fait. Vos CV n’utilisent que les faits que vous gardez.",
       ],
       keywords: [
         "CV",
@@ -31,8 +31,8 @@ export const frenchHelpGuide: HelpGuide = {
       title: "Ajouter une offre",
       paragraphs: [
         "Sur l’accueil, choisissez Nouvelle candidature. Donnez un nom à l’offre, collez sa description ou son lien, puis choisissez Créer la candidature.",
-        "DraftLoop liste les exigences de l’offre. Relisez-les et corrigez celles qui semblent fausses, car le brouillon est écrit en fonction d’elles.",
-        "Pour l’instant, DraftLoop est réglé et testé sur les métiers du logiciel et de la tech. Il fonctionne aussi pour d’autres métiers, dans les soins, la vente, l’enseignement ou l’artisanat : relisez ces brouillons un peu plus attentivement. La prise en charge de plus de métiers est prévue dans notre feuille de route.",
+        "Redakloop liste les exigences de l’offre. Relisez-les et corrigez celles qui semblent fausses, car le brouillon est écrit en fonction d’elles.",
+        "Pour l’instant, Redakloop est réglé et testé sur les métiers du logiciel et de la tech. Il fonctionne aussi pour d’autres métiers, dans les soins, la vente, l’enseignement ou l’artisanat : relisez ces brouillons un peu plus attentivement. La prise en charge de plus de métiers est prévue dans notre feuille de route.",
       ],
       keywords: [
         "candidature",
@@ -119,7 +119,7 @@ export const frenchHelpGuide: HelpGuide = {
       id: "agents",
       title: "Travailler avec un agent",
       paragraphs: [
-        "Un agent IA comme Claude Code ou Codex peut utiliser DraftLoop pour vous grâce à MCP. Dans les Réglages, ouvrez Agents, créez un jeton pour l’agent et suivez les étapes affichées.",
+        "Un agent IA comme Claude Code ou Codex peut utiliser Redakloop pour vous grâce à MCP. Dans les Réglages, ouvrez Agents, créez un jeton pour l’agent et suivez les étapes affichées.",
         "Un agent connecté peut lister vos candidatures, ajouter une offre, lancer un CV et rédiger des lettres de motivation. Il peut aussi noter dans votre journal de travail ce que vous avez livré ; une note ne devient un élément de parcours qu’après votre approbation.",
         "Avancé : connecter un agent, à la fin de ce guide, détaille chaque étape.",
       ],
@@ -141,7 +141,7 @@ export const frenchHelpGuide: HelpGuide = {
       title: "Offres et crédits",
       paragraphs: [
         "Votre offre définit ce que vous pouvez utiliser. Crédits et consentement montre votre offre, ses limites et votre solde de crédits.",
-        "Avant qu’une exécution démarre, DraftLoop indique les crédits qu’il va réserver ; une exécution lancée compte tout de suite. Une exécution qui ne laisse aucun brouillon est remboursée. Là où le service en vend, Acheter des crédits liste les packs de crédits.",
+        "Avant qu’une exécution démarre, Redakloop indique les crédits qu’il va réserver ; une exécution lancée compte tout de suite. Une exécution qui ne laisse aucun brouillon est remboursée. Là où le service en vend, Acheter des crédits liste les packs de crédits.",
       ],
       keywords: [
         "prix",
@@ -159,7 +159,7 @@ export const frenchHelpGuide: HelpGuide = {
       id: "privacy",
       title: "Confidentialité et données",
       paragraphs: [
-        "DraftLoop n’enregistre votre contenu qu’après votre consentement, et le garde dans l’UE. Il n’envoie aux fournisseurs de modèles que le contenu dont une étape a besoin.",
+        "Redakloop n’enregistre votre contenu qu’après votre consentement, et le garde dans l’UE. Il n’envoie aux fournisseurs de modèles que le contenu dont une étape a besoin.",
         "Marquez une section comme privée pour la garder hors des brouillons et loin des fournisseurs de modèles. Depuis le menu du compte, vous pouvez tout télécharger. Pour supprimer tous vos documents et candidatures, ou votre compte, ouvrez Paramètres du compte dans ce menu : les deux se trouvent dans sa Zone dangereuse et vous demandent d’abord de saisir une confirmation.",
         "Pour vous connecter plus vite, ouvrez Sécurité de connexion dans le menu du compte et configurez une clé d’accès. Après votre mot de passe, votre empreinte, votre visage, votre code PIN ou votre téléphone remplace alors le code à six chiffres. Gardez votre application d’authentification en secours : Essayer une autre méthode passe de l’une à l’autre. Cochez Se souvenir de moi pour rester connecté sur cet appareil jusqu’à 30 jours.",
       ],
@@ -183,7 +183,7 @@ export const frenchHelpGuide: HelpGuide = {
       title: "Quand quelque chose ne marche pas",
       paragraphs: [
         "Si une étape échoue, lisez d’abord le message à l’écran : il indique si l’étape reprendra seule ou ce qu’il faut faire. Un envoi de fichier refusé signifie souvent que le consentement n’est pas encore enregistré.",
-        "Si ce guide ne répond pas à votre question, ouvrez Aide dans l’en-tête puis choisissez Envoyer un avis et décrivez ce qui s’est passé. Les personnes qui gèrent DraftLoop lisent chaque note.",
+        "Si ce guide ne répond pas à votre question, ouvrez Aide dans l’en-tête puis choisissez Envoyer un avis et décrivez ce qui s’est passé. Les personnes qui gèrent Redakloop lisent chaque note.",
         "Une note part avec des détails techniques : la page, la version, les derniers codes d’erreur et la famille de votre navigateur. Ouvrez Ce que nous joignons dans la fenêtre pour voir chaque valeur. Votre CV, vos offres d’emploi, le texte de la page et les captures d’écran ne sont jamais envoyés.",
       ],
       keywords: [
@@ -202,13 +202,13 @@ export const frenchHelpGuide: HelpGuide = {
       id: "connect-agent",
       title: "Avancé : connecter un agent",
       paragraphs: [
-        "Votre agent joint DraftLoop par un petit programme, draftloop-mcp, qui tourne sur votre ordinateur. Il vous faut git, Node.js 24 et pnpm.",
+        "Votre agent joint Redakloop par un petit programme, draftloop-mcp, qui tourne sur votre ordinateur. Il vous faut git, Node.js 24 et pnpm.",
         "1. Installez draftloop-mcp une fois. Il n’est pas encore sur npm : installez-le depuis le code source, dans un terminal : git clone https://github.com/akoita/draft-loop, puis cd draft-loop, pnpm install, cd apps/mcp et pnpm link --global. Vérifiez avec draftloop-mcp --help, qui affiche son mode d’emploi. Si pnpm refuse le lien, lancez npm link dans le même dossier.",
         "2. Dans les Réglages, ouvrez Agents, puis Connecter un agent. Cochez ce que l’agent peut faire et sélectionnez Créer un jeton d'agent. Le jeton ne s’affiche qu’une fois.",
         "3. Choisissez l’onglet de votre agent et copiez ce qu’il affiche. Il contient déjà l’adresse de ce serveur et, une fois créé, le jeton.",
-        "Plugin Claude Code : lancez les deux lignes /plugin dans Claude Code, puis draftloop-mcp save-token dans un terminal, collez le jeton, appuyez sur Entrée puis Ctrl-D. Si l’onglet affiche une ligne export, ajoutez-la au profil de votre shell. Le plugin ajoute les outils DraftLoop, les commandes /draftloop: et un rappel pour noter le travail marquant.",
+        "Plugin Claude Code : lancez les deux lignes /plugin dans Claude Code, puis draftloop-mcp save-token dans un terminal, collez le jeton, appuyez sur Entrée puis Ctrl-D. Si l’onglet affiche une ligne export, ajoutez-la au profil de votre shell. Le plugin ajoute les outils Redakloop, les commandes /draftloop: et un rappel pour noter le travail marquant.",
         "Claude Code : lancez la commande claude mcp add dans un terminal. Codex : ajoutez la table à ~/.codex/config.toml. Tout autre agent MCP : ajoutez l’entrée JSON au fichier de réglages MCP de l’agent.",
-        "4. Redémarrez votre agent et demandez en langage courant, par exemple « liste mes candidatures DraftLoop ». Dans Claude Code, /mcp liste les outils DraftLoop. Pour les notes sur le travail livré, activez aussi Accepter les notes des agents dans Agents.",
+        "4. Redémarrez votre agent et demandez en langage courant, par exemple « liste mes candidatures Redakloop ». Dans Claude Code, /mcp liste les outils Redakloop. Pour les notes sur le travail livré, activez aussi Accepter les notes des agents dans Agents.",
       ],
       keywords: [
         "MCP",
@@ -233,7 +233,7 @@ export const frenchHelpGuide: HelpGuide = {
         "Chaque jeton ne détient que les permissions que vous cochez. Journal de travail, Lire les candidatures et Ajouter des offres sont cochées par défaut, car le plugin s’en sert.",
         "Journal de travail : noter le travail livré, en notes que vous relisez. Lire les candidatures : lister vos candidatures, lire le texte de l’offre et suivre une exécution. Ajouter des offres : ajouter une candidature depuis une offre collée, jamais depuis un lien.",
         "Lire les CV et les brouillons : lire les CV exportés et vos lettres et questions d’entretien enregistrées. Lancer des exécutions et des brouillons : lancer des CV et des brouillons dans la limite mensuelle de dépense fixée sur le jeton. Déposer des fiches projet : résumer un de vos dépôts de code en une fiche qui attend votre approbation.",
-        "Quoi que vous cochiez, un agent ne peut jamais approuver un brouillon, trancher un constat, exporter, changer un réglage ni lire vos éléments de parcours. Cela reste à vous, dans DraftLoop. Ce qu’un outil renvoie est lu par le fournisseur du modèle de votre agent.",
+        "Quoi que vous cochiez, un agent ne peut jamais approuver un brouillon, trancher un constat, exporter, changer un réglage ni lire vos éléments de parcours. Cela reste à vous, dans Redakloop. Ce qu’un outil renvoie est lu par le fournisseur du modèle de votre agent.",
         "Traitez un jeton comme un mot de passe. Gardez-le dans vos réglages utilisateur ou le fichier de jeton du plugin, jamais dans un fichier de projet que vous commitez ou partagez. Il cesse de fonctionner après 90 jours : créez-en alors un nouveau.",
         "Pour révoquer un jeton, ouvrez Agents, trouvez sa ligne sous Agents connectés, sélectionnez Déconnecter et confirmez. L’agent est refusé aussitôt, et vos autres jetons continuent de fonctionner.",
       ],
@@ -255,7 +255,7 @@ export const frenchHelpGuide: HelpGuide = {
       paragraphs: [
         "Chaque exécution associe deux modèles de deux entreprises différentes : un auteur écrit le CV, et un critique vérifie chaque affirmation au regard de vos éléments de parcours. Par défaut, l’auteur est Claude, d’Anthropic, et le critique vient d’OpenAI : les angles morts d’une entreprise ne passent pas sans contrôle.",
         "Le critique dépose des constats. Un constat bloquant doit être réglé avant l’approbation ; un avertissement est un conseil. Avec le pilote automatique, l’auteur continue de réviser malgré les constats bloquants, jusqu’à la limite de tours. Sans lui, l’exécution s’arrête après un tour qui a un constat bloquant.",
-        "Chaque affirmation cite l’élément dont elle vient. DraftLoop n’invente jamais un employeur, une date, un chiffre ni une réussite : une affirmation sans source devient un constat.",
+        "Chaque affirmation cite l’élément dont elle vient. Redakloop n’invente jamais un employeur, une date, un chiffre ni une réussite : une affirmation sans source devient un constat.",
         "Sous Options avancées, vous pouvez choisir la paire de modèles, par recherche d’emploi ou par candidature, et le budget d’exécution : tours, coût et durée. L’écran vous prévient si les deux modèles viennent de la même entreprise.",
       ],
       keywords: [
@@ -280,7 +280,7 @@ export const frenchHelpGuide: HelpGuide = {
       paragraphs: [
         "Dans Éléments de parcours, sous Options avancées, les sections privées marquent des parties d’un document par leur titre. Toujours autoriser peut être envoyé aux modèles. Envoyer seulement si autorisé reste à l’écart, sauf si votre recherche d’emploi autorise le contenu sensible. Ne jamais envoyer n’atteint jamais un modèle.",
         "Un changement s’applique dès l’exécution suivante. Les pull requests importées démarrent en sensible, et une note de journal d’un projet privé garde ses liens à l’écart des modèles.",
-        "DraftLoop filtre aussi chaque texte d’offre, document et note de journal pour y détecter des instructions cachées destinées à un modèle. Un élément signalé est retenu, et une exécution qui en a besoin s’arrête, jusqu’à ce qu’un propriétaire le libère avec un motif. La liste de vos fichiers montre l’état du filtrage de chaque élément.",
+        "Redakloop filtre aussi chaque texte d’offre, document et note de journal pour y détecter des instructions cachées destinées à un modèle. Un élément signalé est retenu, et une exécution qui en a besoin s’arrête, jusqu’à ce qu’un propriétaire le libère avec un motif. La liste de vos fichiers montre l’état du filtrage de chaque élément.",
       ],
       keywords: [
         "privé",
@@ -299,7 +299,7 @@ export const frenchHelpGuide: HelpGuide = {
       id: "data-download",
       title: "Avancé : ce que contient votre téléchargement de données",
       paragraphs: [
-        "Dans le menu du compte, Vos données, puis Tout télécharger enregistre draftloop-data.zip. Son fichier README.md indique ce que contient chaque fichier.",
+        "Dans le menu du compte, Vos données, puis Tout télécharger enregistre redakloop-data.zip. Son fichier README.md indique ce que contient chaque fichier.",
         "Il contient les informations de votre compte et l’historique de vos consentements, votre profil professionnel avec les citations derrière chaque fait, la dernière version de chaque document ajouté, et pour chaque candidature le texte de l’offre, les lettres, guides d’entretien et CV exportés. Il contient aussi vos notes de journal de travail.",
         "Il ne contient jamais d’identifiants internes, de résultats de filtrage, de détails internes des exécutions comme les tours et constats, de notes écartées ni les données de quelqu’un d’autre.",
       ],
@@ -316,7 +316,7 @@ export const frenchHelpGuide: HelpGuide = {
     },
     {
       id: "self-hosted",
-      title: "Avancé : faire tourner DraftLoop sur votre ordinateur",
+      title: "Avancé : faire tourner Redakloop sur votre ordinateur",
       paragraphs: [
         "Vous pouvez faire tourner tout le service sur votre machine : les mêmes écrans, vos propres clés de fournisseurs ou un modèle local, et chaque fichier sur votre disque. Il vous faut Docker avec le plugin Compose et quelques gigaoctets de disque.",
         "Sous Linux ou macOS, téléchargez le script d’installation depuis https://raw.githubusercontent.com/akoita/draft-loop/main/deploy/local/bin/draft-loop-server vers /tmp/draft-loop-server et lancez bash /tmp/draft-loop-server install. Sous Windows, utilisez draft-loop-server.ps1 du même dossier.",

@@ -15,7 +15,7 @@ export interface ModelProfileCatalogPricing {
   readonly outputUsdPerMillion: number;
   /** A prompt-cache read, where the provider prices it. */
   readonly cacheReadUsdPerMillion?: number;
-  /** A one-hour prompt-cache write, the only lifetime DraftLoop asks for. */
+  /** A one-hour prompt-cache write, the only lifetime Redakloop asks for. */
   readonly cacheWriteUsdPerMillion?: number;
   readonly maxInputTokens: number;
   readonly scope: "standard-uncached-text-api";

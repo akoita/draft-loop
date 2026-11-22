@@ -1,7 +1,7 @@
-# Connect DraftLoop to your assistant
+# Connect Redakloop to your assistant
 
 This page is for a candidate who wants Claude, ChatGPT or another assistant to
-work with their DraftLoop account. It says what the assistant can do, what it
+work with their Redakloop account. It says what the assistant can do, what it
 sees, and how to stop it.
 
 **Status:** the connection is built and tested in the code. The hosted
@@ -13,19 +13,19 @@ are not deployed. Today it works with a
 
 ```mermaid
 flowchart LR
-  you[You, in your assistant] --> add[Add DraftLoop as a connector]
-  add --> sign[Sign in to DraftLoop]
+  you[You, in your assistant] --> add[Add Redakloop as a connector]
+  add --> sign[Sign in to Redakloop]
   sign --> grant[Choose what the assistant may do]
-  grant --> use[Ask the assistant to use DraftLoop]
-  use --> decide[Approve and export in DraftLoop]
+  grant --> use[Ask the assistant to use Redakloop]
+  use --> decide[Approve and export in Redakloop]
 ```
 
-1. Add DraftLoop in your assistant's connector settings.
-2. Sign in with your DraftLoop account. The assistant never sees your password.
+1. Add Redakloop in your assistant's connector settings.
+2. Sign in with your Redakloop account. The assistant never sees your password.
 3. Choose what the assistant may do. Each choice is a permission below.
-4. Ask in plain words, such as "list my job applications in DraftLoop".
+4. Ask in plain words, such as "list my job applications in Redakloop".
 
-An assistant cannot create a DraftLoop account. Sign up in DraftLoop first.
+An assistant cannot create a Redakloop account. Sign up in Redakloop first.
 
 ## What each permission allows
 
@@ -57,8 +57,8 @@ Starting a CV run or a draft costs model usage on your account. An assistant
 starts none until you set its monthly limit:
 
 1. Ask your assistant to start something once. Without a limit it is refused,
-   and it then appears in DraftLoop.
-2. In DraftLoop, open **Settings > Agents**. Under **Connected
+   and it then appears in Redakloop.
+2. In Redakloop, open **Settings > Agents**. Under **Connected
    agents**, find your assistant's row: it says "No limit yet".
 3. Select **Set a limit**, type a monthly limit in US dollars and select
    **Save limit**.
@@ -69,16 +69,16 @@ cap, so the limit is never passed. Your plan and credits still apply.
 
 ## What your assistant's provider sees
 
-Everything a DraftLoop tool returns is read by your assistant's model, under
-your own account with that provider. DraftLoop limits what a tool returns:
+Everything a Redakloop tool returns is read by your assistant's model, under
+your own account with that provider. Redakloop limits what a tool returns:
 
 - A list returns titles, dates and status, not whole documents.
 - Reading a CV or a saved draft needs the permission you add yourself.
 - No tool returns your career evidence, an open draft or its findings.
 - A saved draft is returned without the career facts it cites.
 
-DraftLoop keeps your data on its own service. A directory that lists
-DraftLoop stores none of it. The assistant's provider handles what it reads
+Redakloop keeps your data on its own service. A directory that lists
+Redakloop stores none of it. The assistant's provider handles what it reads
 under its own privacy terms.
 
 ## Stop or change the connection
@@ -87,9 +87,9 @@ under its own privacy terms.
 | -------------------------------- | ---------------------------------------------------------------------- |
 | Stop the assistant from spending | In Settings > Agents, select **Stop spending** for it        |
 | Change what it may do            | Disconnect it in your assistant, then connect again with other choices |
-| Disconnect it                    | Remove DraftLoop in your assistant's connector settings                |
+| Disconnect it                    | Remove Redakloop in your assistant's connector settings                |
 
-Not built yet: a list of connected assistants in DraftLoop with a disconnect
+Not built yet: a list of connected assistants in Redakloop with a disconnect
 button. Until then, removing the connector in the assistant is the way to
 disconnect.
 
@@ -100,8 +100,8 @@ disconnect.
 | It was not granted a permission            | Connect again and add that permission                     |
 | It has no monthly spend cap                | Set its limit in Settings > Agents              |
 | It reached its monthly cap                 | Raise the limit, or wait for next month                   |
-| The account has no DraftLoop workspace     | Sign up in DraftLoop first, then connect again            |
-| It needs a Markdown export to read your CV | Export the CV as Markdown in DraftLoop                    |
+| The account has no Redakloop workspace     | Sign up in Redakloop first, then connect again            |
+| It needs a Markdown export to read your CV | Export the CV as Markdown in Redakloop                    |
 
 ## Related
 

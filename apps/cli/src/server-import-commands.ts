@@ -179,7 +179,7 @@ function collect(value: string, previous: readonly string[] = []): readonly stri
 
 /**
  * Registers `server import`, which brings a desktop user's career evidence, applications and run
- * history into a DraftLoop server through its HTTP API. It prints what it would send and sends
+ * history into a Redakloop server through its HTTP API. It prints what it would send and sends
  * only with `--approve`; the desktop backup and workspaces are only read.
  */
 export function registerServerImportCommands(
@@ -190,7 +190,7 @@ export function registerServerImportCommands(
   const environment = dependencies.environment ?? process.env;
   const server = root
     .command("server")
-    .description("Bring desktop data into a DraftLoop server, such as the self-hosted one");
+    .description("Bring desktop data into a Redakloop server, such as the self-hosted one");
 
   server
     .command("import")

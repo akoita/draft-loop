@@ -15,10 +15,10 @@ describe("help menu", () => {
 
     expect(html).toMatch(/<summary[^>]*>[\s\S]*Help<\/summary>/u);
     expect(html).toMatch(
-      /Quick help<\/button>[\s\S]*User guide<\/a>[\s\S]*About DraftLoop<\/a>[\s\S]*Send feedback<\/button>[\s\S]*Privacy policy/u,
+      /Quick help<\/button>[\s\S]*User guide<\/a>[\s\S]*About Redakloop<\/a>[\s\S]*Send feedback<\/button>[\s\S]*Privacy policy/u,
     );
     expect(html).toContain('href="/guide/" target="_blank" rel="noopener">User guide</a>');
-    expect(html).toContain('href="/about/" target="_blank" rel="noopener">About DraftLoop</a>');
+    expect(html).toContain('href="/about/" target="_blank" rel="noopener">About Redakloop</a>');
     expect(html).toContain('<a href="/legal/terms" target="_blank" rel="noopener">');
   });
 

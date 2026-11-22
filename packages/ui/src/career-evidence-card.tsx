@@ -150,7 +150,7 @@ export function CareerEvidenceNextStep({ onOpenProfile }: { readonly onOpenProfi
   return (
     <aside className="career-next-step" aria-labelledby="career-next-step-heading">
       <strong id="career-next-step-heading">{t`Next: build your career profile`}</strong>
-      <p>{t`Your documents are saved. DraftLoop reads them and lists the facts it finds for you to check. You can add more documents at any time.`}</p>
+      <p>{t`Your documents are saved. Redakloop reads them and lists the facts it finds for you to check. You can add more documents at any time.`}</p>
       <button className="button button-primary" type="button" onClick={onOpenProfile}>
         {t`Continue to Career profile`} <span aria-hidden="true">→</span>
       </button>

@@ -86,7 +86,7 @@ describe("confirming a waitlist email", () => {
 });
 
 describe("the landing page", () => {
-  it("says what DraftLoop is, that it is a test, and links the legal pages", () => {
+  it("says what Redakloop is, that it is a test, and links the legal pages", () => {
     const html = renderToStaticMarkup(<Landing signIn={<button type="button">Sign in</button>} />);
 
     expect(html).toContain("drafts a CV and a cover letter");

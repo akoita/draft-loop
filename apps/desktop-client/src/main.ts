@@ -119,7 +119,7 @@ function createWindow(webPreferences: Electron.WebPreferences): BrowserWindow {
     minWidth: minimumWindowWidth,
     minHeight: minimumWindowHeight,
     backgroundColor: windowGround,
-    title: "DraftLoop",
+    title: "Redakloop",
     webPreferences: {
       ...webPreferences,
       contextIsolation: true,
@@ -242,7 +242,7 @@ async function checkForNewVersion(asked: boolean): Promise<void> {
   let tag: string | undefined;
   try {
     const response = await fetch(releasesApiUrl, {
-      headers: { accept: "application/vnd.github+json", "user-agent": "DraftLoop-desktop" },
+      headers: { accept: "application/vnd.github+json", "user-agent": "Redakloop-desktop" },
       signal: AbortSignal.timeout(10_000),
     });
     tag = response.ok ? newerDesktopRelease(await response.json(), app.getVersion()) : undefined;

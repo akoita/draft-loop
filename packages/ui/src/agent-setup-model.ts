@@ -207,7 +207,7 @@ export function agentHostLabel(host: AgentHost): string {
 export function agentHostHint(host: AgentHost): string {
   switch (host) {
     case "plugin":
-      return t`Installs the DraftLoop tools, the /log-work and /tailor-cv skills and a reminder to record notable work. The token goes in your user folder, never in a project.`;
+      return t`Installs the Redakloop tools, the /log-work and /tailor-cv skills and a reminder to record notable work. The token goes in your user folder, never in a project.`;
     case "claude-code":
       return t`Run it in a terminal. It saves the server in your user settings.`;
     case "codex":

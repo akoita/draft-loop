@@ -309,7 +309,7 @@ file first and database second.
 
 - **Residue.** A crash or a concurrent loser may leave unreferenced opaque
   entries.
-- **Ownership.** File shape or matching bytes never prove DraftLoop owns an
+- **Ownership.** File shape or matching bytes never prove Redakloop owns an
   entry.
 
 **The journal** is append-only. For each new managed write, it records opaque

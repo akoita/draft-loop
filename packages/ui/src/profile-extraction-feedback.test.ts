@@ -60,7 +60,7 @@ describe("saved DeepInfra stream feedback", () => {
   it("keeps legacy malformed-stream guidance path-free without counts", async () => {
     const message = await savedMessage();
     expect(message).toBe(
-      "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved.",
+      "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update Redakloop; no facts were saved.",
     );
     expect(message).not.toContain("/");
     expect(safeCanonicalCandidateProfileFeedback(message)).toBe(message);
@@ -68,14 +68,14 @@ describe("saved DeepInfra stream feedback", () => {
 
   it("repairs only the exact historical persisted malformed-stream message", () => {
     const historical =
-      "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved.";
+      "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update Redakloop to the latest supported version; no facts were saved.";
     const safeMessage =
-      "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved.";
+      "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update Redakloop; no facts were saved.";
 
     expect(safeCanonicalCandidateProfileFeedback(historical)).toBe(safeMessage);
     expect(
       safeCanonicalCandidateProfileFeedback(
-        "DeepInfra returned a malformed GLM stream. Check private/provider compatibility and update DraftLoop to the latest supported version; no facts were saved.",
+        "DeepInfra returned a malformed GLM stream. Check private/provider compatibility and update Redakloop to the latest supported version; no facts were saved.",
       ),
     ).toBe("The profile operation could not be completed.");
   });

@@ -1,7 +1,7 @@
 {
   "realm": "draft-loop-local",
   "enabled": true,
-  "displayName": "DraftLoop local stack",
+  "displayName": "Redakloop local stack",
   "sslRequired": "none",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
@@ -10,7 +10,7 @@
   "clients": [
     {
       "clientId": "draft-loop-web",
-      "name": "DraftLoop web screen",
+      "name": "Redakloop web screen",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,

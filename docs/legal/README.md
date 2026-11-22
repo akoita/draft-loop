@@ -3,7 +3,7 @@
 **Status:** The terms of use, privacy policy and legal notice are published on
 the hosted service for the free, invite-only test. A lawyer reviews them
 before the first paid sale (#2682).<br>
-**Scope:** The hosted DraftLoop service ([ADR 0011](../adr/0011-client-server-version.md)).
+**Scope:** The hosted Redakloop service ([ADR 0011](../adr/0011-client-server-version.md)).
 A self-hosted server, and the desktop client pointed at it, process data on
 the user's own machine and need no privacy policy from the operator.
 

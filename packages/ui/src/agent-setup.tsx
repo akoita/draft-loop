@@ -106,7 +106,7 @@ export function AgentSetup({
     <>
       <h3>{t`Agents`}</h3>
       <p className="muted">
-        {t`Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here.`}
+        {t`Let Claude Code, Codex or another agent work with Redakloop for you. Approvals, review decisions and settings always stay with you here.`}
       </p>
       {workJournal}
     </>

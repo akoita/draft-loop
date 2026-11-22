@@ -203,11 +203,11 @@ export function planRefusalMessage(error: unknown): string | undefined {
     case "403 plan_required":
       return t`Your organisation has no plan yet. Ask the owner to choose one.`;
     case "422 model_tier_unknown":
-      return t`DraftLoop cannot price one of the workspace's models yet. Choose another preset or model.`;
+      return t`Redakloop cannot price one of the workspace's models yet. Choose another preset or model.`;
     case "429 run_cap_reached":
       return runCapMessage(details);
     case "503 spend_pool_exhausted":
-      return t`DraftLoop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month.`;
+      return t`Redakloop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month.`;
     case "409 plan_limit_reached":
       return planLimitMessage(details);
     default:

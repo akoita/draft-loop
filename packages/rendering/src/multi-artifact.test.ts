@@ -198,7 +198,7 @@ describe("Multi-Artifact Kinds (Cover Letter & Application Q&A)", () => {
 
   it("renders application Q&A across all formats with ATS compatibility", () => {
     const html = renderHtml(sampleApplicationQa);
-    expect(html).toContain("DraftLoop Application Q&amp;A");
+    expect(html).toContain("Redakloop Application Q&amp;A");
     expect(html).toContain("Why are you interested in this role?");
 
     for (const format of ["markdown", "pdf", "docx"] as const) {

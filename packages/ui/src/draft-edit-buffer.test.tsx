@@ -121,7 +121,7 @@ describe("the draft's edit lock (#1925)", () => {
     expect(html).toContain("You can edit the draft once this round finishes.");
   });
 
-  it("locks the draft while DraftLoop retries a failed step, and says the review is still going", () => {
+  it("locks the draft while Redakloop retries a failed step, and says the review is still going", () => {
     const retrying: ReviewScreenState = {
       ...fixture,
       state: "provider-error",
@@ -149,7 +149,7 @@ describe("the draft's edit lock (#1925)", () => {
     expect(html).toContain("You can edit the draft once this round finishes.");
     expect(html).toContain("Review in progress · nothing to do yet");
     expect(html).toContain(
-      `DraftLoop retries the critic on version ${fixture.artifact.version} shortly.`,
+      `Redakloop retries the critic on version ${fixture.artifact.version} shortly.`,
     );
     expect(html).not.toContain("has not been critiqued yet");
   });

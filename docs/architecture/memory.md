@@ -1,7 +1,7 @@
 # Memory model
 
 This page is for a developer or coding agent changing code that stores or
-reads context for a run. It names every kind of memory DraftLoop has, who
+reads context for a run. It names every kind of memory Redakloop has, who
 writes and reads it, and the rules every kind follows.
 
 The catalog in code is
@@ -21,7 +21,7 @@ change both together.
 
 - **Facts need a citation.** A candidate fact reaches a draft only with a
   reference to the evidence that supports it.
-- **Learned items are never facts.** Anything DraftLoop learns from use is a
+- **Learned items are never facts.** Anything Redakloop learns from use is a
   preference or a lesson. It can change how a draft is written, never what it
   claims.
 - **The person sees and edits every long-term item.** Facts, writing policy
@@ -33,7 +33,7 @@ change both together.
 ## Memory kinds
 
 Lifetime is how long an item lives: one model call, one run, a workspace, or
-the candidate's whole record. The writer is `system` (DraftLoop or an agent),
+the candidate's whole record. The writer is `system` (Redakloop or an agent),
 `person`, or `person-confirmed` (proposed by the system, kept only after the
 person approves).
 

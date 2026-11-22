@@ -135,7 +135,7 @@ const speakerLabels: Readonly<Record<FactSuggestion["speaker"], string>> = {
   candidate: "Candidate",
   coach: "Coach",
   agent: "Agent",
-  system: "DraftLoop",
+  system: "Redakloop",
 };
 
 /** One line, so the provenance quote matches the source text exactly. */

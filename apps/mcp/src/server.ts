@@ -21,30 +21,30 @@ import { type RunsApi, registerRunTools } from "./runs.js";
 import { registerServiceNoticeTools, type ServiceNoticeApi } from "./service-notice.js";
 
 /**
- * The DraftLoop MCP server (ADR 0011 D17, #2023, #2440). A host agent records notable work it
- * helped ship as a note the candidate reviews in DraftLoop, lists what it recorded, and, where
+ * The Redakloop MCP server (ADR 0011 D17, #2023, #2440). A host agent records notable work it
+ * helped ship as a note the candidate reviews in Redakloop, lists what it recorded, and, where
  * its token's scopes allow, lists job applications, adds one from pasted job text and follows a
- * run. Decisions stay in DraftLoop. The rule of what to record travels with the server, in the tool description,
+ * run. Decisions stay in Redakloop. The rule of what to record travels with the server, in the tool description,
  * the guide resource, the prompt and the instructions.
  */
 
 export const serverVersion = "0.2.0";
 
 export const serverInstructions = [
-  "DraftLoop keeps the candidate's career evidence; record_work files a note about notable work you just helped ship, which waits for the candidate's review and never becomes a CV claim by itself.",
+  "Redakloop keeps the candidate's career evidence; record_work files a note about notable work you just helped ship, which waits for the candidate's review and never becomes a CV claim by itself.",
   "Call it after a merge or release that a hiring manager would care about, never for routine fixes, and never include secrets, customer data or anything the candidate asked you to keep private.",
   "Read draftloop://work-journal/guide when unsure, and use list_work to avoid recording the same work twice.",
-  "list_applications, get_application and get_run_status show the candidate's job applications and where their CV runs stand, each application with its next_step as DraftLoop's screens name it; get_job_text reads the job description one keeps; get_cv, list_materials and get_material read the CV the candidate exported and the cover letters, interview preparation guides and interview questions they saved; get_requirement_evidence shows which of their sources support each requirement of a run; add_job adds an application from a job description the candidate pasted; estimate_run prices a CV run and start_cv_run starts one, and draft_cover_letter and draft_interview_prep write and save a draft, within the token's monthly spend cap and only when the candidate asked.",
+  "list_applications, get_application and get_run_status show the candidate's job applications and where their CV runs stand, each application with its next_step as Redakloop's screens name it; get_job_text reads the job description one keeps; get_cv, list_materials and get_material read the CV the candidate exported and the cover letters, interview preparation guides and interview questions they saved; get_requirement_evidence shows which of their sources support each requirement of a run; add_job adds an application from a job description the candidate pasted; estimate_run prices a CV run and start_cv_run starts one, and draft_cover_letter and draft_interview_prep write and save a draft, within the token's monthly spend cap and only when the candidate asked.",
   "add_project files a project card about one code repository you read on the candidate's machine, counted from git and shown to the candidate first; it never takes code (draftloop://projects/guide).",
   "get_profile reads the candidate's reviewed career profile with fact ids, without the facts they marked never to say; suggest_profile_update files one change with the words behind it, which waits for the candidate's decision, and list_profile_suggestions shows what you filed and how it stands.",
-  "send_feedback passes the candidate's own note about DraftLoop to the people who run it, only when they ask.",
-  "search_help and draftloop://help/guide/en (or /fr) hold DraftLoop's user guide: answer the candidate's questions about using DraftLoop from it.",
-  "A refusal coded service_maintenance means DraftLoop paused changes for planned maintenance: service_notice says until when; tell the candidate and wait instead of retrying.",
-  "Approving a draft, deciding findings, exporting and every setting stay with the candidate in DraftLoop: say what waits for them instead of trying.",
-  "A refusal that names a missing scope means the candidate must create a token with it under Agents in DraftLoop's Settings.",
+  "send_feedback passes the candidate's own note about Redakloop to the people who run it, only when they ask.",
+  "search_help and draftloop://help/guide/en (or /fr) hold Redakloop's user guide: answer the candidate's questions about using Redakloop from it.",
+  "A refusal coded service_maintenance means Redakloop paused changes for planned maintenance: service_notice says until when; tell the candidate and wait instead of retrying.",
+  "Approving a draft, deciding findings, exporting and every setting stay with the candidate in Redakloop: say what waits for them instead of trying.",
+  "A refusal that names a missing scope means the candidate must create a token with it under Agents in Redakloop's Settings.",
 ].join(" ");
 
-export const recordWorkDescription = `File a note about notable work you just helped the candidate ship, for their career evidence. The note waits in DraftLoop's Work journal until the candidate approves, edits or discards it.
+export const recordWorkDescription = `File a note about notable work you just helped the candidate ship, for their career evidence. The note waits in Redakloop's Work journal until the candidate approves, edits or discards it.
 
 Record when: a feature, integration or migration was merged or released; a named technology was adopted (for example a payments provider, a database, a protocol); a measured improvement landed (latency, cost, error rate), with how it was measured.
 One note per user-visible feature: do not fold unrelated small changes into a bigger note.
@@ -57,7 +57,7 @@ Use amends with a note id to correct a pending note, and dry_run to check a note
 export const listWorkDescription =
   "List the work journal notes already recorded, by title, dates, technologies and status, so you can avoid recording the same work twice or amend a pending note. It never returns summaries, links or metrics.";
 
-export const guideText = `# DraftLoop work journal: what to record
+export const guideText = `# Redakloop work journal: what to record
 
 Record notable work that a hiring manager would ask about, once it has shipped. A note is evidence for the candidate to review, never a CV claim.
 
@@ -107,7 +107,7 @@ function failure(error: unknown) {
         }
       : {
           code: "internal_error",
-          message: "The DraftLoop MCP server failed.",
+          message: "The Redakloop MCP server failed.",
           fields: [],
           retryable: false,
         };

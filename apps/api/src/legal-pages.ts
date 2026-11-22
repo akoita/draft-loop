@@ -217,13 +217,13 @@ export function renderLegalPage(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(document.title)} · DraftLoop</title>
+<title>${escapeHtml(document.title)} · Redakloop</title>
 <meta name="description" content="${escapeHtml(document.description)}">
 <link rel="icon" href="/showcase/mark.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/legal/legal.css">
 </head>
 <body>
-<header><a href="/">DraftLoop</a><nav>${nav}</nav><a href="/legal/${other}/${page}" lang="${other}">${escapeHtml(strings.otherLanguage)}</a></header>
+<header><a href="/">Redakloop</a><nav>${nav}</nav><a href="/legal/${other}/${page}" lang="${other}">${escapeHtml(strings.otherLanguage)}</a></header>
 <main>
 <h1>${escapeHtml(document.title)}</h1>
 <p class="version">${escapeHtml(fill(strings.versionLabel, values, strings.missing) ?? "")}. ${escapeHtml(strings.prevails)}</p>

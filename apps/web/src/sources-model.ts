@@ -20,7 +20,7 @@ export type SourceMediaType =
 export const acceptedSourceFiles = ".pdf,.docx,.md,.markdown,.txt,.json,.csv";
 
 const unsupportedMessage = () =>
-  t`DraftLoop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV.`;
+  t`Redakloop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV.`;
 
 /** A career evidence file's media type: a source file, or a pull request list (#2261). */
 export type EvidenceMediaType = SourceMediaType | "application/json" | "text/csv";

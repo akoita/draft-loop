@@ -32,7 +32,7 @@ function serverError(status: number, body: unknown): CliUserError {
 }
 
 /**
- * One JSON or file request to the DraftLoop server's HTTP API. Any answer other than 2xx becomes a
+ * One JSON or file request to the Redakloop server's HTTP API. Any answer other than 2xx becomes a
  * user error that names the status and the API's error code, never the request's content.
  */
 export async function serverRequest<Body>(

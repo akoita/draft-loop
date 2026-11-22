@@ -71,7 +71,7 @@ export async function issueAgentToken(input: IssueAgentTokenInput): Promise<Issu
       }),
     });
   } catch {
-    throw new Error("The DraftLoop server did not answer; start it with `draft-loop-server up`.");
+    throw new Error("The Redakloop server did not answer; start it with `draft-loop-server up`.");
   }
   if (response.status === 401) {
     throw new Error(
@@ -106,7 +106,7 @@ export async function saveTokenFromInput(input: string, path: string): Promise<s
   const token = input.trim();
   if (!isAgentTokenShape(token)) {
     throw new Error(
-      "That is not a DraftLoop agent token; copy the one shown under Agents in Settings.",
+      "That is not a Redakloop agent token; copy the one shown under Agents in Settings.",
     );
   }
   await saveAgentToken(path, token);

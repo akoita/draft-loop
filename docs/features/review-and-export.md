@@ -30,7 +30,7 @@ source-only CLI has its own review and export commands
    against the template's target; nothing is saved until you export. A
    Word preview shows the same template's PDF pages, since a browser has no
    Word viewer.
-5. Accept or dismiss the **writing preferences** that DraftLoop suggests from
+5. Accept or dismiss the **writing preferences** that Redakloop suggests from
    your review choices. An accepted one joins the writing policy, which keeps
    every version. The policy's History tab shows how many runs suggested it.
 

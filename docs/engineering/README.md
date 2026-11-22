@@ -1,7 +1,7 @@
 # Engineering guides
 
 These guides show a developer or a coding agent how to make the changes
-DraftLoop needs most often: which packages to touch, in what order, and which
+Redakloop needs most often: which packages to touch, in what order, and which
 checks prove the change. [AGENTS.md](../../AGENTS.md) holds the rules; these
 pages hold the steps. The [architecture overview](../architecture/overview.md)
 explains why the boundaries are where they are.

@@ -1,4 +1,4 @@
-<h1><img src="docs/assets/draftloop-hero.svg" alt="DraftLoop: job-specific CVs grounded in your own evidence. One AI drafts, another critiques, you decide."></h1>
+<h1><img src="docs/assets/draftloop-hero.svg" alt="Redakloop: job-specific CVs grounded in your own evidence. One AI drafts, another critiques, you decide."></h1>
 
 [![CI](https://github.com/akoita/draft-loop/actions/workflows/ci.yml/badge.svg)](https://github.com/akoita/draft-loop/actions/workflows/ci.yml)
 ![Node.js](https://img.shields.io/badge/Node.js-24.22.1-339933?logo=node.js&logoColor=white)
@@ -7,7 +7,7 @@
 ![Anthropic](https://img.shields.io/badge/provider-Anthropic-D97757)
 ![OpenAI](https://img.shields.io/badge/provider-OpenAI-412991)
 
-DraftLoop turns candidate-owned sources into a job-specific CV with grounded
+Redakloop turns candidate-owned sources into a job-specific CV with grounded
 evidence, independent AI critique, and final human control.
 
 It is designed for candidates who want useful drafting assistance without giving
@@ -15,41 +15,41 @@ up traceability or control of their source material. Claims remain connected to
 candidate-provided evidence, provider and model identities are visible, and the
 candidate decides what to approve and export.
 
-> **Current maturity:** DraftLoop is an alpha. Its capabilities are integrated
+> **Current maturity:** Redakloop is an alpha. Its capabilities are integrated
 > and deterministically validated, but private quality checks show drafts that
 > still cover fewer job requirements than a manually tailored CV, and no
 > representative consented outcome has been recorded. The
 > [roadmap and current status](docs/roadmap.md) record the evidence and
 > remaining gaps. This project is not production-ready.
 
-## Ways to run DraftLoop
+## Ways to run Redakloop
 
 | Way to run                                       | Status         | What it is                                                                                                                                                                                       |
 | ------------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [Self-hosted server](#quick-install-with-docker) | Recommended    | The web screen, API, worker and database on your own machine with Docker. Your files stay on your disk.                                                                                          |
-| [Desktop app](#desktop-app)                      | Alpha (v0.9.0) | DraftLoop's desktop version beside the web screen, for your self-hosted server and the hosted service once it opens. Workspaces from the retired v0.8 alpha move to the server with one command. |
+| [Desktop app](#desktop-app)                      | Alpha (v0.9.0) | Redakloop's desktop version beside the web screen, for your self-hosted server and the hosted service once it opens. Workspaces from the retired v0.8 alpha move to the server with one command. |
 | [CLI](#developer-quick-start)                    | Source only    | Every workflow step from a terminal, over the same packages.                                                                                                                                     |
 | Hosted service | Invite-only beta | The same server in the EU with sign-in and consent ([architecture](docs/architecture/hosted-service.md)). It opens by invitation, with a waitlist. |
 
 All of them run the same packages and the same author–critic loop, and differ
 only at their adapters; see the [architecture overview](docs/architecture/overview.md#ways-to-run).
 
-[![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the Electron desktop client over the server's web screen, and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service, an invite-only beta, runs the same server images in the EU.](docs/assets/ways-to-run.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/ways-to-run.svg)
+[![Ways to run Redakloop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the Electron desktop client over the server's web screen, and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service, an invite-only beta, runs the same server images in the EU.](docs/assets/ways-to-run.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/ways-to-run.svg)
 
-## How DraftLoop works
+## How Redakloop works
 
-DraftLoop keeps the job description and career evidence in your own store, then
+Redakloop keeps the job description and career evidence in your own store, then
 applies an evidence-grounded
 [evaluator–optimizer workflow](https://github.com/anthropics/claude-cookbooks/blob/main/patterns/agents/evaluator_optimizer.ipynb):
 an author generates, an independent critic evaluates against a rubric, and
 accepted feedback drives bounded revision. The default cross-company pairing is
 Anthropic as author and OpenAI as critic; Anthropic-only pairs use a different
 Claude model as critic. [ADR 0003](docs/adr/0003-evidence-grounded-evaluator-optimizer.md)
-records DraftLoop's adaptation and controls.
+records Redakloop's adaptation and controls.
 
-[![How DraftLoop works: sources and job requirements pass a visible transmission approval, a grounded Anthropic author and an independent OpenAI critic iterate in bounded rounds, and the candidate reviews every claim before export, on their own server or the hosted service in the EU.](docs/assets/how-draftloop-works.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/how-draftloop-works.svg)
+[![How Redakloop works: sources and job requirements pass a visible transmission approval, a grounded Anthropic author and an independent OpenAI critic iterate in bounded rounds, and the candidate reviews every claim before export, on their own server or the hosted service in the EU.](docs/assets/how-draftloop-works.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/how-draftloop-works.svg)
 
-The loop is an assistant, not an authority. DraftLoop does not independently
+The loop is an assistant, not an authority. Redakloop does not independently
 verify a career, contact past employers, replace interviews, or turn a
 candidate's source material into permission to invent facts.
 
@@ -93,7 +93,7 @@ same. The [self-hosted server](docs/operations/self-hosted.md) guide covers
 settings, upgrades, backup and restore, privacy, and moving a desktop
 workspace to the server.
 
-On the self-hosted server, your agent, such as Claude Code or Codex, can work with DraftLoop through
+On the self-hosted server, your agent, such as Claude Code or Codex, can work with Redakloop through
 the `draftloop-mcp` MCP server. It records notable work it helped ship, lists
 your job applications, adds a job you pasted and follows a CV run; approvals
 stay with you. In Claude Code, install the plugin from this repository:
@@ -110,8 +110,8 @@ other agents.
 
 ## Desktop app
 
-The desktop app is a first-class DraftLoop client beside the web screen: an
-Electron app over a DraftLoop server's own web screen, pointed at your
+The desktop app is a first-class Redakloop client beside the web screen: an
+Electron app over a Redakloop server's own web screen, pointed at your
 self-hosted server or at the hosted service once it opens. It ships from v0.9.0
 ([ADR 0011, D9](docs/adr/0011-client-server-version.md#d9-clients)) and needs a
 server at 0.14.0 or later to remember your sign-in.
@@ -151,7 +151,7 @@ for what it stores on your computer.
 
 ## Developer quick start
 
-DraftLoop has no npm package: from a clone, use Node.js **24.22.1** and pnpm
+Redakloop has no npm package: from a clone, use Node.js **24.22.1** and pnpm
 **10.18.3**:
 
 ```sh
@@ -198,7 +198,7 @@ pnpm validate
 
 ### Local semantic retrieval model (optional)
 
-DraftLoop can use a pinned, local embedding model (Apache-2.0; Granite, about
+Redakloop can use a pinned, local embedding model (Apache-2.0; Granite, about
 313 MB for the default `311m` tier and 98 MB for `97m`, or the experimental
 EmbeddingGemma 2 `eg2-text` tier at about 175 MB). It runs on your machine
 and is never downloaded implicitly. The files are fetched only when you run
@@ -279,7 +279,7 @@ Runs read only the source versions a workspace selects; see
   approved material under zero-retention terms
   ([ADR 0011](docs/adr/0011-client-server-version.md)). It is open as an
   invite-only beta.
-- DraftLoop prepares artifacts. It does not submit applications, publish
+- Redakloop prepares artifacts. It does not submit applications, publish
   documents, send messages, or perform uncontrolled web research on a user's
   behalf.
 
@@ -292,6 +292,6 @@ Runs read only the source versions a workspace selects; see
 - [Self-hosted server](docs/operations/self-hosted.md) · [Local server stack](docs/operations/local-server-stack.md) · [Client-server version (ADR 0011)](docs/adr/0011-client-server-version.md) · [Client-server delivery plan](docs/architecture/client-server-delivery-plan.md)
 - [Contributing](CONTRIBUTING.md) · [Releasing](docs/operations/releasing.md)
 
-Human approval is mandatory before an artifact is exported. DraftLoop can help
+Human approval is mandatory before an artifact is exported. Redakloop can help
 prepare a CV, but the candidate remains responsible for factual review, final
 approval, and every action beyond it.

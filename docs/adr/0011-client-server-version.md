@@ -2,11 +2,11 @@
 
 - Status: Accepted (2026-10-17)
 - Date: 2026-10-16 (updated 2026-10-17)
-- Decision owners: DraftLoop maintainers
+- Decision owners: Redakloop maintainers
 
 ## Context
 
-DraftLoop is a local-first desktop app. The candidate's evidence, profile,
+Redakloop is a local-first desktop app. The candidate's evidence, profile,
 runs and exports live on their machine. Model providers receive only the
 bounded material each run sends, after a visible approval. The last
 local-first stage (#1309) brings CV quality to parity with the manual
@@ -280,9 +280,9 @@ The owner decided (2026-10-16) to serve every profile through tiered plans
 
 ### D7. Privacy and data protection
 
-- **Controller and processor.** For an individual plan, DraftLoop is the
+- **Controller and processor.** For an individual plan, Redakloop is the
   controller of the candidate's data. For team and business plans, the
-  organisation is the controller and DraftLoop processes the data on its
+  organisation is the controller and Redakloop processes the data on its
   behalf under a data processing agreement. The organisation must hold a
   lawful basis to process each candidate's material.
 - **The candidate's consent is captured and recorded:**
@@ -394,7 +394,7 @@ Build on what the local version already records:
     sign-in, consent, credits, records and screening panels stay in the web
     shell.
 - **The desktop app** is a first-class client beside the web, with mobile
-  later (amended 2026-11-03): an Electron app over a DraftLoop server's own
+  later (amended 2026-11-03): an Electron app over a Redakloop server's own
   web screen, pointed at the self-hosted server or the hosted service. It
   holds no engine, storage or provider keys, so it gets each feature the day
   its server ships it.
@@ -408,7 +408,7 @@ Build on what the local version already records:
     system Save dialog for exports and sign-in remembered in the operating
     system's keychain. There is no offline drafting.
 - **The CLI** becomes an API client, for scripting and support.
-- **Agents** reach DraftLoop through an MCP server (D17).
+- **Agents** reach Redakloop through an MCP server (D17).
 
 ### D10. API contract
 
@@ -754,7 +754,7 @@ The existing offline fixture mode keeps local runs free of provider calls.
 ### D17. Agent channel: an MCP server
 
 Users increasingly work inside agents such as Claude, Codex or ChatGPT.
-DraftLoop is offered there as an MCP server: one more client, like the CLI,
+Redakloop is offered there as an MCP server: one more client, like the CLI,
 not a second product.
 
 - **Two transports, one tool set:**
@@ -775,11 +775,11 @@ not a second product.
   notable work it just helped ship, and `list_work` lists those notes by
   title, date, technologies and status. A note is *evidence for review*:
   it waits in a pending inbox, and only the candidate's approval in
-  DraftLoop turns it into a knowledge source. Intake is off until the
+  Redakloop turns it into a knowledge source. Intake is off until the
   candidate turns on "Accept notes from coding agents".
 - **Every suitable feature, not only the journal (amended 2026-11-07,
   #2437).** An agent may use a feature when it saves the candidate work and
-  leaves every decision in DraftLoop. The tool catalogue grows by scope:
+  leaves every decision in Redakloop. The tool catalogue grows by scope:
 
   | Scope | Tools | What reaches the agent's provider | Stage |
   |---|---|---|---|
@@ -806,16 +806,16 @@ not a second product.
   consent, erasure, releasing quarantined material, models, budget, writing
   policy and its suggestions, members, tokens and the career interview, which
   needs the candidate's own answers.
-- **Distribution as a plugin.** DraftLoop ships as a Claude Code plugin from a
+- **Distribution as a plugin.** Redakloop ships as a Claude Code plugin from a
   marketplace in this repository: the MCP server, skills and the Stop hook.
   Codex receives the same server and skills. A pasted configuration stays the
   fallback for other agents.
-- **The engine stays in DraftLoop.** The host agent never writes or edits
+- **The engine stays in Redakloop.** The host agent never writes or edits
   CV claims. It may record evidence for the candidate's review; it asks
-  DraftLoop to run the author–critic workflow, so grounding and the critic
+  Redakloop to run the author–critic workflow, so grounding and the critic
   still apply.
-- **Approval stays in DraftLoop.** An export or share needs the user's
-  approval in DraftLoop, never through the agent.
+- **Approval stays in Redakloop.** An export or share needs the user's
+  approval in Redakloop, never through the agent.
 - **Minimal disclosure.** Whatever a tool returns reaches the host agent's
   model provider. Tools return only what was asked, never return
   never-share material, and the hosted version records consent for it.
@@ -842,7 +842,7 @@ Notes on phase 4:
 
 - **Job matching** uses official job APIs and partner feeds only, never
   scraping. Embeddings shortlist jobs, and a model scores only the top
-  ones, citing the profile's evidence. DraftLoop suggests jobs and never
+  ones, citing the profile's evidence. Redakloop suggests jobs and never
   applies on the user's behalf.
 - **Ranking candidates for recruiters** is high-risk under the EU AI Act,
   unlike recommending jobs to a candidate. The candidate-side version comes

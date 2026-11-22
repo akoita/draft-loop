@@ -37,13 +37,13 @@ function english(reference: string, text: string, serviceUrl: string): string[] 
   return [
     "Hello,",
     "",
-    `Thank you for your note ${reference} about DraftLoop. Here is our answer:`,
+    `Thank you for your note ${reference} about Redakloop. Here is our answer:`,
     "",
     text,
     "",
-    `To answer, use Send feedback in DraftLoop (${serviceUrl}) and quote ${reference}. Replies to this email are not read.`,
+    `To answer, use Send feedback in Redakloop (${serviceUrl}) and quote ${reference}. Replies to this email are not read.`,
     "",
-    "The DraftLoop team",
+    "The Redakloop team",
   ];
 }
 
@@ -51,13 +51,13 @@ function french(reference: string, text: string, serviceUrl: string): string[] {
   return [
     "Bonjour,",
     "",
-    `Merci pour votre avis ${reference} sur DraftLoop. Voici notre réponse :`,
+    `Merci pour votre avis ${reference} sur Redakloop. Voici notre réponse :`,
     "",
     text,
     "",
-    `Pour répondre, utilisez Envoyer un avis dans DraftLoop (${serviceUrl}) en citant ${reference}. Les réponses à cet email ne sont pas lues.`,
+    `Pour répondre, utilisez Envoyer un avis dans Redakloop (${serviceUrl}) en citant ${reference}. Les réponses à cet email ne sont pas lues.`,
     "",
-    "L'équipe DraftLoop",
+    "L'équipe Redakloop",
   ];
 }
 
@@ -71,18 +71,18 @@ export function feedbackReplyMessage(input: {
   const { reference, text, serviceUrl } = input;
   if (input.locale === "en") {
     return {
-      subject: `About your DraftLoop note ${reference}`,
+      subject: `About your Redakloop note ${reference}`,
       text: english(reference, text, serviceUrl).join("\n"),
     };
   }
   if (input.locale === "fr") {
     return {
-      subject: `À propos de votre avis DraftLoop ${reference}`,
+      subject: `À propos de votre avis Redakloop ${reference}`,
       text: french(reference, text, serviceUrl).join("\n"),
     };
   }
   return {
-    subject: `Votre avis / Your note ${reference}: DraftLoop`,
+    subject: `Votre avis / Your note ${reference}: Redakloop`,
     text: [
       ...french(reference, text, serviceUrl),
       "",

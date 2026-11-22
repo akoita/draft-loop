@@ -1,7 +1,7 @@
 # Feature catalog
 
 This catalog lists every capability a candidate, a coach, an operator or an
-agent can reach in DraftLoop, with its status and where it runs. Start
+agent can reach in Redakloop, with its status and where it runs. Start
 here before reading the architecture or the code. The
 [roadmap](../roadmap.md) holds stages and priorities; this page holds what is
 true now.
@@ -17,7 +17,7 @@ true now.
 
 | Where it runs | Meaning                                                                                       |
 | ------------- | --------------------------------------------------------------------------------------------- |
-| server        | The web screen of every DraftLoop server: self-hosted, hosted, and the desktop client over it |
+| server        | The web screen of every Redakloop server: self-hosted, hosted, and the desktop client over it |
 | self-hosted   | Only on a [self-hosted server](../operations/self-hosted.md)                                  |
 | hosted        | Only on the hosted service                                                                    |
 | CLI           | The source-only CLI over a local workspace                                                    |
@@ -25,12 +25,12 @@ true now.
 **Agent access** names the MCP tools an agent can call for the feature
 through the [agent channel](../reference/agent-channel.md), or says `none`.
 
-## Running DraftLoop
+## Running Redakloop
 
 | Feature                                                                             | Status      | Where it runs | Agent access     | What it does                                                                                           |
 | ----------------------------------------------------------------------------------- | ----------- | ------------- | ---------------- | ------------------------------------------------------------------------------------------------------ |
 | [Self-hosted server](../operations/self-hosted.md)                                  | `available` | self-hosted   | `none`           | Runs the whole client-server stack on your own machine with Docker Compose.                            |
-| [Desktop client](../reference/cli-and-desktop.md)                                   | `available` | server        | `none`           | An Electron window over a DraftLoop server's web screen; alpha.                                        |
+| [Desktop client](../reference/cli-and-desktop.md)                                   | `available` | server        | `none`           | An Electron window over a Redakloop server's web screen; alpha.                                        |
 | [Source-only CLI](../reference/cli-and-desktop.md)                                  | `available` | CLI           | `none`           | Runs a local workspace from a source checkout; in maintenance mode.                                    |
 | [Hosted service](../architecture/hosted-service.md)                                 | `partial`   | hosted        | `none`           | The same server on Google Cloud in the EU; an invite-only beta in production.                          |
 | [Planned-maintenance notice](../architecture/hosted-service.md#planned-maintenance) | `available` | server        | `service_notice` | Shows the operator's planned maintenance on every screen and pauses changes during a read-only window. |
@@ -109,7 +109,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Organisations and members](organisations-and-consent.md)       | `available` | hosted        | `none`                                                             | Invite people, set roles and choose who opens each job search; sign-up accepts the published terms.                                                                                                                                                                                                                                                                                                                                                                          |
 | [Consent and erasure](organisations-and-consent.md)             | `available` | hosted        | `none`                                                             | Records consent before storing material, and erases a record, an organisation, or a person's own account with their sign-in.                                                                                                                                                                                                                                                                                                                                                 |
 | [Help](help.md)                                                 | `partial`   | web, server   | `search_help`                                                      | A Help menu on every screen opens a searchable user guide in English or French, also public at `/guide/` and linked from the menu with the About page and ending with the server's version and release day, and an AI assistant that answers questions and hands them to a person where the server turns it on; agents search and read the same guide.                                                                                                                       |
-| [Feedback](feedback.md)                                         | `partial`   | web, server   | `send_feedback`; the operator's `list_feedback`, `triage_feedback` | A member sends the operator a note about DraftLoop, with its technical context, from Send feedback in the header's Help menu or through their agent. The operator triages notes on the operator screen's inbox or through the API, links GitHub issues and replies to the member by email.                                                                                                                                                                                                                  |
+| [Feedback](feedback.md)                                         | `partial`   | web, server   | `send_feedback`; the operator's `list_feedback`, `triage_feedback` | A member sends the operator a note about Redakloop, with its technical context, from Send feedback in the header's Help menu or through their agent. The operator triages notes on the operator screen's inbox or through the API, links GitHub issues and replies to the member by email.                                                                                                                                                                                                                  |
 | [Operator screen](organisations-and-consent.md#operator-screen) | `available` | server        | `none`                                                             | The operator invites people from the beta waitlist, which emails each one a single invite to choose a password and join, follows invites and the seats used, is warned before inviting past the account cap, changes the cap at runtime with `pnpm beta:cap`, and triages members' feedback in an inbox; each list pages and searches, so it handles hundreds of rows. It also reads one member's run trace, content-free, opened from the feedback note that names the run, and a content-free usage funnel of where testers stop, week by week. |
 
 ## Planned

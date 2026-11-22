@@ -56,7 +56,7 @@ flowchart TD
 
 ## Proposing a topic
 
-The topic finder (#2174) proposes topics from what DraftLoop already holds:
+The topic finder (#2174) proposes topics from what Redakloop already holds:
 gaps in a known role, untold periods, untold themes, and themes the
 candidate's target jobs ask for. The interviewer offers them like this:
 

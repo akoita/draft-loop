@@ -1,5 +1,5 @@
 // Packaged acceptance for the desktop client (ADR 0011, D9; issue #2093). It launches the
-// packaged client with a fresh profile against a scripted fake DraftLoop API on this computer
+// packaged client with a fresh profile against a scripted fake Redakloop API on this computer
 // and checks the picker, the server window's isolation and navigation rules, that a remembered
 // sign-in goes only to the server that proves it holds it (#2148), and a relaunch.
 // No provider, no real server and no candidate material are involved.
@@ -17,7 +17,7 @@ import { pathToFileURL } from "node:url";
 
 import { _electron as electron } from "playwright-core";
 
-const fakePage = `<!doctype html><title>DraftLoop acceptance server</title>
+const fakePage = `<!doctype html><title>Redakloop acceptance server</title>
 <h1 id="ready">Acceptance server</h1>
 <a id="outside" href="https://docs.example.test/help">Help</a>
 <script>
@@ -39,7 +39,7 @@ export function acceptanceProof(token, challenge) {
 }
 
 /**
- * A scripted DraftLoop API on this computer. With `holdsToken` it answers the owner token proof;
+ * A scripted Redakloop API on this computer. With `holdsToken` it answers the owner token proof;
  * without it, it is the impostor of #2148: another process on the same address that does not
  * hold the token. `seen` collects every request line, header and body, to show the token never
  * reached it.
@@ -187,7 +187,8 @@ async function main() {
     await window.waitForTimeout(500);
     const opened = await app.evaluate(() => globalThis.acceptanceOpened);
     checks.outsideLinksLeave =
-      new URL(window.url()).origin === origin && opened.includes("https://docs.example.test/help");
+      new URL(window.url()).origin === origin &&
+      opened.some((url) => url === "https://docs.example.test/help");
     checks.otherSchemesBlocked = await window.evaluate(async () => {
       location.href = "file:///";
       await new Promise((resolvePromise) => setTimeout(resolvePromise, 300));

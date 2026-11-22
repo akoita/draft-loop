@@ -6,7 +6,7 @@ import { recordedChoices } from "./recorded-review-choices.js";
 
 /**
  * Review signals (#2251): what one person's review choices say across the runs and applications
- * of a workspace or tenant, read from records DraftLoop already keeps. They feed preference
+ * of a workspace or tenant, read from records Redakloop already keeps. They feed preference
  * suggestions, which change only the writing policy and never a candidate fact.
  *
  * A deleted term is candidate content: callers keep it in memory and in the tenant's store, and

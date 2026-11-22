@@ -28,7 +28,7 @@ import { SpeechButton } from "./speech-button.js";
 import { appendTranscript, type SpeechInput } from "./speech-to-text.js";
 
 /**
- * The guided career interview on the Career evidence page (#1030, #2189): DraftLoop offers topics
+ * The guided career interview on the Career evidence page (#1030, #2189): Redakloop offers topics
  * from the career record, the candidate talks one through with a coach-style interviewer, and each
  * summary they confirm becomes evidence. A host that serves the interview provides it as a panel.
  */

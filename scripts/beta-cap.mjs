@@ -1,4 +1,4 @@
-// Reads or sets the beta account cap on a running DraftLoop server, with no redeploy (#2998).
+// Reads or sets the beta account cap on a running Redakloop server, with no redeploy (#2998).
 //
 //   DRAFT_LOOP_API_URL=https://... DRAFT_LOOP_OWNER_TOKEN=... pnpm beta:cap        # read
 //   DRAFT_LOOP_API_URL=https://... DRAFT_LOOP_OWNER_TOKEN=... pnpm beta:cap 15     # set to 15

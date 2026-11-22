@@ -72,7 +72,7 @@ describe("desktop model profile picker rendering", () => {
       /<details class="model-profile-picker-notice"><summary><span[^>]*>Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions\.<\/span> <span[^>]*>More<\/span><\/summary>/,
     );
     expect(html).toContain("Quality for real CVs has not been validated");
-    expect(html).toContain("DraftLoop never switches your sign-in automatically.");
+    expect(html).toContain("Redakloop never switches your sign-in automatically.");
     expect(html).toContain("Sending candidate material still asks for your approval each time.");
     expect(html).toContain("Public uncached API list rates");
     expect(html).toContain("Combined scenario estimate");

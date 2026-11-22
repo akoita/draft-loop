@@ -1,4 +1,4 @@
-# Installs and runs DraftLoop's self-hosted server (ADR 0011, D15) with Docker only: no clone, no
+# Installs and runs Redakloop's self-hosted server (ADR 0011, D15) with Docker only: no clone, no
 # Node and no build. The bash twin is draft-loop-server. See docs/operations/self-hosted.md.
 #
 #   draft-loop-server.ps1 install [version] [folder]   download a release's stack (default: latest)
@@ -203,12 +203,12 @@ function Start-Server {
   }
   $script = Join-Path (Join-Path $serverHome "bin") "draft-loop-server.ps1"
   Write-Output ""
-  Write-Output "DraftLoop is running at http://127.0.0.1:$port"
+  Write-Output "Redakloop is running at http://127.0.0.1:$port"
   Write-Output "Sign in with the owner token, which this prints: $script token"
   if ($port -eq "8080") {
-    Write-Output "Desktop app: get DraftLoop from https://github.com/$Repository/releases and choose This computer."
+    Write-Output "Desktop app: get Redakloop from https://github.com/$Repository/releases and choose This computer."
   } else {
-    Write-Output "Desktop app: get DraftLoop from https://github.com/$Repository/releases and add http://127.0.0.1:$port."
+    Write-Output "Desktop app: get Redakloop from https://github.com/$Repository/releases and add http://127.0.0.1:$port."
   }
   exit 0
 }
@@ -268,11 +268,11 @@ function Restore-Server([string[]]$Arguments) {
   & tar -xzf $archive -C $scratch backup.json database.dump files.tar.gz 2>$null
   $manifestFile = Join-Path $scratch "backup.json"
   if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $manifestFile)) {
-    Fail "$archive is not a DraftLoop server backup."
+    Fail "$archive is not a Redakloop server backup."
   }
   $manifest = Get-Content -Raw -LiteralPath $manifestFile | ConvertFrom-Json
   if ($manifest.format -ne $BackupFormat -or $manifest.formatVersion -ne 1) {
-    Fail "$archive is not a DraftLoop server backup."
+    Fail "$archive is not a Redakloop server backup."
   }
   $saved = [string]$manifest.serverVersion
   if ([version]$saved -gt [version]$version) {
@@ -319,7 +319,7 @@ function Install-Server([string[]]$Arguments) {
   Copy-Bundle (Join-Path $scratch "bundle") $serverHome
   Remove-Item -LiteralPath $scratch -Recurse -Force
   Set-InstalledVersion $serverHome $version
-  Write-Output "Installed DraftLoop server $version in $serverHome."
+  Write-Output "Installed Redakloop server $version in $serverHome."
   Write-Output "Next: put anthropic_api_key (and openai_api_key if you use OpenAI) in $(Join-Path $serverHome 'keys'),"
   Write-Output "then run $(Join-Path $serverHome 'bin/draft-loop-server.ps1') up"
 }
@@ -338,7 +338,7 @@ function Update-Server([string[]]$Arguments) {
   Copy-Bundle (Join-Path $scratch "bundle") $serverHome
   Remove-Item -LiteralPath $scratch -Recurse -Force
   Set-InstalledVersion $serverHome $version
-  Write-Output "Switched $serverHome to DraftLoop server $version; starting it."
+  Write-Output "Switched $serverHome to Redakloop server $version; starting it."
   # Pulls the new images, runs the migrations, then restarts the API and the worker.
   Start-Server
 }

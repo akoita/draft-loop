@@ -392,7 +392,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   await app.register(swagger, {
     openapi: {
       openapi: "3.1.0",
-      info: { title: "DraftLoop API", version: "1" },
+      info: { title: "Redakloop API", version: "1" },
       components: {
         securitySchemes: {
           ownerToken: {

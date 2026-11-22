@@ -1,4 +1,4 @@
-/* DraftLoop web: the owner's review screen. It borrows the desktop's slate surfaces, teal
+/* Redakloop web: the owner's review screen. It borrows the desktop's slate surfaces, teal
    signals and amber and red findings, on a light or dark ground that follows the system.
    Element and shared-name rules skip the shared screens, which keep the desktop's own styles. */
 

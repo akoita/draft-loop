@@ -2,11 +2,11 @@
 
 - Status: Accepted
 - Date: 2026-08-21
-- Decision owners: DraftLoop maintainers
+- Decision owners: Redakloop maintainers
 
 ## Context
 
-DraftLoop's application workspace contains evidence and retrieval data for one
+Redakloop's application workspace contains evidence and retrieval data for one
 job application. That is the right lifecycle for opportunity context, run
 history, review decisions, and exports, but it is not durable candidate memory.
 Copying that workspace between applications would make source identity,
@@ -216,11 +216,11 @@ file is published first and the database marker second; a committed marker is
 valid only while the referenced regular file matches checksum and size. Ordinary
 failures clean up staging or newly published bytes. A crash or concurrent loser
 may leave an unreferenced opaque entry, but its shape or matching bytes do not
-authenticate DraftLoop ownership.
+authenticate Redakloop ownership.
 
 The append-only journal records an opaque intent before staging, resolved target
 before publication, publication, atomic managed-marker/database commit, and
-completion after staging cleanup. New intents also record a versioned DraftLoop
+completion after staging cleanup. New intents also record a versioned Redakloop
 ownership marker, the writer's fencing generation, and expected media type,
 checksum, and size. After capture, a separate immutable record binds the staging
 file's device and inode identity to that intent. These sensitive local fields
@@ -350,7 +350,7 @@ history, member history, and guarded no-op semantics.
 The store is local and plaintext. Restrictive filesystem permissions are
 best-effort, not encryption, and do not protect against another process running
 as the same user. The user controls the selected location and copies made
-outside DraftLoop.
+outside Redakloop.
 
 Filesystem paths are host configuration, not portable product data. The selected
 store path, exact file origins, and directory root remain outside the portable

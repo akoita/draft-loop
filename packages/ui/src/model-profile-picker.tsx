@@ -230,7 +230,7 @@ export function ModelProfilePicker({
             <span className="model-profile-picker-notice-line">{t`Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions.`}</span>{" "}
             <span className="model-profile-picker-notice-more">{t`More`}</span>
           </summary>
-          <p>{t`Quality for real CVs has not been validated for these presets, and account availability is not checked. OpenAI Codex user-session routes cannot use these profiles. DraftLoop never switches your sign-in automatically.`}</p>
+          <p>{t`Quality for real CVs has not been validated for these presets, and account availability is not checked. OpenAI Codex user-session routes cannot use these profiles. Redakloop never switches your sign-in automatically.`}</p>
         </details>
       )}
       {supportMessage === null ? null : (

@@ -85,7 +85,7 @@ const messageBody = z.strictObject({
 const handoffBody = z.strictObject({
   consent: z
     .literal(true)
-    .describe("The member agreed to share this conversation with the people who run DraftLoop."),
+    .describe("The member agreed to share this conversation with the people who run Redakloop."),
   transcript: z
     .array(
       z.strictObject({
@@ -154,7 +154,7 @@ const supportReplySchema = z
   .meta({ id: "SupportReply" });
 
 /**
- * Support conversations (#2882): a member asks how DraftLoop works and the support assistant
+ * Support conversations (#2882): a member asks how Redakloop works and the support assistant
  * answers from the user guide and their own account, or returns the matching guide sections when
  * it is off, over a limit, or fails. The server stores no conversation: the screen sends the
  * earlier turns with each question. Agents read the guide through `search_help` instead.

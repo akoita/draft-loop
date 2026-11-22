@@ -14,7 +14,7 @@ export type UrlHostnameResolver = (hostname: string) => Promise<readonly string[
 /** The host resolved to an address a fetch must not reach, so nothing was connected. */
 export class UnsafeUrlAddressError extends Error {
   constructor() {
-    super("The URL resolves to an address DraftLoop does not fetch from.");
+    super("The URL resolves to an address Redakloop does not fetch from.");
     this.name = "UnsafeUrlAddressError";
   }
 }
@@ -94,7 +94,7 @@ export function createPinnedUrlFetcher(options: PinnedUrlFetcherOptions = {}): U
             accept: "text/html,application/xhtml+xml,text/plain,text/markdown;q=0.9,*/*;q=0.1",
             // The body is read as is, so ask for it uncompressed.
             "accept-encoding": "identity",
-            "user-agent": "DraftLoop",
+            "user-agent": "Redakloop",
           },
           ...(init?.signal ? { signal: init.signal } : {}),
         },

@@ -117,7 +117,7 @@ describe("draft read tools", () => {
     await client.close();
   });
 
-  it("say the candidate exports the CV in DraftLoop when no Markdown export exists", async () => {
+  it("say the candidate exports the CV in Redakloop when no Markdown export exists", async () => {
     const { config } = scripted({
       [`GET ${base}/applications/app_fixture_0001`]: json({
         ...application,

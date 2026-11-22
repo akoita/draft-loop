@@ -189,9 +189,9 @@ describe("the support assistant (#2882)", () => {
   it("reports the service status", async () => {
     const { assistant, requests } = harness([
       toolStep("get_service_status"),
-      answerStep("DraftLoop is running normally.", ["problems"]),
+      answerStep("Redakloop is running normally.", ["problems"]),
     ]);
-    await assistant.answer(ask("Is DraftLoop down?"));
+    await assistant.answer(ask("Is Redakloop down?"));
     const last = requests[1]?.input as { tool_results: { result: unknown }[] };
     expect(last.tool_results[0]?.result).toEqual({ state: "operational", codes: [] });
   });
@@ -264,13 +264,13 @@ describe("the support assistant (#2882)", () => {
 
   it("passes a refusal through without calling a tool", async () => {
     const { assistant, requests, audit } = harness([
-      answerStep("I only help with using DraftLoop.", [], "refused"),
+      answerStep("I only help with using Redakloop.", [], "refused"),
     ]);
     const reply = await assistant.answer(ask("Rewrite my CV summary so it sounds senior."));
     expect(reply).toEqual({
       mode: "assistant",
       outcome: "refused",
-      text: "I only help with using DraftLoop.",
+      text: "I only help with using Redakloop.",
       sections: [],
       ticketId: null,
     });

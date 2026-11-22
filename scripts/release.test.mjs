@@ -51,7 +51,7 @@ function createFixture({ packageVersions = {}, metadata = {}, readme } = {}) {
   });
   writeFileSync(
     join(rootDirectory, "README.md"),
-    readme ?? "# DraftLoop\n\nhttps://github.com/akoita/draft-loop/releases\n",
+    readme ?? "# Redakloop\n\nhttps://github.com/akoita/draft-loop/releases\n",
     "utf8",
   );
 
@@ -206,7 +206,7 @@ describe("release package discovery and checks", () => {
 
   test("rejects a README without the canonical GitHub releases link", () => {
     assert.throws(
-      () => checkRelease(createFixture({ readme: "# DraftLoop\n" })),
+      () => checkRelease(createFixture({ readme: "# Redakloop\n" })),
       /README release link check failed: README\.md must contain the canonical releases URL/,
     );
   });

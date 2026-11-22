@@ -2,11 +2,11 @@
 
 - Status: Accepted
 - Date: 2026-08-13
-- Decision owners: DraftLoop maintainers
+- Decision owners: Redakloop maintainers
 
 ## Context
 
-DraftLoop was inspired by the evaluator–optimizer pattern: one model produces
+Redakloop was inspired by the evaluator–optimizer pattern: one model produces
 an initial result, another evaluates it against a rubric, and the first model
 revises it until the quality criteria are met or a retry limit is reached.
 

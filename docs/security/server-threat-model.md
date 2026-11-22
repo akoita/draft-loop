@@ -1,6 +1,6 @@
 # Server threat model
 
-This page is the security baseline for the DraftLoop server and its clients:
+This page is the security baseline for the Redakloop server and its clients:
 the API, the worker, the page fetcher, the model routes, the desktop client,
 the agent channel and the self-hosted Compose stack. It is for anyone who
 changes a server boundary or reviews a server release. It lists what is

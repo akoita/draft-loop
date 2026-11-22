@@ -3,7 +3,7 @@
  * formats through this module instead of calling `toLocale*` itself, so switching the screens'
  * language also switches how they write dates and amounts.
  *
- * English screens write British English ("24 Nov 2026", "Anthropic and OpenAI"): DraftLoop
+ * English screens write British English ("24 Nov 2026", "Anthropic and OpenAI"): Redakloop
  * serves the EU. A caller may pass an explicit locale, as tests and exports do.
  */
 import { i18n } from "@lingui/core";

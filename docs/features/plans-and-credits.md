@@ -20,7 +20,7 @@ owner token, has no organisation and answers `404` on these routes.
 - A **member** reads the plan, its limits and the credit balance under
   **Credits and consent**. The screen warns once most of the period's
   allowance is used.
-- Before a run starts, DraftLoop estimates the credits it would reserve; a
+- Before a run starts, Redakloop estimates the credits it would reserve; a
   started run counts at once.
 - Once the day's runs are used, the Start dialog says so, gives the local time
   the limit resets (UTC midnight) and keeps Start disabled.

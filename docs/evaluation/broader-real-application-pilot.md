@@ -61,7 +61,7 @@ restore the fixed all-cases-pass cohort result. The planned aggregate decision
 therefore has one indeterminate case and two cases not pursued, rather than a
 three-case measurement set.
 
-The broader-pilot exit criterion is unmet. DraftLoop has not demonstrated
+The broader-pilot exit criterion is unmet. Redakloop has not demonstrated
 factual non-regression, improved quality, reduced user effort, completed
 approval/export, or completed adversarial observations across representative
 consented cases. Milestone 7 ends without validation or release.

@@ -15,7 +15,7 @@ import {
   runProfileWindowLiveCheck,
 } from "./profile-window-live-check.js";
 
-const helpText = `DraftLoop profile window live check
+const helpText = `Redakloop profile window live check
 
 Usage:
   pnpm test:profile-windows:live [<company>/<modelId> ...]

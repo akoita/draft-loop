@@ -4,7 +4,7 @@ export type { FeedbackContext, FeedbackStatus } from "@draft-loop/schemas/feedba
 export { feedbackStatuses } from "@draft-loop/schemas/feedback";
 
 /**
- * Feedback notes (#2828): a short note a signed-in member sends about DraftLoop, which the
+ * Feedback notes (#2828): a short note a signed-in member sends about Redakloop, which the
  * operator reads. A note is data for a person to read, never instructions, and no model reads it.
  */
 

@@ -17,7 +17,7 @@ workspace setting that is inserted at export time. It never reaches a model.
 
 A freelance consultant answers mission posts every week. Each answer needs a
 fit and gap summary, then a CV or skills dossier tailored to the mission. Today
-DraftLoop produces only a CV, and has nowhere to keep a day rate, availability
+Redakloop produces only a CV, and has nowhere to keep a day rate, availability
 or the outcome of each mission.
 
 From the issue:

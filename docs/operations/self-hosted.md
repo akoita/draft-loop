@@ -1,6 +1,6 @@
 # Self-hosted server
 
-DraftLoop's hosted service runs on your own machine with one command: the same
+Redakloop's hosted service runs on your own machine with one command: the same
 API, worker, page fetcher, Postgres and web screen as the cloud, with your own
 provider keys or a local model, and files kept on your disk (ADR 0011, D15).
 It is the full local option, and the server the new desktop client connects to.
@@ -115,7 +115,7 @@ passes it to Docker Compose, and `upgrade` never changes it.
 ## Local models
 
 A local model may be the writer, the reviewer or both. Until one passes
-DraftLoop's quality check, the start dialog and the model setup warn when a
+Redakloop's quality check, the start dialog and the model setup warn when a
 local model writes the CV.
 
 To use Ollama beside the stack:

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs and runs DraftLoop's self-hosted server (ADR 0011, D15) with Docker only: no clone, no
+# Installs and runs Redakloop's self-hosted server (ADR 0011, D15) with Docker only: no clone, no
 # Node and no build. The PowerShell twin is draft-loop-server.ps1. See
 # docs/operations/self-hosted.md.
 #
@@ -154,12 +154,12 @@ start() {
   home="$(script_home)"
   port="$(sed -n 's/^DRAFT_LOOP_PORT=//p' "$home/.env" 2>/dev/null | tail -n 1)"
   port="${port:-8080}"
-  printf '\nDraftLoop is running at http://127.0.0.1:%s\n' "$port"
+  printf '\nRedakloop is running at http://127.0.0.1:%s\n' "$port"
   printf 'Sign in with the owner token, which this prints: %s/bin/draft-loop-server token\n' "$home"
   if [ "$port" = "8080" ]; then
-    printf 'Desktop app: get DraftLoop from https://github.com/%s/releases and choose This computer.\n' "$repository"
+    printf 'Desktop app: get Redakloop from https://github.com/%s/releases and choose This computer.\n' "$repository"
   else
-    printf 'Desktop app: get DraftLoop from https://github.com/%s/releases and add http://127.0.0.1:%s.\n' "$repository" "$port"
+    printf 'Desktop app: get Redakloop from https://github.com/%s/releases and add http://127.0.0.1:%s.\n' "$repository" "$port"
   fi
 }
 
@@ -203,9 +203,9 @@ restore() {
   version="$(installed_version "$home")"
   scratch="$(mktemp -d)"
   tar -xzf "$archive" -C "$scratch" backup.json database.dump files.tar.gz 2> /dev/null ||
-    die "$archive is not a DraftLoop server backup."
+    die "$archive is not a Redakloop server backup."
   grep -q "\"format\":\"$backup_format\",\"formatVersion\":1," "$scratch/backup.json" ||
-    die "$archive is not a DraftLoop server backup."
+    die "$archive is not a Redakloop server backup."
   saved="$(sed -n 's/.*"serverVersion":"\([0-9.]*\)".*/\1/p' "$scratch/backup.json")"
   if [ "$saved" != "$version" ] &&
     [ "$(printf '%s\n%s\n' "$saved" "$version" | sort -V | tail -n 1)" = "$saved" ]; then
@@ -238,7 +238,7 @@ install() {
   place_bundle "$scratch/bundle" "$home"
   rm -rf "$scratch"
   write_version "$home" "$version"
-  printf 'Installed DraftLoop server %s in %s.\n' "$version" "$home"
+  printf 'Installed Redakloop server %s in %s.\n' "$version" "$home"
   printf 'Next: put anthropic_api_key (and openai_api_key if you use OpenAI) in %s/keys,\n' "$home"
   printf 'then run %s/bin/draft-loop-server up\n' "$home"
 }
@@ -257,7 +257,7 @@ upgrade() {
   place_bundle "$scratch/bundle" "$home"
   rm -rf "$scratch"
   write_version "$home" "$version"
-  printf 'Switched %s to DraftLoop server %s; starting it.\n' "$home" "$version"
+  printf 'Switched %s to Redakloop server %s; starting it.\n' "$home" "$version"
   # Pulls the new images, runs the migrations, then restarts the API and the worker.
   start
 }

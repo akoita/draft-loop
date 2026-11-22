@@ -968,7 +968,7 @@ export function OperatorPage({
             {refreshing ? t`Refreshing…` : t`Refresh`}
           </button>
           <button type="button" className="secondary" onClick={onClose}>
-            {t`Back to DraftLoop`}
+            {t`Back to Redakloop`}
           </button>
         </div>
       </div>

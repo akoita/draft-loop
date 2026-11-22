@@ -120,7 +120,7 @@ describe("job pages rendered by JavaScript", () => {
     await expect(attempt).rejects.toBeInstanceOf(OpportunityJobPageUnreadableError);
     await expect(attempt).rejects.toThrow(opportunityJobPageUnreadableMessage);
     expect(opportunityJobPageUnreadableMessage).toBe(
-      "DraftLoop could not read enough job text from this page. It may show the job only with JavaScript. Paste the job text instead.",
+      "Redakloop could not read enough job text from this page. It may show the job only with JavaScript. Paste the job text instead.",
     );
     expect(extract).not.toHaveBeenCalled();
   });

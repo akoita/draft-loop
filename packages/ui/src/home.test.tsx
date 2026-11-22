@@ -101,7 +101,7 @@ describe("Home dashboard", () => {
     expect(html).toContain(`<p class="home-card-subtitle">${careerProfileCardSubtitle()}</p>`);
     expect(html).toContain(`<p class="home-card-subtitle">${careerEvidenceCardSubtitle()}</p>`);
     expect(html).toContain("What you give");
-    expect(html).toContain("What DraftLoop builds, you check");
+    expect(html).toContain("What Redakloop builds, you check");
   });
 
   it("shows evidence and profile as two numbered steps joined by an arrow", () => {
@@ -338,7 +338,7 @@ describe("Home in another screen language", () => {
         "Job search 2026",
         "Close workspace",
         "Staff Platform Engineer",
-        "DraftLoop",
+        "Redakloop",
       ]),
     ).toEqual([]);
   });

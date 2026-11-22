@@ -24,7 +24,7 @@ export interface NewApplicationDraft {
   readonly jobKind: NewApplicationJobKind;
   readonly jobText: string;
   readonly jobUrl: string;
-  /** The person allowed DraftLoop to fetch the job page when requirements are extracted. */
+  /** The person allowed Redakloop to fetch the job page when requirements are extracted. */
   readonly urlApproved: boolean;
   /** The attached file, once read; null before one is chosen. */
   readonly jobFile: NewApplicationJobFile | null;
@@ -98,7 +98,7 @@ export const newApplicationJobTextMessage = () => t`Paste the job description to
 export const newApplicationJobUrlMessage = () =>
   t`Enter the web address (http or https) of the job page.`;
 export const newApplicationUrlApprovalMessage = () =>
-  t`Allow DraftLoop to fetch this page to continue. Nothing is fetched until you extract requirements.`;
+  t`Allow Redakloop to fetch this page to continue. Nothing is fetched until you extract requirements.`;
 
 function isWebAddress(value: string): boolean {
   try {

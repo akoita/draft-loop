@@ -13,7 +13,7 @@ const url = "https://draftloop.example.test";
 describe("planned-maintenance email (#2968)", () => {
   it("names the window in Paris time and what members can still do", () => {
     const { subject, text } = maintenanceNotice(window, "en", url);
-    expect(subject).toBe("Planned maintenance on DraftLoop");
+    expect(subject).toBe("Planned maintenance on Redakloop");
     expect(text).toContain("20:00");
     expect(text).toContain("22:00");
     expect(text).toContain("(Paris time)");
@@ -23,7 +23,7 @@ describe("planned-maintenance email (#2968)", () => {
 
   it("is written in French for a member whose screen is in French", () => {
     const { subject, text } = maintenanceNotice(window, "fr", url);
-    expect(subject).toBe("Maintenance planifiée de DraftLoop");
+    expect(subject).toBe("Maintenance planifiée de Redakloop");
     expect(text).toContain("heure de Paris");
     expect(text).toContain("modifications seront suspendues");
   });
@@ -76,8 +76,8 @@ describe("planned-maintenance email (#2968)", () => {
     );
     expect(summary).toEqual({ recipients: 2, sent: 1, failed: 1, dryRun: false });
     expect(sent.map((message) => message.subject)).toEqual([
-      "Maintenance planifiée de DraftLoop",
-      "Planned maintenance on DraftLoop",
+      "Maintenance planifiée de Redakloop",
+      "Planned maintenance on Redakloop",
     ]);
   });
 

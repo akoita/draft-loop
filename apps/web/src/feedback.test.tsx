@@ -77,7 +77,7 @@ describe("the Send feedback dialog (#2844, #2876)", () => {
     const html = render(<FeedbackDialog {...idle} sent reference="FB-1A2B3C4D" />);
 
     expect(html).toContain('role="status"');
-    expect(html).toContain("The people who run DraftLoop read every note.");
+    expect(html).toContain("The people who run Redakloop read every note.");
     expect(html).toContain('<strong class="feedback-reference">FB-1A2B3C4D</strong>');
     expect(html).not.toContain("<textarea");
   });

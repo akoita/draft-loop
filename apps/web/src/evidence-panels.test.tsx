@@ -103,7 +103,7 @@ describe("storage permission on the Career evidence page", () => {
     expect(html).toContain("Granted on");
     expect(html).toContain("Withdraw consent");
     expect(html).not.toContain("<form");
-    expect(html).not.toContain("DraftLoop stores the CVs");
+    expect(html).not.toContain("Redakloop stores the CVs");
   });
 
   it("asks with the form while no permission is recorded", () => {

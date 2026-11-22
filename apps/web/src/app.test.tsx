@@ -74,7 +74,7 @@ describe("web screen", () => {
   it("puts the service status and sign-out in the page's actions, with no bar of its own", () => {
     const html = renderToStaticMarkup(<Shell client={unusedClient} onSignOut={() => {}} />);
 
-    expect(html).not.toContain("<h1>DraftLoop</h1>");
+    expect(html).not.toContain("<h1>Redakloop</h1>");
     expect(html).toMatch(
       /<div class="page-actions">(?:<button[^>]*header-theme-toggle[\s\S]*?<\/button>)?<span class="service-status service-checking" role="status">/u,
     );
@@ -106,7 +106,7 @@ describe("web screen", () => {
       <Shell mode="sign-in" client={unusedClient} onSignOut={() => {}} />,
     );
 
-    expect(html).toContain("Opening DraftLoop…");
+    expect(html).toContain("Opening Redakloop…");
     expect(html).not.toContain("Opening your documents…");
   });
 

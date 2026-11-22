@@ -2,12 +2,12 @@
 
 - Status: Accepted
 - Date: 2026-08-20
-- Decision owners: DraftLoop maintainers
+- Decision owners: Redakloop maintainers
 - Amends: [ADR 0004](0004-desktop-credential-boundary.md)
 
 ## Context
 
-DraftLoop's direct Anthropic and OpenAI adapters currently require separately
+Redakloop's direct Anthropic and OpenAI adapters currently require separately
 billed API keys. The local vendor runtimes can instead reuse a user's existing
 Claude and ChatGPT/Codex login, while unattended CI cannot rely on an
 interactive personal session. Authentication also changes billing, retention,
@@ -27,13 +27,13 @@ hosted provider:
 
 1. `api-key` uses the existing `@anthropic-ai/sdk` and `openai` adapters. It is
    the default, supports unattended execution when explicitly configured, and
-   retains the existing credential store and environment fallback. DraftLoop's
+   retains the existing credential store and environment fallback. Redakloop's
    current CI/CD workflows do not receive provider credentials or run this gate.
 2. `user-session` delegates the complete request to the locally installed
-   vendor runtime using its provider-managed login. DraftLoop never reads,
+   vendor runtime using its provider-managed login. Redakloop never reads,
    returns, persists, or copies the underlying OAuth credentials.
 
-Mode selection is explicit and fails closed. DraftLoop never falls back from a
+Mode selection is explicit and fails closed. Redakloop never falls back from a
 user session to an API key, or conversely, because doing so would change the
 approved receiver, billing source, and retention contract.
 
@@ -49,12 +49,12 @@ provider-specific environment override takes precedence over the shared
 environment setting, then that provider's saved preference, and finally the
 `api-key` default. The desktop reports whether an environment override controls
 the active mode and refuses to pretend that a saved change is active; a mode
-change takes effect only after the user closes and reopens DraftLoop.
+change takes effect only after the user closes and reopens Redakloop.
 
 The OpenAI credentials screen offers the API-key mode and the authenticated
 Codex/ChatGPT subscription mode. While a user session is active, it shows the
 Codex login probe and setup guidance instead of an actionable OpenAI API-key
-editor. DraftLoop does not silently switch billing modes when a probe or key is
+editor. Redakloop does not silently switch billing modes when a probe or key is
 unavailable.
 
 The first user-session slice is experimental and local-only. It uses an empty

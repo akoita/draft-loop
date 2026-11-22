@@ -213,7 +213,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
       >
         <div className="modal-header">
           <div>
-            <p className="eyebrow">{t`DraftLoop / Opportunity brief`}</p>
+            <p className="eyebrow">{t`Redakloop / Opportunity brief`}</p>
             <h2 id="brief-review-title">{t`Review requirements`}</h2>
           </div>
           <button className="button button-quiet" type="button" onClick={onClose}>

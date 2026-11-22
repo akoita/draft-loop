@@ -148,7 +148,7 @@ describe("application tools", () => {
         next_step: {
           stage: "reviewing",
           action:
-            "A draft waits for the candidate: they read it, decide each finding and approve it in DraftLoop.",
+            "A draft waits for the candidate: they read it, decide each finding and approve it in Redakloop.",
         },
       },
     ]);

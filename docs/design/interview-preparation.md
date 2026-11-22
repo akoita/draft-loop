@@ -93,12 +93,12 @@ never-share material. The amendment adds one read tool.
   contents of anything the candidate has not approved.
 - **Host agent role:** it may draft interview answers from the returned facts
   and practise with the candidate. It still cannot write or edit CV claims;
-  CV drafting stays in the DraftLoop author–critic workflow.
+  CV drafting stays in the Redakloop author–critic workflow.
 - **Token scope:** the agent token today reaches only the work journal. Add a
   read-only interview scope; it needs its own setting the candidate turns on,
   as "Accept notes from agents" does for the journal.
 - **Cost:** the candidate prepares inside Claude or another agent and spends
-  no DraftLoop credits. Whatever the tool returns reaches that agent's model
+  no Redakloop credits. Whatever the tool returns reaches that agent's model
   provider, so the setting names this plainly.
 
 ## Step 3: questions and claim check
@@ -136,7 +136,7 @@ kind, with the same pending state and the same approval screen.
 
 ## Gate
 
-A candidate prepares one real interview from DraftLoop's facts alone. Every
+A candidate prepares one real interview from Redakloop's facts alone. Every
 claim in their practised answers traces to an approved fact, and no
 `never-say` item reaches an answer.
 

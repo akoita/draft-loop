@@ -114,7 +114,7 @@ describe("createWorkJournalApi", () => {
     const refusal = api(() => new Response("<html>", { status: 503 })).list({});
     await expect(refusal).rejects.toBeInstanceOf(WorkJournalApiError);
     await expect(api(() => new Response("<html>", { status: 503 })).list({})).rejects.toMatchObject(
-      { code: "http_503", message: "The DraftLoop server refused the call.", fields: [] },
+      { code: "http_503", message: "The Redakloop server refused the call.", fields: [] },
     );
   });
 

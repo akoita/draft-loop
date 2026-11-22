@@ -46,7 +46,7 @@ export function applicationImportSuccessNotice(
 
 /**
  * The notice for a failed import, or `null` when the person only closed the folder picker. The
- * host words refusals ("not a DraftLoop workspace", "already imported") without any path, so they
+ * host words refusals ("not a Redakloop workspace", "already imported") without any path, so they
  * are shown as written; anything else falls back to a fixed sentence.
  */
 export function applicationImportErrorNotice(error: unknown): ApplicationImportNotice | null {

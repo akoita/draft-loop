@@ -10,7 +10,7 @@ job, a draft, review and export, Prepare), then covers Display, agents, plans
 and credits, privacy, and what to do when something goes wrong. Its Advanced
 sections, at the end, cover connecting an agent and its permissions, how a
 draft is written and checked, private sections and screening, the data
-download, and running DraftLoop on your own computer. Settings > Agents links
+download, and running Redakloop on your own computer. Settings > Agents links
 to the agent steps.
 
 ## Where it runs
@@ -116,7 +116,7 @@ pnpm test:support:live
 
 | Surface | What it does |
 | --- | --- |
-| Web header: **Help** menu | **Quick help** opens the guide in a modal side sheet. The menu also opens the public **User guide** and **About DraftLoop** pages in a new tab, **Send feedback** in sign-in mode, and the legal pages |
+| Web header: **Help** menu | **Quick help** opens the guide in a modal side sheet. The menu also opens the public **User guide** and **About Redakloop** pages in a new tab, **Send feedback** in sign-in mode, and the legal pages |
 | Public pages `/guide/`, `/guide/fr/` | The whole guide for visitors, with an EN and FR switch; written by the web build (`apps/web/src/guide-page.ts`) |
 | `GET /v1/help`, `GET /v1/workspaces/:workspaceId/help` | The guide or a search of it, `language` `en` or `fr`, `q` up to 200 characters |
 | MCP `search_help` (scope `journal`) | Searches the guide for an agent |

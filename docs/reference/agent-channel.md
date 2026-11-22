@@ -1,4 +1,4 @@
-# Agent channel: agents in DraftLoop
+# Agent channel: agents in Redakloop
 
 An agent here is any AI assistant that pairs a model with a harness able to
 call tools over MCP. Claude Code and Codex are the examples this page sets up;
@@ -11,7 +11,7 @@ section. The service serves it at `/guide/#connect-agent`, and Settings >
 Agents links to it. This page is the developer reference.
 
 The candidate's agent can record notable work it helped ship, such as a
-payments integration or a database migration, as a note in DraftLoop's work
+payments integration or a database migration, as a note in Redakloop's work
 journal. A note is evidence for review, never a CV claim: it waits as pending
 until the candidate approves it on the Career evidence page or from the CLI.
 The design is [ADR 0011, D17](../adr/0011-client-server-version.md#d17-agent-channel-an-mcp-server).
@@ -309,12 +309,12 @@ returns a run's open draft, its findings or career evidence.
 | `start_cv_run`             | `runs:start`        | Starts a CV run on the newest reviewed brief, within the cap                                                                     |
 | `draft_cover_letter`       | `runs:start`        | Drafts and saves a cover letter, within the cap                                                                                  |
 | `draft_interview_prep`     | `runs:start`        | Drafts and saves interview questions with talking points, within the cap                                                         |
-| `send_feedback`            | `journal`           | Passes the candidate's own note about DraftLoop to the people who run it                                                         |
+| `send_feedback`            | `journal`           | Passes the candidate's own note about Redakloop to the people who run it                                                         |
 | `add_project`              | `evidence:write`    | Files a project card about one repository, pending the candidate's approval                                                      |
 | `get_profile`              | `profile:suggest`   | Reads the reviewed career profile with fact ids, without the facts marked never-say                                              |
 | `suggest_profile_update`   | `profile:suggest`   | Files one change to the profile with the words behind it, pending the candidate's decision                                       |
 | `list_profile_suggestions` | `profile:suggest`   | Lists the suggestions this token filed and their status                                                                          |
-| `search_help`              | `journal`           | Searches DraftLoop's user guide, in English or French, for how a feature works                                                   |
+| `search_help`              | `journal`           | Searches Redakloop's user guide, in English or French, for how a feature works                                                   |
 | `service_notice`           | none (public)       | Says whether planned maintenance is coming or under way, and until when changes are paused                                       |
 
 With the operator's credential, the server's owner token, the server also
@@ -323,23 +323,23 @@ link each to a GitHub issue ([Feedback](../features/feedback.md)). It never
 offers them with an agent token or a member's sign-in, and the API refuses any
 other credential.
 
-During a read-only planned maintenance, DraftLoop refuses changes with
+During a read-only planned maintenance, Redakloop refuses changes with
 `service_maintenance`, a refusal marked retryable. `service_notice` says
 until when, so the agent tells the candidate instead of retrying.
 
 `search_help` and the `draftloop://help/guide/en` (or `/fr`) resource hold
 the same user guide a member reads from the Help button, so an agent can
-answer how DraftLoop works without guessing.
+answer how Redakloop works without guessing.
 
 `add_job` refuses a job page address, because fetching a page needs the
-candidate's approval in DraftLoop. The job text is screened like an upload
+candidate's approval in Redakloop. The job text is screened like an upload
 when its requirements are extracted. Approving a draft, deciding findings,
-exporting and every setting stay with the candidate in DraftLoop. A token
+exporting and every setting stay with the candidate in Redakloop. A token
 without the scope a tool needs is refused with a message naming that scope,
 its name on the token form, and where to create a new token.
 
 `get_cv` needs a Markdown export. When the CV has none, the agent asks the
-candidate to export it in DraftLoop; it never exports or writes one itself.
+candidate to export it in Redakloop; it never exports or writes one itself.
 The material route returns the cited facts too, so a `drafts:read` token can
 read them by calling the API directly; the tools leave them out.
 
@@ -366,7 +366,7 @@ the other.
 - **Past the cap.** The start answers 429 `agent_spend_cap_reached` with the
   cap and what was spent. It works again next month, or with a new token.
 - **Stays human.** The models, the career profile, the budget, approving the
-  draft and deciding findings stay with the candidate in DraftLoop.
+  draft and deciding findings stay with the candidate in Redakloop.
 
 The token list in Settings shows what each token used this month.
 `start_cv_run` sends a new `Idempotency-Key` on each call, so the agent never
@@ -386,7 +386,7 @@ draftloop-mcp init --host claude-code --hook --scope applications:read --scope d
 
 A host's command menu, such as Claude Code's `/` menu, lists skills and MCP
 prompts, never tools. To use a tool without a command, ask in plain words, for
-example "list my DraftLoop applications". In Claude Code, `/mcp` lists every
+example "list my Redakloop applications". In Claude Code, `/mcp` lists every
 tool the server offers.
 
 | Task                     | Plugin skill              | MCP prompt, any host | What it does                                        |
@@ -409,13 +409,13 @@ command. `draftloop-mcp serve-http` serves the same tools over Streamable HTTP:
 DRAFT_LOOP_SERVER_URL=http://127.0.0.1:8080 draftloop-mcp serve-http
 ```
 
-It prints `DraftLoop MCP tools on http://127.0.0.1:8090/mcp`. The caller sends
+It prints `Redakloop MCP tools on http://127.0.0.1:8090/mcp`. The caller sends
 its own agent token as `Authorization: Bearer`, and the server forwards it to
 the API on each call. It keeps no token, no session and no candidate data.
 
 | Setting                       | Default                 | What it sets                     |
 | ----------------------------- | ----------------------- | -------------------------------- |
-| `DRAFT_LOOP_SERVER_URL`       | `http://127.0.0.1:8080` | The DraftLoop API the tools call |
+| `DRAFT_LOOP_SERVER_URL`       | `http://127.0.0.1:8080` | The Redakloop API the tools call |
 | `DRAFT_LOOP_SERVER_WORKSPACE` | `owner`                 | The workspace the tools act in   |
 | `DRAFT_LOOP_MCP_PORT`         | `8090`                  | The port it listens on           |
 | `DRAFT_LOOP_MCP_HOST`         | `127.0.0.1`             | The address it binds             |
@@ -439,7 +439,7 @@ sequenceDiagram
   participant A as Assistant
   participant M as MCP server
   participant I as Identity provider
-  participant D as DraftLoop API
+  participant D as Redakloop API
   A->>M: POST /mcp without a token
   M-->>A: 401 with the metadata address and default scopes
   A->>M: GET /.well-known/oauth-protected-resource
@@ -505,7 +505,7 @@ two more checks:
 
 ## On the hosted service: an assistant's sign-in
 
-A candidate's own guide is [Connect DraftLoop to your assistant](connect-an-assistant.md).
+A candidate's own guide is [Connect Redakloop to your assistant](connect-an-assistant.md).
 
 Besides a member's [agent token](#set-it-up), an assistant can sign the
 person in through the identity provider and hold an access token issued to

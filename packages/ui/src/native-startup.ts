@@ -2,7 +2,7 @@ import { t } from "@lingui/core/macro";
 import type { ReviewScreenPort } from "./model.js";
 
 export const nativeConnectionUnavailableMessage = () =>
-  t`The desktop native connection is unavailable. Restart DraftLoop and try again.`;
+  t`The desktop native connection is unavailable. Restart Redakloop and try again.`;
 
 /** The Electron marker suppresses the browser fixture fallback; it grants no host access. */
 export function isElectronRendererRuntime(

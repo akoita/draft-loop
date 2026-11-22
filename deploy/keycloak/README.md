@@ -1,18 +1,18 @@
 # The hosted service's Keycloak image
 
 For whoever deploys or changes sign-in. The image is stock Keycloak with its
-build options baked in and DraftLoop's theme, `draftloop`, in
+build options baked in and Redakloop's theme, `draftloop`, in
 `themes/draftloop`. It holds no realm, secret or setting.
 
 ## What the theme changes
 
 | Part  | Page or email                            | What a person sees                                                   |
 | ----- | ---------------------------------------- | -------------------------------------------------------------------- |
-| Email | Execute-actions (`UPDATE_PASSWORD` only) | "Your DraftLoop beta invite" with one **Create your account** button |
-| Login | Confirmation before the form             | "Create your DraftLoop account" and **Choose my password**           |
+| Email | Execute-actions (`UPDATE_PASSWORD` only) | "Your Redakloop beta invite" with one **Create your account** button |
+| Login | Confirmation before the form             | "Create your Redakloop account" and **Choose my password**           |
 | Login | Password form                            | "Choose your password"                                               |
-| Login | After the password                       | "Your password is set" and **Continue to DraftLoop**                 |
-| Login | Sign-in                                  | "Sign in to DraftLoop", buttons and links in DraftLoop's teal        |
+| Login | After the password                       | "Your password is set" and **Continue to Redakloop**                 |
+| Login | Sign-in                                  | "Sign in to Redakloop", buttons and links in Redakloop's teal        |
 
 Every other email and page keeps Keycloak's words. Each text exists in
 English and French, in `messages/messages_<locale>.properties`.
@@ -20,10 +20,10 @@ English and French, in `messages/messages_<locale>.properties`.
 ```mermaid
 flowchart LR
   A[API creates the sign-in] --> B[Invite email]
-  B --> C[Create your DraftLoop account]
+  B --> C[Create your Redakloop account]
   C --> D[Choose your password]
   D --> E[Your password is set]
-  E --> F[DraftLoop screen, #welcome]
+  E --> F[Redakloop screen, #welcome]
   F --> G[Sign in, then accept the terms]
 ```
 

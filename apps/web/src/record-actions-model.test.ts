@@ -27,7 +27,7 @@ describe("record export and deletion", () => {
 
   it("downloads the record's archive under the API's file name", () => {
     expect(exportRequest("candidate-ana")).toEqual({ path: { workspaceId: "candidate-ana" } });
-    expect(exportFileName).toBe("draftloop-data.zip");
+    expect(exportFileName).toBe("redakloop-data.zip");
   });
 
   it("deletes only once DELETE is typed, and never asks for the internal id", () => {

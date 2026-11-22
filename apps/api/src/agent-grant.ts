@@ -98,7 +98,7 @@ export function admitAgentGrant(
     return {
       outcome: "refused",
       message:
-        "An agent connection cannot start runs or drafts on this server; start them in DraftLoop.",
+        "An agent connection cannot start runs or drafts on this server; start them in Redakloop.",
     };
   }
   if (request.method === "GET" && rule.allows !== undefined && !rule.allows(request)) {

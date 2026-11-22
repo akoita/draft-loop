@@ -640,7 +640,7 @@ export function createWorkspaceApplicationService(
       }
       if (command.language !== undefined && !isDocumentLanguage(command.language)) {
         throw new CliUserError(
-          `${command.language} is not a language DraftLoop can write documents in.`,
+          `${command.language} is not a language Redakloop can write documents in.`,
         );
       }
       const createdAt = command.createdAt ?? clock();

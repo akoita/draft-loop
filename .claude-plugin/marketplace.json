@@ -1,14 +1,14 @@
 {
   "name": "draftloop",
-  "owner": { "name": "DraftLoop contributors" },
+  "owner": { "name": "Redakloop contributors" },
   "metadata": {
-    "description": "Connect Claude Code, Codex or another agent to your own DraftLoop server."
+    "description": "Connect Claude Code, Codex or another agent to your own Redakloop server."
   },
   "plugins": [
     {
       "name": "draftloop",
       "source": "./plugins/draftloop",
-      "description": "Record notable work as career evidence, see your job applications, add a job and follow a CV run in your DraftLoop server. Approvals stay in DraftLoop.",
+      "description": "Record notable work as career evidence, see your job applications, add a job and follow a CV run in your Redakloop server. Approvals stay in Redakloop.",
       "category": "productivity"
     }
   ]

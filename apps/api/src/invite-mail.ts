@@ -35,10 +35,10 @@ function english(link: string, code: string, signIn?: "exists"): string[] {
   const steps =
     signIn === "exists"
       ? [
-          "Your place in the DraftLoop beta is ready. Open this link and sign in with your existing DraftLoop password; your invite code is already filled in:",
+          "Your place in the Redakloop beta is ready. Open this link and sign in with your existing Redakloop password; your invite code is already filled in:",
         ]
       : [
-          "Your place in the DraftLoop beta is ready. Open this link to create your account; your invite code is already filled in:",
+          "Your place in the Redakloop beta is ready. Open this link to create your account; your invite code is already filled in:",
         ];
   return [
     "Hello,",
@@ -53,7 +53,7 @@ function english(link: string, code: string, signIn?: "exists"): string[] {
     "",
     "If you did not ask to join, ignore this email.",
     "",
-    "The DraftLoop team",
+    "The Redakloop team",
   ];
 }
 
@@ -61,10 +61,10 @@ function french(link: string, code: string, signIn?: "exists"): string[] {
   const steps =
     signIn === "exists"
       ? [
-          "Votre place dans la beta de DraftLoop est prête. Ouvrez ce lien et connectez-vous avec votre mot de passe DraftLoop actuel ; votre code d'invitation est déjà rempli :",
+          "Votre place dans la beta de Redakloop est prête. Ouvrez ce lien et connectez-vous avec votre mot de passe Redakloop actuel ; votre code d'invitation est déjà rempli :",
         ]
       : [
-          "Votre place dans la beta de DraftLoop est prête. Ouvrez ce lien pour créer votre compte ; votre code d'invitation est déjà rempli :",
+          "Votre place dans la beta de Redakloop est prête. Ouvrez ce lien pour créer votre compte ; votre code d'invitation est déjà rempli :",
         ];
   return [
     "Bonjour,",
@@ -79,7 +79,7 @@ function french(link: string, code: string, signIn?: "exists"): string[] {
     "",
     "Si vous n'avez rien demandé, ignorez cet email.",
     "",
-    "L'équipe DraftLoop",
+    "L'équipe Redakloop",
   ];
 }
 
@@ -94,18 +94,18 @@ export function inviteMessage(input: {
   const { signIn } = input;
   if (input.locale === "en") {
     return {
-      subject: "Your DraftLoop beta invite",
+      subject: "Your Redakloop beta invite",
       text: english(link, input.code, signIn).join("\n"),
     };
   }
   if (input.locale === "fr") {
     return {
-      subject: "Votre invitation à la beta de DraftLoop",
+      subject: "Votre invitation à la beta de Redakloop",
       text: french(link, input.code, signIn).join("\n"),
     };
   }
   return {
-    subject: "Votre invitation à DraftLoop / Your DraftLoop invite",
+    subject: "Votre invitation à Redakloop / Your Redakloop invite",
     text: [
       ...french(link, input.code, signIn),
       "",

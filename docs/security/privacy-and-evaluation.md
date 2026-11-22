@@ -1,10 +1,10 @@
 # Privacy and evaluation policy
 
-This page is for anyone who changes how DraftLoop stores, sends or evaluates
+This page is for anyone who changes how Redakloop stores, sends or evaluates
 candidate material. It states what stays local, what may reach a provider and
 under which approval, and how quality is measured without real data.
 
-DraftLoop treats candidate material and confidential employer information as
+Redakloop treats candidate material and confidential employer information as
 sensitive by default. Two sets of rules apply:
 
 - **Local CLI and the shared engine:** source material, evidence, drafts and
@@ -60,7 +60,7 @@ provider retention: not allowed unless explicitly configured
 
 ## Provider approval and credentials
 
-Before the first request that carries source or draft material, DraftLoop shows
+Before the first request that carries source or draft material, Redakloop shows
 the data class, provider, model, endpoint, allowed context and retention
 choice. A denied or stale policy fails before the SDK call. The complete
 candidate corpus never enters the approved context.
@@ -76,7 +76,7 @@ content. The desktop client holds no provider key: it opens the server's own
 web screen, and the server holds the keys.
 
 Experimental local user-session mode hands a structured request to an
-installed Codex or Claude runtime. DraftLoop does not extract or store its
+installed Codex or Claude runtime. Redakloop does not extract or store its
 OAuth credentials. The runtime, authentication mode and provider-default
 retention appear in the approved endpoint identity. Tools, repository
 instructions, extensions, MCP servers, web search and session persistence are
@@ -99,7 +99,7 @@ defines the brief contract. The privacy rules are:
   enter extraction requests.
 - **Extraction requests:** after approval, normalized text from available,
   partial or stale sources may go to the author provider. Requests omit URLs,
-  paths, provenance and candidate input. DraftLoop validates the schema and
+  paths, provenance and candidate input. Redakloop validates the schema and
   every cited source ID, and stores no raw request or response.
 - **Failures:** an unavailable source has no invented checksum. Diagnostics do
   not repeat a path, URL query, raw content or operating-system error.
@@ -110,7 +110,7 @@ defines the brief contract. The privacy rules are:
 
 ## Candidate writing policies
 
-The candidate imports or activates each policy file explicitly. DraftLoop keeps
+The candidate imports or activates each policy file explicitly. Redakloop keeps
 bounded, immutable, checksum-addressed versions. Default views show metadata,
 and exact content is returned only by an explicit content read. Edits to the
 managed active file become a new version before a run.
@@ -182,7 +182,7 @@ URL failures never echo query strings. Store roots stay out of workspace
 descriptors, context snapshots, run history, diagnostics and provider
 requests.
 
-The CKB database and managed blobs are plaintext. DraftLoop sets restrictive
+The CKB database and managed blobs are plaintext. Redakloop sets restrictive
 permissions where supported, but they do not protect against another process
 running as the same user. Files such as `AGENTS.md` or `.env` stay inert
 candidate data and never become instructions, configuration or permissions.
@@ -222,7 +222,7 @@ IDs, capture time and lifecycle revision. Combining more than one CKB needs a
 separate approval. The snapshot is audit and drift evidence, not consent to send
 content.
 
-Before a provider-capable start, resume or revision, DraftLoop compares a fresh
+Before a provider-capable start, resume or revision, Redakloop compares a fresh
 path-free projection with the run's snapshot. Drift requires review before the
 provider is called.
 
@@ -239,7 +239,7 @@ provider is called.
 Deleting an original file or workspace does not delete its managed CKB copy. A
 database-only backup is incomplete because it omits managed blobs. Users remain
 responsible for directories, devices, cloud backups, exported packages and
-copies made outside DraftLoop.
+copies made outside Redakloop.
 
 ## Redaction and logging
 
@@ -296,6 +296,6 @@ explicit disagreements and human approval remain required.
 
 ## Approval boundary
 
-DraftLoop prepares artifacts. It must not submit an application, send a
+Redakloop prepares artifacts. It must not submit an application, send a
 message, publish a document or run uncontrolled web research without an
 explicit user action and a visible approval boundary.

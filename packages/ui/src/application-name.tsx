@@ -101,7 +101,7 @@ interface ApplicationNameNudgeProps {
 
 /**
  * Asks once for a name in the person's own terms while the default application still has the
- * name DraftLoop derived from the workspace's job. Any choice, keeping the name included, ends it.
+ * name Redakloop derived from the workspace's job. Any choice, keeping the name included, ends it.
  */
 export function ApplicationNameNudge({
   name,

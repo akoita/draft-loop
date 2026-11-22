@@ -1,6 +1,6 @@
-# Releasing DraftLoop
+# Releasing Redakloop
 
-DraftLoop intends to produce a versioned release at each roadmap stage exit. An
+Redakloop intends to produce a versioned release at each roadmap stage exit. An
 explicitly approved alpha sprint checkpoint may also be released before a
 stage exit. Every release is created only from the approved `main` branch;
 publishing an artifact proves the Released evidence level for that artifact,

@@ -127,7 +127,7 @@ describe("sensitive knowledge consent", () => {
     it("refuses to write outside a workspace or with a non-boolean value", async () => {
       const root = await temporaryDirectory();
       await expect(setSensitiveKnowledgeConsent(root, true)).rejects.toThrow(
-        /No DraftLoop workspace found/u,
+        /No Redakloop workspace found/u,
       );
       const workspace = await bareWorkspace();
       await expect(

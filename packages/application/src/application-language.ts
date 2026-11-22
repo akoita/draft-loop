@@ -65,7 +65,7 @@ export async function setApplicationLanguage(
     );
   }
   if (language !== null && !documentLanguageCodeSchema.safeParse(language).success) {
-    throw new CliUserError(`${language} is not a language DraftLoop can write documents in.`);
+    throw new CliUserError(`${language} is not a language Redakloop can write documents in.`);
   }
   const current = await readApplicationLanguages(root, settings);
   const { [applicationId]: _previous, ...others } = current.languages;

@@ -5,7 +5,7 @@ machine to develop or test it. The stack runs with Docker Compose, needs no
 cloud account and makes no provider calls (ADR 0011, D15). The CLI does not use
 it.
 
-To run DraftLoop for real use on your machine, use the
+To run Redakloop for real use on your machine, use the
 [self-hosted server](self-hosted.md) instead.
 
 ## Quick start

@@ -29,7 +29,7 @@ export function createServiceNoticeApi(config: WorkJournalApiConfig): ServiceNot
       } catch {
         throw new WorkJournalApiError(
           "server_unreachable",
-          "The DraftLoop server did not answer.",
+          "The Redakloop server did not answer.",
           [],
           true,
         );
@@ -38,7 +38,7 @@ export function createServiceNoticeApi(config: WorkJournalApiConfig): ServiceNot
       if (!response.ok) {
         throw new WorkJournalApiError(
           `http_${response.status}`,
-          "The DraftLoop server could not say whether maintenance is planned.",
+          "The Redakloop server could not say whether maintenance is planned.",
           [],
           response.status >= 500,
         );
@@ -49,7 +49,7 @@ export function createServiceNoticeApi(config: WorkJournalApiConfig): ServiceNot
 }
 
 export const serviceNoticeDescription =
-  "Check whether DraftLoop has planned maintenance: none, upcoming (with its window), ongoing or overrunning. While readOnly maintenance has started, DraftLoop refuses changes with service_maintenance and reads still work; tell the candidate when it ends instead of retrying, and wait until this tool returns no notice before trying again.";
+  "Check whether Redakloop has planned maintenance: none, upcoming (with its window), ongoing or overrunning. While readOnly maintenance has started, Redakloop refuses changes with service_maintenance and reads still work; tell the candidate when it ends instead of retrying, and wait until this tool returns no notice before trying again.";
 
 type Failure = (error: unknown) => {
   isError: boolean;

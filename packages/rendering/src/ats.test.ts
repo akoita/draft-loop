@@ -127,8 +127,8 @@ describe("ATS Compatibility & Cross-Format Document Export", () => {
 
     // Metadata validation
     expect(rawPdf).toContain("/Title");
-    expect(rawPdf).toContain("/Author (DraftLoop)");
-    expect(rawPdf).toContain("/Creator (DraftLoop CV Engine)");
+    expect(rawPdf).toContain("/Author (Redakloop)");
+    expect(rawPdf).toContain("/Creator (Redakloop CV Engine)");
 
     // ATS extraction validation
     const atsReport = validateAtsExtractability(rendered, sampleArtifact);
@@ -146,7 +146,7 @@ describe("ATS Compatibility & Cross-Format Document Export", () => {
 
     // Core properties validation
     expect(rawDocx).toContain("docProps/core.xml");
-    expect(rawDocx).toContain("DraftLoop");
+    expect(rawDocx).toContain("Redakloop");
 
     // ATS extraction validation
     const atsReport = validateAtsExtractability(rendered, sampleArtifact);

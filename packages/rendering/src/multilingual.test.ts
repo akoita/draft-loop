@@ -163,16 +163,16 @@ describe("Multilingual Templates & Localized Document Exports", () => {
     expect(getLocalizedSectionTitle("summary", "es")).toBe("Resumen profesional");
     expect(getLocalizedSectionTitle("summary", "ja")).toBe("職務要約");
 
-    expect(getLocalizedDocumentTitle("cover-letter", "fr")).toBe("Lettre de motivation DraftLoop");
-    expect(getLocalizedDocumentTitle("cv", "de")).toBe("DraftLoop Lebenslauf");
+    expect(getLocalizedDocumentTitle("cover-letter", "fr")).toBe("Lettre de motivation Redakloop");
+    expect(getLocalizedDocumentTitle("cv", "de")).toBe("Redakloop Lebenslauf");
     expect(getLocalizedDocumentTitle("application-qa", "es")).toBe(
-      "Preguntas y respuestas DraftLoop",
+      "Preguntas y respuestas Redakloop",
     );
   });
 
   it("renders localized French CV across all formats with ATS compatibility", () => {
     const html = renderHtml(sampleFrenchCv);
-    expect(html).toContain("CV personnalisé DraftLoop");
+    expect(html).toContain("CV personnalisé Redakloop");
     expect(html).toContain("Résumé professionnel");
 
     for (const format of ["markdown", "pdf", "docx"] as const) {
@@ -194,7 +194,7 @@ describe("Multilingual Templates & Localized Document Exports", () => {
     expect(markdown).not.toContain("## Schlussformel");
 
     const html = renderHtml(sampleGermanCoverLetter);
-    expect(html).toContain("DraftLoop Anschreiben");
+    expect(html).toContain("Redakloop Anschreiben");
 
     for (const format of ["markdown", "pdf", "docx"] as const) {
       const rendered = renderArtifact(sampleGermanCoverLetter, format);

@@ -81,7 +81,7 @@ export const supportGoldenSet: readonly SupportGoldenQuestion[] = [
   {
     id: "en-cover-letter",
     language: "en",
-    question: "Can DraftLoop write a cover letter?",
+    question: "Can Redakloop write a cover letter?",
     expect: { sections: ["prepare"] },
   },
   {
@@ -213,7 +213,7 @@ export const supportGoldenSet: readonly SupportGoldenQuestion[] = [
   {
     id: "fr-agent",
     language: "fr",
-    question: "Comment utiliser DraftLoop avec un agent comme Claude ?",
+    question: "Comment utiliser Redakloop avec un agent comme Claude ?",
     expect: { sections: ["agents"] },
   },
   {

@@ -185,7 +185,7 @@ No candidate material was used, and no API key was billed.
 ### Cause: outdated CLIs on the Node path
 
 Every frontier failure so far came from outdated CLIs in the Node 24.5.0
-global packages. DraftLoop puts that directory first on `PATH`, so the
+global packages. Redakloop puts that directory first on `PATH`, so the
 adapters used these copies instead of the current ones.
 
 | CLI | Version found | Raw failure |

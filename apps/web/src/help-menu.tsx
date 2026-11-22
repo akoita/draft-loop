@@ -72,7 +72,7 @@ export function HelpMenuView({ onQuickHelp, onFeedback, release }: HelpMenuViewP
           target="_blank"
           rel="noopener"
         >
-          {t`About DraftLoop`}
+          {t`About Redakloop`}
         </a>
         {onFeedback === undefined ? null : (
           <button

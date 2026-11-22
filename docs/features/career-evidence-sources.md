@@ -16,7 +16,7 @@ source-only CLI takes files into a local workspace instead
 
 ## How to use it
 
-1. Open **Career evidence** and choose **Add documents**. DraftLoop takes PDF,
+1. Open **Career evidence** and choose **Add documents**. Redakloop takes PDF,
    DOCX, Markdown and text files, and pull request lists as JSON or CSV.
 2. Or choose **Paste text**, give an optional title and save. The text is
    stored as one more source, named `<title>.txt`.
@@ -26,7 +26,7 @@ source-only CLI takes files into a local workspace instead
 4. **Advanced options**, folded at the bottom of the card, holds what most
    people never need: correcting what each source is, choosing or creating a
    knowledge base and the private-section rules. The folded line names what
-   is not at its default, such as "2 private-section rules". DraftLoop creates one knowledge
+   is not at its default, such as "2 private-section rules". Redakloop creates one knowledge
    base for you on the first add, so you can leave this closed.
 
 Every source is screened for hidden instructions before a run may use it; see

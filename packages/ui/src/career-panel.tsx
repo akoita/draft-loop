@@ -5,7 +5,7 @@ import { careerPanelSummary } from "./career-flow.js";
 import { Chip } from "./home.js";
 import type { HomeStatusPresentation } from "./home-model.js";
 
-/** One step of the Your career panel: what the person gives, or what DraftLoop builds from it. */
+/** One step of the Your career panel: what the person gives, or what Redakloop builds from it. */
 export interface CareerPanelStep {
   readonly id: string;
   readonly title: string;

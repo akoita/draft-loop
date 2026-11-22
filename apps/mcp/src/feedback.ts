@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { WorkspaceApiCall } from "./client.js";
 
 /**
- * The agent channel's feedback tool (#2843): passes the candidate's own note about DraftLoop to
+ * The agent channel's feedback tool (#2843): passes the candidate's own note about Redakloop to
  * the people who run it, as if sent from the header menu. Needs the token's `journal` scope.
  */
 
@@ -40,14 +40,14 @@ export function createFeedbackApi(call: WorkspaceApiCall): FeedbackApi {
       return {
         note_id: body.noteId,
         sent_at: body.sentAt,
-        next_step: "Sent. The people who run DraftLoop read it; there is no reply in DraftLoop.",
+        next_step: "Sent. The people who run Redakloop read it; there is no reply in Redakloop.",
       };
     },
   };
 }
 
 export const sendFeedbackDescription =
-  "Send the candidate's own feedback about DraftLoop (a bug, an idea, anything else) to the people who run it. Send only what the candidate asked you to pass on, in their words, at most 2,000 characters; never include secrets or other people's data. Needs the journal scope.";
+  "Send the candidate's own feedback about Redakloop (a bug, an idea, anything else) to the people who run it. Send only what the candidate asked you to pass on, in their words, at most 2,000 characters; never include secrets or other people's data. Needs the journal scope.";
 
 type Failure = (error: unknown) => {
   isError: boolean;
@@ -59,7 +59,7 @@ export function registerFeedbackTools(server: McpServer, api: FeedbackApi, failu
   server.registerTool(
     "send_feedback",
     {
-      title: "Send feedback about DraftLoop",
+      title: "Send feedback about Redakloop",
       description: sendFeedbackDescription,
       inputSchema: z.object({
         text: z.string().trim().min(1).max(2_000).describe("The candidate's note, in their words."),
