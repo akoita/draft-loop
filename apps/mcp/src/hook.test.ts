@@ -13,7 +13,7 @@ const bash = (command: string) => ({
 });
 const recordWork = {
   type: "assistant",
-  message: { content: [{ type: "tool_use", name: "mcp__draftloop__record_work", input: {} }] },
+  message: { content: [{ type: "tool_use", name: "mcp__redakloop__record_work", input: {} }] },
 };
 const lines = (...entries: unknown[]) => entries.map((entry) => JSON.stringify(entry)).join("\n");
 
@@ -85,7 +85,7 @@ describe("runStopHook", () => {
   let root: string;
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), "draftloop-mcp-hook-"));
+    root = await mkdtemp(join(tmpdir(), "redakloop-mcp-hook-"));
   });
 
   afterEach(async () => {

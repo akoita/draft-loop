@@ -94,7 +94,7 @@ settings, upgrades, backup and restore, privacy, and moving a desktop
 workspace to the server.
 
 On the self-hosted server, your agent, such as Claude Code or Codex, can work with Redakloop through
-the `draftloop-mcp` MCP server. It records notable work it helped ship, lists
+the `redakloop-mcp` MCP server. It records notable work it helped ship, lists
 your job applications, adds a job you pasted and follows a CV run; approvals
 stay with you. In Claude Code, install the plugin from this repository:
 

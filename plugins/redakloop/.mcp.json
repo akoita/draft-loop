@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "draftloop": {
-      "command": "draftloop-mcp",
+    "redakloop": {
+      "command": "redakloop-mcp",
       "env": {
         "DRAFT_LOOP_SERVER_URL": "${DRAFT_LOOP_SERVER_URL:-http://127.0.0.1:8080}"
       }

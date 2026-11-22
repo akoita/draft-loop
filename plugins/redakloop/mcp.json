@@ -1,9 +1,9 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
   "mcpServers": {
-    "draftloop": {
+    "redakloop": {
       "type": "stdio",
-      "command": "draftloop-mcp"
+      "command": "redakloop-mcp"
     }
   }
 }

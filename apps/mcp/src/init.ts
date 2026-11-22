@@ -12,7 +12,7 @@ import { defaultServerUrl, defaultServerWorkspace } from "./client.js";
 import { addProjectSkill } from "./projects.js";
 
 /**
- * `draftloop-mcp init` (#2025): sets up the work journal in one project for one host. It writes the
+ * `redakloop-mcp init` (#2025): sets up the work journal in one project for one host. It writes the
  * MCP server entry, a short instructions snippet, the `/log-work` skill and, for Claude Code on
  * request, an advisory Stop hook. Every file holds only names: no token and no path of this
  * machine is written. Existing files are merged, never replaced. With the owner token in its
@@ -25,7 +25,7 @@ export type InitHost = (typeof initHosts)[number];
 
 export interface InitOptions {
   readonly host: InitHost;
-  /** The command that starts the MCP server; `draftloop-mcp` once it is on the PATH. */
+  /** The command that starts the MCP server; `redakloop-mcp` once it is on the PATH. */
   readonly command: string;
   /** Claude Code only: the advisory Stop hook. */
   readonly hook: boolean;
@@ -78,7 +78,7 @@ Use this when the candidate asks to log work, optionally with a date range such 
 Never include keys, tokens, passwords, customer or personal data, or private document text.
 `;
 
-/** The hook command; `draftloop-mcp hook stop` reads the turn and prints at most one line. */
+/** The hook command; `redakloop-mcp hook stop` reads the turn and prints at most one line. */
 function hookCommand(command: string): string {
   return `${command} hook stop`;
 }
@@ -89,7 +89,7 @@ const serverEnvironment = {
 };
 
 function splitCommand(command: string): { readonly command: string; readonly args: string[] } {
-  const [head = "draftloop-mcp", ...args] = command.trim().split(/\s+/u);
+  const [head = "redakloop-mcp", ...args] = command.trim().split(/\s+/u);
   return { command: head, args };
 }
 
@@ -116,13 +116,14 @@ function object(value: unknown): Json {
 
 function mergeMcpJson(text: string | undefined, options: InitOptions): string {
   const current = parseJson(".mcp.json", text);
-  const servers = object(current.mcpServers);
+  // The server's name before the rename to Redakloop (#3299); init replaces that entry.
+  const { draftloop: _previous, ...servers } = object(current.mcpServers);
   return `${JSON.stringify(
     {
       ...current,
       mcpServers: {
         ...servers,
-        draftloop: { ...splitCommand(options.command), env: serverEnvironment },
+        redakloop: { ...splitCommand(options.command), env: serverEnvironment },
       },
     },
     null,
@@ -134,7 +135,10 @@ function mergeClaudeSettings(text: string | undefined, options: InitOptions): st
   const current = parseJson(".claude/settings.json", text);
   const hooks = object(current.hooks);
   const command = hookCommand(options.command);
-  const stop = Array.isArray(hooks.Stop) ? (hooks.Stop as unknown[]) : [];
+  // Drops the hook the command wrote under its name before the rename to Redakloop (#3299).
+  const stop = (Array.isArray(hooks.Stop) ? (hooks.Stop as unknown[]) : []).filter(
+    (entry) => !JSON.stringify(entry).includes("draftloop-mcp hook stop"),
+  );
   const present = JSON.stringify(stop).includes(JSON.stringify(command));
   const entry = { hooks: [{ type: "command", command }] };
   return `${JSON.stringify(
@@ -155,7 +159,7 @@ function codexBlock(options: InitOptions): string {
   const { command, args } = splitCommand(options.command);
   return [
     codexStart,
-    "[mcp_servers.draftloop]",
+    "[mcp_servers.redakloop]",
     `command = ${tomlString(command)}`,
     `args = [${args.map(tomlString).join(", ")}]`,
     'env_vars = ["DRAFT_LOOP_SERVER_URL", "XDG_CONFIG_HOME"]',
@@ -215,7 +219,7 @@ export const initScopes = ["journal", "applications:read", "jobs:write", "drafts
 /** The scopes a token gets without --scope: what the plugin uses, never drafts:read (#2569). */
 export const initDefaultScopes: readonly string[] = ["journal", "applications:read", "jobs:write"];
 
-export const initUsage = `Usage: draftloop-mcp init --host claude-code|codex|generic [--hook] [--command <command>] [--scope <scope>]... [--no-token] [--dry-run]
+export const initUsage = `Usage: redakloop-mcp init --host claude-code|codex|generic [--hook] [--command <command>] [--scope <scope>]... [--no-token] [--dry-run]
 
 Sets up Redakloop in the current project. With the owner token in DRAFT_LOOP_SERVER_TOKEN, it
 also issues an agent token and saves it outside the project; --no-token skips that. The token
@@ -241,7 +245,7 @@ export interface AgentTokenSetup {
 /** The `init` arguments, or why they cannot be used. */
 export function parseInitArguments(argv: readonly string[]): InitArguments | { problem: string } {
   let host: string | undefined;
-  let command = "draftloop-mcp";
+  let command = "redakloop-mcp";
   let hook = false;
   let dryRun = false;
   let token = true;

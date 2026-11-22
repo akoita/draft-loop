@@ -16,4 +16,4 @@ Only list what the tool returns. Never guess an application or a run that is not
 
 ## When a call is refused
 
-A refusal that names the `applications:read` scope means the candidate's agent token lacks it. Tell them to create a token with **Read applications** ticked in Redakloop's Settings > Agents, then run `draftloop-mcp save-token`.
+A refusal that names the `applications:read` scope means the candidate's agent token lacks it. Tell them to create a token with **Read applications** ticked in Redakloop's Settings > Agents, then run `redakloop-mcp save-token`.

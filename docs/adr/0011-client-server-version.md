@@ -71,11 +71,11 @@ is the natural shape of the server API.
 The diagram shows the hosted service as built in November 2026. Production
 runs as an invite-only beta in sign-in mode, with Keycloak self-hosted on
 Cloud Run (D14). The same images run self-hosted, and the local MCP server
-(`draftloop-mcp`) calls either API. The dashed strip is still planned. The
+(`redakloop-mcp`) calls either API. The dashed strip is still planned. The
 [architecture overview](../architecture/overview.md#ways-to-run) describes
 what runs now.
 
-![Hosted service as built: the web screen with the public pages, agents through draftloop-mcp reach a Fastify API on Cloud Run in europe-west1; the API screens intake, answers the support assistant and signs people in through a self-hosted Keycloak on Cloud Run; the worker, a Cloud Run job, runs queued work through the model gateway, which sends approved context to the Anthropic author on Vertex AI in the EU and the OpenAI critic; data lives in Cloud SQL Postgres with pgvector and in Cloud Storage; Brevo sends email and Stripe sells credit packs; a separate operator app, a load balancer with Cloud Armor and Business SSO are planned; the self-hosted server runs the same images on your machine, with the Electron desktop client over it.](../assets/hosted-service-architecture.svg)
+![Hosted service as built: the web screen with the public pages, agents through redakloop-mcp reach a Fastify API on Cloud Run in europe-west1; the API screens intake, answers the support assistant and signs people in through a self-hosted Keycloak on Cloud Run; the worker, a Cloud Run job, runs queued work through the model gateway, which sends approved context to the Anthropic author on Vertex AI in the EU and the OpenAI critic; data lives in Cloud SQL Postgres with pgvector and in Cloud Storage; Brevo sends email and Stripe sells credit packs; a separate operator app, a load balancer with Cloud Armor and Business SSO are planned; the self-hosted server runs the same images on your machine, with the Electron desktop client over it.](../assets/hosted-service-architecture.svg)
 
 ### D1. Topology: a modular monolith with background workers
 
@@ -764,7 +764,7 @@ not a second product.
     path without the self-hosted stack is not served.
   - *Hosted:* the same process and tools against the cloud API (D10), with
     a signed-in token from the identity provider and plan credits (D13).
-  - *Remote (#2647):* `draftloop-mcp serve-http` serves the same tools over
+  - *Remote (#2647):* `redakloop-mcp serve-http` serves the same tools over
     Streamable HTTP on one URL, forwarding each caller's own credential to
     the API and keeping none. In sign-in mode it is an OAuth protected
     resource (#2648): it publishes its metadata, and the identity provider

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { stopHookAdvice } from "./hook.js";
 
-const bin = fileURLToPath(new URL("../bin/draftloop-mcp.mjs", import.meta.url));
+const bin = fileURLToPath(new URL("../bin/redakloop-mcp.mjs", import.meta.url));
 
 interface Outcome {
   readonly code: number;
@@ -35,11 +35,11 @@ function run(args: string[], options: { cwd?: string; input?: string } = {}): Pr
   });
 }
 
-describe("the draftloop-mcp command", () => {
+describe("the redakloop-mcp command", () => {
   let root: string;
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), "draftloop-mcp-main-"));
+    root = await mkdtemp(join(tmpdir(), "redakloop-mcp-main-"));
   });
 
   afterEach(async () => {
@@ -50,7 +50,7 @@ describe("the draftloop-mcp command", () => {
     const outcome = await run(["serve-websocket"], { cwd: root });
     expect(outcome.code).toBe(2);
     expect(outcome.stdout).toBe("");
-    expect(outcome.stderr).toContain("draftloop-mcp init --host claude-code|codex|generic");
+    expect(outcome.stderr).toContain("redakloop-mcp init --host claude-code|codex|generic");
   });
 
   it("refuses init without a valid host and exits 2", async () => {

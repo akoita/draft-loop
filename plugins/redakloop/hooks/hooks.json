@@ -3,7 +3,7 @@
   "hooks": {
     "Stop": [
       {
-        "hooks": [{ "type": "command", "command": "draftloop-mcp hook stop" }]
+        "hooks": [{ "type": "command", "command": "redakloop-mcp hook stop" }]
       }
     ]
   }

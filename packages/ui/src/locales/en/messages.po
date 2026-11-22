@@ -4547,8 +4547,8 @@ msgid "Inputs"
 msgstr "Inputs"
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Install draftloop-mcp once on this computer."
-msgstr "Install draftloop-mcp once on this computer."
+msgid "Install redakloop-mcp once on this computer."
+msgstr "Install redakloop-mcp once on this computer."
 
 #: packages/ui/src/agent-setup-model.ts
 msgid "Installs the Redakloop tools, the /log-work and /tailor-cv skills and a reminder to record notable work. The token goes in your user folder, never in a project."

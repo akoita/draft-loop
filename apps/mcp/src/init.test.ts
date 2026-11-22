@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -15,16 +15,16 @@ import {
 
 const claude = {
   host: "claude-code",
-  command: "draftloop-mcp",
+  command: "redakloop-mcp",
   hook: true,
   dryRun: false,
 } as const;
 
-describe("draftloop-mcp init", () => {
+describe("redakloop-mcp init", () => {
   let root: string;
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), "draftloop-mcp-init-"));
+    root = await mkdtemp(join(tmpdir(), "redakloop-mcp-init-"));
   });
 
   afterEach(async () => {
@@ -48,8 +48,8 @@ describe("draftloop-mcp init", () => {
     ]);
     const mcp = JSON.parse(await readFile(join(root, ".mcp.json"), "utf8"));
     expect(mcp.mcpServers.other).toEqual({ command: "other-server" });
-    expect(mcp.mcpServers.draftloop).toEqual({
-      command: "draftloop-mcp",
+    expect(mcp.mcpServers.redakloop).toEqual({
+      command: "redakloop-mcp",
       args: [],
       env: {
         DRAFT_LOOP_SERVER_URL: "${DRAFT_LOOP_SERVER_URL:-http://127.0.0.1:8080}",
@@ -59,7 +59,7 @@ describe("draftloop-mcp init", () => {
     expect(instructions).toBe(`# Fernhill bookings\n\nUse pnpm.\n\n${instructionsSnippet}\n`);
     const settings = JSON.parse(await readFile(join(root, ".claude/settings.json"), "utf8"));
     expect(settings.hooks.Stop).toEqual([
-      { hooks: [{ type: "command", command: "draftloop-mcp hook stop" }] },
+      { hooks: [{ type: "command", command: "redakloop-mcp hook stop" }] },
     ]);
 
     // A second run changes nothing and adds no second snippet or hook.
@@ -67,8 +67,31 @@ describe("draftloop-mcp init", () => {
     expect(again.slice(0, 5).every((line) => line.startsWith("unchanged:"))).toBe(true);
   });
 
+  it("replaces the server and hook it wrote under its name before the rename", async () => {
+    await writeFile(
+      join(root, ".mcp.json"),
+      JSON.stringify({ mcpServers: { draftloop: { command: "draftloop-mcp" } } }),
+    );
+    await mkdir(join(root, ".claude"), { recursive: true });
+    await writeFile(
+      join(root, ".claude/settings.json"),
+      JSON.stringify({
+        hooks: { Stop: [{ hooks: [{ type: "command", command: "draftloop-mcp hook stop" }] }] },
+      }),
+    );
+
+    await runInit(root, claude);
+
+    const mcp = JSON.parse(await readFile(join(root, ".mcp.json"), "utf8"));
+    expect(Object.keys(mcp.mcpServers)).toEqual(["redakloop"]);
+    const settings = JSON.parse(await readFile(join(root, ".claude/settings.json"), "utf8"));
+    expect(settings.hooks.Stop).toEqual([
+      { hooks: [{ type: "command", command: "redakloop-mcp hook stop" }] },
+    ]);
+  });
+
   it("sets up Codex with a marked config block and the skill under .agents", () => {
-    const files = planInit({ host: "codex", command: "draftloop-mcp", hook: false }, (path) =>
+    const files = planInit({ host: "codex", command: "redakloop-mcp", hook: false }, (path) =>
       path === ".codex/config.toml" ? 'model = "fixture"\n' : undefined,
     );
     expect(files.map((file) => file.path)).toEqual([
@@ -82,8 +105,8 @@ describe("draftloop-mcp init", () => {
         'model = "fixture"',
         "",
         "# draftloop:work-journal",
-        "[mcp_servers.draftloop]",
-        'command = "draftloop-mcp"',
+        "[mcp_servers.redakloop]",
+        'command = "redakloop-mcp"',
         "args = []",
         'env_vars = ["DRAFT_LOOP_SERVER_URL", "XDG_CONFIG_HOME"]',
         "# /draftloop:work-journal",
@@ -107,7 +130,7 @@ describe("draftloop-mcp init", () => {
     });
     expect(parseInitArguments(["--host", "generic", "--dry-run"])).toEqual({
       host: "generic",
-      command: "draftloop-mcp",
+      command: "redakloop-mcp",
       hook: false,
       dryRun: true,
       token: true,
@@ -116,14 +139,14 @@ describe("draftloop-mcp init", () => {
   });
 });
 
-describe("draftloop-mcp init's agent token", () => {
+describe("redakloop-mcp init's agent token", () => {
   let root: string;
   let tokenPath: string;
   const ownerToken = "owner-token-for-tests-0123456789abcdef";
   const agentToken = `dlagent_${"a".repeat(43)}`;
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), "draftloop-mcp-token-"));
+    root = await mkdtemp(join(tmpdir(), "redakloop-mcp-token-"));
     tokenPath = join(root, "config", "draftloop", "agent-token");
   });
 
@@ -154,7 +177,7 @@ describe("draftloop-mcp init's agent token", () => {
       {
         url: "http://127.0.0.1:8080/v1/workspaces/owner/agent-tokens",
         authorization: `Bearer ${ownerToken}`,
-        body: { label: expect.stringMatching(/^claude-code in draftloop-mcp-token-/u) },
+        body: { label: expect.stringMatching(/^claude-code in redakloop-mcp-token-/u) },
       },
     ]);
     expect(lines).toContain(`issued: agent token dlat_fixture0001, saved to ${tokenPath}`);
@@ -268,7 +291,7 @@ const merge = line({
 });
 const recorded = line({
   type: "assistant",
-  message: { content: [{ type: "tool_use", name: "mcp__draftloop__record_work", input: {} }] },
+  message: { content: [{ type: "tool_use", name: "mcp__redakloop__record_work", input: {} }] },
 });
 const result = line({ type: "user", message: { content: [{ type: "tool_result" }] } });
 

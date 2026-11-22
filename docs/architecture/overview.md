@@ -27,10 +27,10 @@ One set of packages runs in four ways, which differ only at their adapters
 
 | Way to run | Status | Clients | Storage and keys | Model routes |
 | --- | --- | --- | --- | --- |
-| Self-hosted server ([guide](../operations/self-hosted.md)) | Main local option | The web screen in a browser, the CLI's `server import`, agents through `draftloop-mcp` ([agent channel](../reference/agent-channel.md)) | Postgres with pgvector and files in Docker volumes; keys from local files | `direct` Claude and OpenAI routes, or an OpenAI-compatible local model |
+| Self-hosted server ([guide](../operations/self-hosted.md)) | Main local option | The web screen in a browser, the CLI's `server import`, agents through `redakloop-mcp` ([agent channel](../reference/agent-channel.md)) | Postgres with pgvector and files in Docker volumes; keys from local files | `direct` Claude and OpenAI routes, or an OpenAI-compatible local model |
 | Desktop client ([guide](../reference/cli-and-desktop.md#desktop-client)) | Alpha (v0.9.0) | An Electron window over a self-hosted server's own web screen, and the hosted service's once it opens | None of its own: the server's storage and keys; the owner token is remembered in the system keychain | The server's |
 | CLI | Source only | Terminal commands | A local SQLite workspace store and portable CKB | Anthropic and OpenAI SDK adapters, plus opt-in development authors |
-| Hosted service ([architecture](hosted-service.md)) | Invite-only beta in production | The web screen, agents through `draftloop-mcp` | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and the OpenAI critic through the model gateway, each route recorded |
+| Hosted service ([architecture](hosted-service.md)) | Invite-only beta in production | The web screen, agents through `redakloop-mcp` | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and the OpenAI critic through the model gateway, each route recorded |
 
 ![Ways to run Redakloop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the Electron desktop client over the server's web screen, and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service, an invite-only beta, runs the same server images in the EU.](../assets/ways-to-run.svg)
 
@@ -102,7 +102,7 @@ flowchart LR
 - **Clients** hold no domain logic. The web screen and the desktop share their
   screens (`packages/ui`), the desktop client is an Electron shell over the
   server's own web screen, and agents reach the API through the
-  `draftloop-mcp` server ([agent channel](../reference/agent-channel.md)).
+  `redakloop-mcp` server ([agent channel](../reference/agent-channel.md)).
   The API also serves the public pages: the landing page, `/about/`,
   `/guide/` (each with a French version) and `/showcase/`.
 - **Sign-in** is Keycloak over OIDC in sign-in mode, invite only on the

@@ -78,7 +78,7 @@ export class WorkJournalApiError extends Error {
 const notSignedIn = () =>
   new WorkJournalApiError(
     "not_signed_in",
-    `Redakloop has no valid token for this server; run \`draftloop-mcp init\` again with the owner token that \`${signInCommand}\` prints.`,
+    `Redakloop has no valid token for this server; run \`redakloop-mcp init\` again with the owner token that \`${signInCommand}\` prints.`,
   );
 
 export interface RecordWorkResult {

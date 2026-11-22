@@ -16,7 +16,7 @@ journal. A note is evidence for review, never a CV claim: it waits as pending
 until the candidate approves it on the Career evidence page or from the CLI.
 The design is [ADR 0011, D17](../adr/0011-client-server-version.md#d17-agent-channel-an-mcp-server).
 
-The channel is `draftloop-mcp`, a stdio MCP server that calls the
+The channel is `redakloop-mcp`, a stdio MCP server that calls the
 [self-hosted server](../operations/self-hosted.md)'s API with an agent token.
 An agent token reaches one workspace, and only the scopes ticked when it was
 created: `journal` (file notes and list their titles), `applications:read`,
@@ -24,6 +24,10 @@ created: `journal` (file notes and list their titles), `applications:read`,
 `profile:suggest`. Every other route refuses it.
 Candidate data stays on your machine. Without the self-hosted stack, there is
 nothing for it to call: the CLI-only path is not served.
+
+The command was `draftloop-mcp` before the product became Redakloop. That name
+still starts the same server, and `redakloop-mcp init` replaces the server entry
+and hook an earlier `draftloop-mcp init` wrote.
 
 Real Claude Code sessions walked this setup on 2026-11-04: the
 [work journal walk](../evaluation/work-journal-walk.md) and the
@@ -34,19 +38,19 @@ open defects. The [plugin walk](../evaluation/agent-plugin-walk.md) of
 ## Set it up
 
 You need a running [self-hosted server](../operations/self-hosted.md) and
-`draftloop-mcp` on your `PATH` (step 1 below). Then pick one way:
+`redakloop-mcp` on your `PATH` (step 1 below). Then pick one way:
 
 | Way                    | For                     | What it adds                                        |
 | ---------------------- | ----------------------- | --------------------------------------------------- |
 | The Claude Code plugin | Claude Code             | The tools, the [commands](#commands), the Stop hook |
 | A copied configuration | Claude Code, Codex, any | The tools only                                      |
-| `draftloop-mcp init`   | Claude Code, Codex      | The tools, `/log-work` and the hook, in one project |
+| `redakloop-mcp init`   | Claude Code, Codex      | The tools, `/log-work` and the hook, in one project |
 
 The Agents section of Settings on Home shows the first two and
 holds the **Accept notes from agents** button; the Work journal panel links
 to it.
 
-1. Put `draftloop-mcp` on your `PATH` from a clone of this repository. Run the
+1. Put `redakloop-mcp` on your `PATH` from a clone of this repository. Run the
    link from inside `apps/mcp`: `pnpm --dir apps/mcp link --global` links the
    root package instead.
 
@@ -54,7 +58,7 @@ to it.
    pnpm install
    cd apps/mcp
    pnpm link --global
-   draftloop-mcp --help
+   redakloop-mcp --help
    ```
 
    If pnpm answers `ERR_PNPM_NO_GLOBAL_BIN_DIR`, run `npm link` in the same
@@ -62,8 +66,8 @@ to it.
    last command prints the tool's usage.
 
    With nvm, the link lands in the folder of the Node version that was active.
-   Claude Code starts `draftloop-mcp` from its own shell, so that shell must
-   find both `claude` and `draftloop-mcp`: use one Node version for both, or
+   Claude Code starts `redakloop-mcp` from its own shell, so that shell must
+   find both `claude` and `redakloop-mcp`: use one Node version for both, or
    put both versions' `bin` folders on `PATH`.
 
 2. Under **Agents** in Settings, turn on **Accept notes from
@@ -76,7 +80,7 @@ to it.
 
    | Tab                     | What to do                                                                                                    |
    | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
-   | Claude Code plugin      | Run the two `/plugin` lines in Claude Code, then `draftloop-mcp save-token` in a terminal and paste the token |
+   | Claude Code plugin      | Run the two `/plugin` lines in Claude Code, then `redakloop-mcp save-token` in a terminal and paste the token |
    | Claude Code             | Run the `claude mcp add --scope user` command, which holds the token, in a terminal                           |
    | Codex                   | Add the table, which holds the token, to `~/.codex/config.toml`                                               |
    | Other MCP agents (JSON) | Add the entry, which holds the token, to the agent's `mcpServers` file                                        |
@@ -100,7 +104,7 @@ leaves the organisation, and record access and credits apply as for them.
 
 ### Install it in another agent
 
-`plugins/draftloop` is also an
+`plugins/redakloop` is also an
 [Agent Plugins 1.0.0](https://agent-plugins.org/specification) package. An
 agent that reads that format installs it from the folder and gets the tools
 and the skills, but not the Stop hook, which is Claude Code's own.
@@ -111,20 +115,20 @@ and the skills, but not the Stop hook, which is Claude Code's own.
 | `.claude-plugin/plugin.json`, `.mcp.json`, `hooks/` | Claude Code                 |
 
 The portable `mcp.json` sets no server address, because the format expands no
-variables. `draftloop-mcp` then calls `http://127.0.0.1:8080`, or the address
+variables. `redakloop-mcp` then calls `http://127.0.0.1:8080`, or the address
 in `DRAFT_LOOP_SERVER_URL` if your agent passes its environment on. Save the
-token with `draftloop-mcp save-token` as for the Claude Code plugin.
+token with `redakloop-mcp save-token` as for the Claude Code plugin.
 
 ### Set it up with `init`
 
 `init` writes the project's files, including the `/log-work` skill and, for
-Claude Code, the Stop hook. With `draftloop-mcp` on your `PATH` and intake on:
+Claude Code, the Stop hook. With `redakloop-mcp` on your `PATH` and intake on:
 
 1. In the project whose work you want to record, run `init` for your agent,
    with the owner token for that one command only:
 
    ```text
-   DRAFT_LOOP_SERVER_TOKEN="$(draft-loop-server token)" draftloop-mcp init --host claude-code
+   DRAFT_LOOP_SERVER_TOKEN="$(draft-loop-server token)" redakloop-mcp init --host claude-code
    ```
 
    Use `--host codex` or `--host generic` for the other hosts, and add
@@ -132,7 +136,7 @@ Claude Code, the Stop hook. With `draftloop-mcp` on your `PATH` and intake on:
    asks the server for an agent token and saves it in your configuration
    folder, then prints `issued: agent token dlat_..., saved to ...`.
 
-2. Start the agent from a shell without the owner token. `draftloop-mcp`
+2. Start the agent from a shell without the owner token. `redakloop-mcp`
    sends the saved agent token.
 
 `init` merges into existing files, and running it again changes nothing in
@@ -379,7 +383,7 @@ only when named. Its token always keeps `journal`, which the skill and hook it
 writes need:
 
 ```text
-draftloop-mcp init --host claude-code --hook --scope applications:read --scope drafts:read
+redakloop-mcp init --host claude-code --hook --scope applications:read --scope drafts:read
 ```
 
 ## Commands
@@ -403,10 +407,10 @@ With the plugin installed, Claude Code also lists each MCP prompt, as
 ## Serve the tools over HTTP
 
 Some assistants connect to an MCP server by address instead of starting a
-command. `draftloop-mcp serve-http` serves the same tools over Streamable HTTP:
+command. `redakloop-mcp serve-http` serves the same tools over Streamable HTTP:
 
 ```sh
-DRAFT_LOOP_SERVER_URL=http://127.0.0.1:8080 draftloop-mcp serve-http
+DRAFT_LOOP_SERVER_URL=http://127.0.0.1:8080 redakloop-mcp serve-http
 ```
 
 It prints `Redakloop MCP tools on http://127.0.0.1:8090/mcp`. The caller sends
