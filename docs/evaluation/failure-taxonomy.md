@@ -263,7 +263,8 @@ versions and judge. It is manual and paid, and never runs in hosted CI.
 - **Tracks:** every mode except `must-cover-omission`, which waits for the
   v2 judge (#3293). Judge thresholds are the ones tuned on planted failures.
 - **Records:** `packages/evaluations/fixtures/eval-live/results.json` holds
-  only counts, rates, models, prompt versions, commit and cost.
+  only counts, rates, models, prompt versions, commit and cost. Run
+  `pnpm format` before committing it.
 - **Pins:** only the current and the previous prompt version of each role
   can be pinned; any other value stops the run.
 

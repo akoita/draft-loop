@@ -19,12 +19,7 @@
         "version": "cohort-judge-v1",
         "model": "gpt-6-luna"
       },
-      "cases": [
-        "case-nurse",
-        "case-sales",
-        "case-teacher",
-        "case-electrician"
-      ],
+      "cases": ["case-nurse", "case-sales", "case-teacher", "case-electrician"],
       "rounds": 8,
       "costUsd": 0.3738,
       "failRates": {
@@ -56,12 +51,7 @@
         "version": "cohort-judge-v1",
         "model": "gpt-6-luna"
       },
-      "cases": [
-        "case-nurse",
-        "case-sales",
-        "case-teacher",
-        "case-electrician"
-      ],
+      "cases": ["case-nurse", "case-sales", "case-teacher", "case-electrician"],
       "rounds": 8,
       "costUsd": 0.3888,
       "failRates": {
