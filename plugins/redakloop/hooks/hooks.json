@@ -1,9 +1,25 @@
 {
-  "description": "When a turn merged work without checking the work journal, asks the agent once to record it; REDAKLOOP_JOURNAL_HOOK=advise or off changes that.",
+  "description": "After a merge, asks the agent once to record notable work; at session start, points at merges missing from the work journal. REDAKLOOP_JOURNAL_HOOK=advise or off changes both.",
   "hooks": {
     "Stop": [
       {
-        "hooks": [{ "type": "command", "command": "redakloop-mcp hook stop" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "redakloop-mcp hook stop"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "redakloop-mcp hook session-start"
+          }
+        ]
       }
     ]
   }
