@@ -5,7 +5,6 @@ import { defaultAgentTokenPath, saveTokenFromInput } from "./agent-token.js";
 import { configFromEnvironment, createWorkJournalApi } from "./client.js";
 import { journalHookMode, runStopHook } from "./hook.js";
 import { parseInitArguments, runInit } from "./init.js";
-import { runSessionStartHook, systemGit } from "./session-hook.js";
 import {
   createDraftLoopMcpServer,
   mayBeOperatorToken,
@@ -13,6 +12,7 @@ import {
   remoteOptionsFromEnvironment,
   serveRemoteMcp,
 } from "./remote.js";
+import { runSessionStartHook, systemGit } from "./session-hook.js";
 
 const [command, ...rest] = process.argv.slice(2);
 
