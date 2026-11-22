@@ -126,6 +126,10 @@ The landing page (`/`), `/about/`, `/guide/` (each with a `fr/` version),
   names, comma separated, such as the one before a rename. A page read there
   gets a 301 to the same path on the public URL. `/v1/` and `/.well-known/`
   stay served on every host, so agents and webhooks keep working.
+- **Previous sign-in issuers.** Members are recorded by issuer and subject.
+  When the identity provider's host changes, `DRAFT_LOOP_OIDC_PREVIOUS_ISSUERS`
+  lists the earlier issuers, comma separated. Sign-in then finds a member under
+  an earlier issuer when the current one has none, without claiming invites.
 - **Sample pages.** `/showcase/` holds fictional data and is always `noindex`.
 - **Compression.** The web build writes a Brotli and a gzip copy beside each
   text asset over 1 KB (`apps/web/scripts/precompress.mjs`); the API sends the
