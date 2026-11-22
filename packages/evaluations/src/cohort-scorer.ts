@@ -209,8 +209,8 @@ export function scoreCohortDraft(input: {
   return { verdicts, reasons };
 }
 
-export interface ModeAgreement {
-  readonly mode: DeterministicFailureMode;
+export interface ModeAgreement<Mode extends string = DeterministicFailureMode> {
+  readonly mode: Mode;
   readonly rounds: number;
   readonly agreement: number;
   /** Human fails the scorer also failed, over human fails. */
@@ -219,14 +219,15 @@ export interface ModeAgreement {
   readonly trueNegativeRate: number | null;
 }
 
-/** Compares scorer verdicts with human labels, per mode. */
-export function agreementWithLabels(
+/** Compares scorer or judge verdicts with human labels, per mode. */
+export function agreementWithLabels<Mode extends string = DeterministicFailureMode>(
   pairs: readonly {
-    readonly scored: Readonly<Record<DeterministicFailureMode, ModeVerdict>>;
+    readonly scored: Readonly<Record<Mode, ModeVerdict>>;
     readonly labels: Readonly<Record<string, ModeVerdict>>;
   }[],
-): readonly ModeAgreement[] {
-  return deterministicFailureModes.map((mode) => {
+  modes: readonly Mode[] = deterministicFailureModes as readonly string[] as readonly Mode[],
+): readonly ModeAgreement<Mode>[] {
+  return modes.map((mode) => {
     const rated = pairs.filter(({ labels }) => labels[mode] !== undefined);
     const humanFails = rated.filter(({ labels }) => labels[mode] === "fail");
     const humanPasses = rated.filter(({ labels }) => labels[mode] === "pass");
