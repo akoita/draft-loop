@@ -86,8 +86,13 @@ export function cloudLoggingOptions(
     base: null,
     formatters: {
       level: (label) => ({ severity: severities[label] ?? "DEFAULT" }),
-      // An error line carries a stack trace Error Reporting can group (#3239).
-      log: (fields) => ({ ...fields, ...errorReportFields(fields.err) }),
+      // An error line carries a stack trace Error Reporting can group (#3239). A field named
+      // `severity` would clash with the level's key, so it is kept as `fieldSeverity` (#3303).
+      log: ({ severity, ...fields }) => ({
+        ...fields,
+        ...(severity === undefined ? {} : { fieldSeverity: severity }),
+        ...errorReportFields(fields.err),
+      }),
     },
     // A request's child logger is bound to its id; each of its lines gets the trace field.
     mixin: (_merge: object, _level: number, logger: { bindings: () => { reqId?: unknown } }) => {

@@ -224,7 +224,7 @@ describe("review decisions", () => {
       runId: "run-1",
       findingCode: "unsupported-claim",
       category: "grounding",
-      severity: "warning",
+      findingSeverity: "warning",
       decision: "rejected",
     });
     expect(logs.join("\n")).not.toContain("The source dates it.");

@@ -431,7 +431,7 @@ nothing.
   author, critic and revision attempts: duration, model, estimated cost and,
   for a failed attempt, the error type. A run with no trace shows no section.
 - **Finding decisions.** The API logs one `finding decided` line per decision
-  on a finding: run id, finding code, category, severity and decision. It never
+  on a finding: run id, finding code, category, `findingSeverity` and decision. It never
   logs the finding's message or the member's rationale.
 - **Outer loop.** A daily sweep reduces these spans to a digest and a ledger
   of recurring failure patterns: see [Outer loop](outer-loop.md).
