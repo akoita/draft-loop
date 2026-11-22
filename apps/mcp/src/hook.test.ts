@@ -3,7 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { runStopHook, stopHookAdvice, turnNeedsAdvice } from "./hook.js";
+import {
+  journalHookMode,
+  runStopHook,
+  stopHookAdvice,
+  stopHookRecordReason,
+  turnNeedsAdvice,
+} from "./hook.js";
 
 const person = (text: string) => ({ type: "user", message: { content: text } });
 const toolResult = { type: "user", message: { content: [{ type: "tool_result" }] } };
@@ -92,13 +98,42 @@ describe("runStopHook", () => {
     await rm(root, { recursive: true, force: true });
   });
 
-  it("prints the advice as a system message for a turn that shipped without recording", async () => {
+  it("hands a turn that shipped without recording back to the agent by default", async () => {
     const transcriptPath = join(root, "transcript.jsonl");
     await writeFile(transcriptPath, lines(person("merge it"), bash("gh pr merge 3")));
 
     const output = await runStopHook(JSON.stringify({ transcript_path: transcriptPath }));
 
+    expect(JSON.parse(output)).toEqual({ decision: "block", reason: stopHookRecordReason });
+  });
+
+  it("shows the person one line instead in advise mode", async () => {
+    const transcriptPath = join(root, "transcript.jsonl");
+    await writeFile(transcriptPath, lines(person("merge it"), bash("gh pr merge 3")));
+
+    const output = await runStopHook(JSON.stringify({ transcript_path: transcriptPath }), "advise");
+
     expect(JSON.parse(output)).toEqual({ systemMessage: stopHookAdvice });
+  });
+
+  it("stays quiet in off mode", async () => {
+    const transcriptPath = join(root, "transcript.jsonl");
+    await writeFile(transcriptPath, lines(person("merge it"), bash("gh pr merge 3")));
+    expect(await runStopHook(JSON.stringify({ transcript_path: transcriptPath }), "off")).toBe("");
+  });
+
+  it("prints nothing when the agent already looked at the journal", async () => {
+    const transcriptPath = join(root, "transcript.jsonl");
+    const listWork = {
+      type: "assistant",
+      message: {
+        content: [
+          { type: "tool_use", name: "mcp__plugin_redakloop_redakloop__list_work", input: {} },
+        ],
+      },
+    };
+    await writeFile(transcriptPath, lines(person("merge"), bash("gh pr merge 3"), listWork));
+    expect(await runStopHook(JSON.stringify({ transcript_path: transcriptPath }))).toBe("");
   });
 
   it("prints nothing when the turn recorded the work", async () => {
@@ -114,5 +149,18 @@ describe("runStopHook", () => {
     ["a missing transcript", JSON.stringify({ transcript_path: "/no/such/transcript.jsonl" })],
   ])("prints nothing for %s", async (_name, input) => {
     expect(await runStopHook(input)).toBe("");
+  });
+});
+
+describe("journalHookMode", () => {
+  it.each([
+    [undefined, "record"],
+    ["", "record"],
+    ["record", "record"],
+    [" Advise ", "advise"],
+    ["off", "off"],
+    ["sometimes", "record"],
+  ])("reads %j as %s", (value, mode) => {
+    expect(journalHookMode(value)).toBe(mode);
   });
 });

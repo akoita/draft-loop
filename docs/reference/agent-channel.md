@@ -205,11 +205,20 @@ Run `init` again to issue a new one. The
 add-repo` or `git log`, reads only allowlisted files, shows the card, and
   calls `add_project` after the candidate says yes. `init` writes it beside
   `/log-work` for Claude Code and Codex.
-- **The Stop hook** (Claude Code only, with `--hook`) adds one advisory line
-  when a turn merged work without calling `record_work`: `gh pr merge`, a push
-  to `main` or `master`, or a `merge_pull_request` tool call. A push to a
-  feature branch stays quiet. It never blocks the turn, and nothing calls the
-  tool by itself.
+- **The Stop hook** (Claude Code only: the plugin, or `init --hook`) fires
+  when a turn merged work without calling `record_work` or `list_work`:
+  `gh pr merge`, a push to `main` or `master`, or a `merge_pull_request` tool
+  call. A push to a feature branch stays quiet. What it does depends on
+  `REDAKLOOP_JOURNAL_HOOK`, read from the environment Claude Code starts in:
+
+  | Value              | What happens                                                                                             |
+  | ------------------ | -------------------------------------------------------------------------------------------------------- |
+  | `record` (default) | The agent continues the turn once: it calls `list_work`, then records each notable piece or says none is |
+  | `advise`           | The person sees one line suggesting `/log-work`; the agent does not                                      |
+  | `off`              | Nothing                                                                                                  |
+
+  The hook never fails the turn and never continues it twice. Every note it
+  leads to still waits for the candidate's review.
 
 ## What the agent records
 
