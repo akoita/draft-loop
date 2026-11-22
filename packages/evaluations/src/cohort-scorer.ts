@@ -22,19 +22,50 @@ export interface CohortRole {
   readonly end: string;
 }
 
-const months =
-  "January|February|March|April|May|June|July|August|September|October|November|December";
+const monthNames = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+] as const;
+const monthPattern =
+  "(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)";
+const datePattern = `(?:${monthPattern}\\s+\\d{4}|\\d{4})`;
+const separator = "\\s+[—·|–-]\\s+";
 const roleHeadingPattern = new RegExp(
-  `^###\\s+(.+?)\\s+—\\s+.+?\\s+—\\s+((?:${months})\\s+\\d{4}|\\d{4})\\s+to\\s+((?:${months})\\s+\\d{4}|\\d{4}|present)\\s*$`,
-  "u",
+  `^#{2,3}\\s+(.+?)${separator}.+?${separator}(${datePattern})\\s+to\\s+(${datePattern}|present)\\s*$`,
+  "iu",
 );
+const gapHeadingPattern = new RegExp(
+  `^#{2,3}\\s+.+?${separator}(${datePattern})\\s+to\\s+(${datePattern})\\s*$`,
+  "iu",
+);
+const roleEvidencePattern = /-(?:role|employment)-\d+$/u;
+const gapEvidencePattern = /-gap-\d+$/u;
+const gapWords =
+  /\b(?:gap|career break|break|travel(?:led|ed|ling|ing)?|sabbatical|interval|not employed|unemployed|no (?:paid |software )?employment)\b/u;
 const placeholderPattern =
   /\[(?:your |candidate )?(?:full )?(?:name|phone|telephone|email|e-mail|address|location|city|linkedin|website|date)(?: number| address)?\]/iu;
 const numberPattern = /(?<![\p{L}\p{N}])\d+(?:[.,]\d+)*(?![\p{L}\p{N}])/gu;
 
-/** Dated roles from a cohort profile: `### Employer — Title — Month YYYY to Month YYYY`. */
-export function cohortRoles(profile: string): readonly CohortRole[] {
-  const roles: CohortRole[] = [];
+export interface CohortGap {
+  readonly evidenceId: string;
+  readonly start: string;
+  readonly end: string;
+}
+
+function headings(
+  profile: string,
+): readonly { readonly evidenceId: string; readonly line: string }[] {
+  const found: { evidenceId: string; line: string }[] = [];
   let evidenceId = "";
   for (const line of profile.split(/\r?\n/u)) {
     const marker = /<!-- evidence-id: ([\w-]+) -->/u.exec(line);
@@ -42,16 +73,34 @@ export function cohortRoles(profile: string): readonly CohortRole[] {
       evidenceId = marker[1] ?? "";
       continue;
     }
-    const heading = roleHeadingPattern.exec(line.trim());
-    if (heading === null || !/-role-\d+$/u.test(evidenceId)) continue;
-    roles.push({
-      evidenceId,
-      employer: heading[1] ?? "",
-      start: heading[2] ?? "",
-      end: heading[3] ?? "",
-    });
+    if (/^#{2,3}\s/u.test(line.trim())) found.push({ evidenceId, line: line.trim() });
   }
-  return roles;
+  return found;
+}
+
+/** Dated roles from a cohort profile: `### Employer — Title — Month YYYY to Month YYYY`. */
+export function cohortRoles(profile: string): readonly CohortRole[] {
+  return headings(profile).flatMap(({ evidenceId, line }) => {
+    const heading = roleEvidencePattern.test(evidenceId) ? roleHeadingPattern.exec(line) : null;
+    return heading === null
+      ? []
+      : [
+          {
+            evidenceId,
+            employer: heading[1] ?? "",
+            start: heading[2] ?? "",
+            end: heading[3] ?? "",
+          },
+        ];
+  });
+}
+
+/** Recorded gaps from a cohort profile: `### Career break — Month YYYY to Month YYYY`. */
+export function cohortGaps(profile: string): readonly CohortGap[] {
+  return headings(profile).flatMap(({ evidenceId, line }) => {
+    const heading = gapEvidencePattern.test(evidenceId) ? gapHeadingPattern.exec(line) : null;
+    return heading === null ? [] : [{ evidenceId, start: heading[1] ?? "", end: heading[2] ?? "" }];
+  });
 }
 
 /** Every visible string in a draft artifact, joined by newlines. */
@@ -87,13 +136,32 @@ function numbers(text: string): Set<string> {
   );
 }
 
+function monthIndex(word: string): number {
+  const lower = word.toLowerCase();
+  return monthNames.findIndex((name) => name.startsWith(lower.slice(0, 3)));
+}
+
 function dateMentioned(text: string, date: string): boolean {
-  if (date === "present") return /\b(?:present|current|now|today)\b/u.test(text);
-  const [month, year] = date.includes(" ") ? date.split(" ") : ["", date];
-  if (year === undefined || !text.includes(year)) return false;
-  if (month === "" || month === undefined) return true;
-  const lower = month.toLowerCase();
-  return text.includes(`${lower} ${year}`) || text.includes(`${lower.slice(0, 3)} ${year}`);
+  if (date.toLowerCase() === "present") return /\b(?:present|current|now|today)\b/u.test(text);
+  const [first, second] = date.trim().split(/\s+/u);
+  const year = second ?? first ?? "";
+  if (!text.includes(year)) return false;
+  if (second === undefined) return true;
+  const month = monthIndex(first ?? "");
+  const name = monthNames[month] ?? "";
+  const spelled = new RegExp(`\\b${name.slice(0, 3)}[a-z]*\\.?\\s+${year}`, "u");
+  const numeric = new RegExp(`\\b0?${month + 1}[/.-]${year}`, "u");
+  return spelled.test(text) || numeric.test(text);
+}
+
+/** The employer is named in full, or by its first two words, or by a distinctive first word. */
+function employerNamed(text: string, employer: string): boolean {
+  const words = normalise(employer).split(" ");
+  const candidates = [words.join(" "), words.slice(0, 2).join(" ")];
+  if ((words[0] ?? "").length >= 5) candidates.push(words[0] ?? "");
+  return candidates.some((candidate) =>
+    new RegExp(`\\b${candidate.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}\\b`, "u").test(text),
+  );
 }
 
 export interface CohortScore {
@@ -122,16 +190,18 @@ export function scoreCohortDraft(input: {
   if (unsupported.length > 0) reasons["altered-number"] = [`${unsupported.length} number(s)`];
 
   const roles = cohortRoles(input.profile);
-  const present = roles.filter((role) => text.includes(normalise(role.employer)));
+  const present = roles.filter((role) => employerNamed(text, role.employer));
   const missing = roles.filter((role) => !present.includes(role));
   if (missing.length > 0) reasons["role-omission"] = missing.map(({ evidenceId }) => evidenceId);
 
-  const drifted = present.filter(
-    (role) =>
-      !dateMentioned(text, role.start.toLowerCase()) ||
-      !dateMentioned(text, role.end.toLowerCase()),
-  );
-  if (drifted.length > 0) reasons["chronology-drift"] = drifted.map(({ evidenceId }) => evidenceId);
+  const drifted = present
+    .filter((role) => !dateMentioned(text, role.start) || !dateMentioned(text, role.end))
+    .map(({ evidenceId }) => evidenceId);
+  // A recorded gap must be stated, by a gap word or its own start date, not left to inference.
+  const hidden = cohortGaps(input.profile)
+    .filter((gap) => !gapWords.test(text) && !dateMentioned(text, gap.start))
+    .map(({ evidenceId }) => evidenceId);
+  if (drifted.length + hidden.length > 0) reasons["chronology-drift"] = [...drifted, ...hidden];
 
   const verdicts = Object.fromEntries(
     deterministicFailureModes.map((mode) => [mode, reasons[mode] === undefined ? "pass" : "fail"]),

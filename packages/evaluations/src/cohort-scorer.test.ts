@@ -28,6 +28,7 @@ const faithful = draft(
   "Wickbarrow Sensor Works, Test Systems Developer, June 2015 to October 2018.",
   "Oxbow Robotics Lab, Build and Release Engineer, February 2020 to July 2022. Median local verification went from 22 to 16 minutes in 30 clean build trials.",
   "Kiteframe Robotics, Software Tooling Engineer, Aug 2022 to present.",
+  "Career gap from November 2018 to January 2020.",
 );
 
 describe("cohortRoles", () => {
@@ -83,7 +84,7 @@ describe("scoreCohortDraft", () => {
       "chronology-drift": "fail",
     });
     expect(score.reasons["role-omission"]).toEqual(["d-role-1"]);
-    expect(score.reasons["chronology-drift"]).toEqual(["d-role-2"]);
+    expect(score.reasons["chronology-drift"]).toEqual(["d-role-2", "d-gap-1"]);
     expect(score.reasons["altered-number"]).toEqual(["2 number(s)"]);
   });
 
@@ -91,6 +92,40 @@ describe("scoreCohortDraft", () => {
     const score = scoreCohortDraft({ artifact: null, profile, jobDescription });
     expect(score.verdicts["role-omission"]).toBe("fail");
     expect(score.verdicts["placeholder-left"]).toBe("pass");
+  });
+});
+
+describe("other profile formats", () => {
+  it("reads '·' headings, short months, employment ids and a short employer name", () => {
+    const other = [
+      "<!-- evidence-id: a-employment-1 -->",
+      "## Bright Silt Consulting · Software Consultant · Jan 2018 to Jun 2020",
+      "<!-- evidence-id: a-gap-1 -->",
+      "### Career break — July 2020 to March 2021",
+    ].join("\n");
+    expect(cohortRoles(other)).toEqual([
+      {
+        evidenceId: "a-employment-1",
+        employer: "Bright Silt Consulting",
+        start: "Jan 2018",
+        end: "Jun 2020",
+      },
+    ]);
+    const kept = scoreCohortDraft({
+      artifact: draft(
+        "Bright Silt, consultant, January 2018 to June 2020. Career break until 2021.",
+      ),
+      profile: other,
+      jobDescription: "",
+    });
+    expect(kept.verdicts["role-omission"]).toBe("pass");
+    expect(kept.verdicts["chronology-drift"]).toBe("pass");
+    const hidden = scoreCohortDraft({
+      artifact: draft("Bright Silt, consultant, 01/2018 to 06/2020."),
+      profile: other,
+      jobDescription: "",
+    });
+    expect(hidden.reasons["chronology-drift"]).toEqual(["a-gap-1"]);
   });
 });
 
