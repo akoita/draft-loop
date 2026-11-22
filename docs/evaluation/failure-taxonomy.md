@@ -120,3 +120,37 @@ Observations:
   chronology failures.
 - The deterministic header check caught every placeholder, and the critic
   caught both cases of team work stated as solo work.
+
+## Deterministic scorer
+
+`packages/evaluations/src/cohort-scorer.ts` (#3287) decides four modes from
+the draft text and the case's own profile, with no model call. The model
+judge (#3288) covers the rest.
+
+| Mode | Fails when |
+| --- | --- |
+| `placeholder-left` | A bracketed placeholder such as `[Email]` is in the draft |
+| `altered-number` | A number appears that neither the profile nor the job states |
+| `role-omission` | A dated role's employer is not named, in full or by a short form |
+| `chronology-drift` | A named role's start or end date is missing, or a recorded gap is neither named nor dated |
+
+To measure it against the labels, from the repository root:
+
+```sh
+pnpm exec tsx packages/evaluations/src/cohort-scorer-command.ts ~/draft-loop-ftx
+```
+
+Agreement with the labels on the 39 rounds that have a draft:
+
+| Mode | Train | Dev | Held-out |
+| --- | --- | --- | --- |
+| `placeholder-left` | 100% | 100% | 100% |
+| `altered-number` | 100% | 100% | 100% |
+| `role-omission` | 100% | 100% | 100% |
+| `chronology-drift` | 95% | 100% | 70% |
+
+- The one train miss is work listed under the wrong employer, which only the
+  model judge can see.
+- The three held-out misses came from a parsing bug: case b's gap id has no
+  number. The fix only widens the id pattern, but it was found by looking at
+  held-out results, so held-out is no longer a clean measure for this mode.

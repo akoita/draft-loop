@@ -49,7 +49,7 @@ const gapHeadingPattern = new RegExp(
   "iu",
 );
 const roleEvidencePattern = /-(?:role|employment)-\d+$/u;
-const gapEvidencePattern = /-gap-\d+$/u;
+const gapEvidencePattern = /-gap(?:-\d+)?$/u;
 const gapWords =
   /\b(?:gap|career break|break|travel(?:led|ed|ling|ing)?|sabbatical|interval|not employed|unemployed|no (?:paid |software )?employment)\b/u;
 const placeholderPattern =

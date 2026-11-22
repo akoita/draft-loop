@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { agreementWithLabels, cohortRoles, scoreCohortDraft } from "./cohort-scorer.js";
+import { agreementWithLabels, cohortGaps, cohortRoles, scoreCohortDraft } from "./cohort-scorer.js";
 
 const caseDirectory = new URL(
   "../fixtures/fresh-software-engineering-cohort/case-d/",
@@ -126,6 +126,21 @@ describe("other profile formats", () => {
       jobDescription: "",
     });
     expect(hidden.reasons["chronology-drift"]).toEqual(["a-gap-1"]);
+  });
+});
+
+describe("cohortGaps", () => {
+  it("reads gap ids with or without a number, and skips other entries", () => {
+    const caseB = readFileSync(
+      new URL(
+        "../fixtures/reserved-software-engineering-cohort/case-b/candidate-profile.md",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    expect(cohortGaps(caseB)).toEqual([
+      { evidenceId: "b-gap", start: "Feb 2019", end: "Nov 2019" },
+    ]);
   });
 });
 
