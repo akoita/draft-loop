@@ -88,6 +88,7 @@ export const frenchHelpGuide: HelpGuide = {
       title: "Préparer la candidature",
       paragraphs: [
         "Dans une candidature, ouvrez Préparer pour rédiger une lettre de motivation ou un guide de préparation à l’entretien à partir des mêmes éléments. Cette partie est repliée par défaut.",
+        "Écrivez votre lettre de motivation vous-même. Les recruteurs et les outils de détection de l’IA, comme Pangram, repèrent souvent une lettre entièrement écrite par une IA, et cela peut vous desservir. Servez-vous du brouillon comme matière : les faits choisis, leurs sources et la structure, puis réécrivez-le avec vos propres mots. Une lettre encore marquée brouillon IA vous redemande votre accord avant le téléchargement.",
         "Chaque candidature payée comprend 20 brouillons, guides et recherches dans Préparer.",
       ],
       keywords: ["lettre de motivation", "lettre", "entretien", "questions", "préparation"],

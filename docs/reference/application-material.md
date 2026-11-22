@@ -343,6 +343,15 @@ The request must send one text for each item, in order; another count answers
 ## The web panel
 
 Each application page on the web shows an optional **Prepare** panel after the CV. It starts folded to one line, and the browser remembers when you open it. The **Cover letter or interview** button above the draft opens it and scrolls to it.
+
+**Cover letters are material to rewrite (#3276).** Recruiters and AI-detection
+tools often spot a letter written entirely by a model, and it can count
+against the application. The Cover letter tab therefore opens with **Write the
+letter yourself**, which says so. The first **Draft cover letter** on an
+application asks the candidate to accept that risk; the browser remembers the
+choice for that application. A saved letter that is still the model's text,
+drafted or revised by the critic with no item rewritten, carries **AI draft:
+rewrite before sending**, and downloading it in any format asks once more.
 The candidate picks a cover letter or an interview preparation guide on its
 toggle and selects the button named after it, **Draft cover letter** or
 **Draft interview guide**. Interview questions drafted before guides existed

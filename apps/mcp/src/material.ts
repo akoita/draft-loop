@@ -90,7 +90,7 @@ export function createMaterialApi(call: WorkspaceApiCall): MaterialApi {
 const spendLine =
   "It spends money: draft only when the candidate asked, and once per request. It reserves one draft's cost cap against this token's monthly cap and is refused past it. Needs the runs:start scope.";
 
-export const draftCoverLetterDescription = `Draft a cover letter for one job application from the candidate's career facts and the job's reviewed requirements, on DraftLoop's default model, and save it in DraftLoop. Pass the candidate's own wishes as guidance; never invent facts. ${spendLine}`;
+export const draftCoverLetterDescription = `Draft a cover letter for one job application from the candidate's career facts and the job's reviewed requirements, on DraftLoop's default model, and save it in DraftLoop. Pass the candidate's own wishes as guidance; never invent facts. A letter written entirely by AI can be spotted by recruiters and AI-detection tools: tell the candidate to rewrite it in their own words before sending it. ${spendLine}`;
 
 export const draftInterviewPrepDescription = `Draft interview questions for one job application, each with a talking point from the candidate's career facts, on DraftLoop's default model, and save them in DraftLoop. Pass the candidate's own wishes as guidance. ${spendLine}`;
 

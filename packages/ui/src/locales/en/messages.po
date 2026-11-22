@@ -1369,6 +1369,10 @@ msgstr "Agents cannot add notes to your Work journal. When they can, nothing bec
 msgid "Agents cannot add notes yet."
 msgstr "Agents cannot add notes yet."
 
+#: apps/web/src/cover-letter-risk.tsx
+msgid "AI draft: rewrite before sending"
+msgstr "AI draft: rewrite before sending"
+
 #: apps/web/src/refusal-text.ts
 msgid "AI features are paused for a short while. They come back on their own; your work is saved."
 msgstr "AI features are paused for a short while. They come back on their own; your work is saved."
@@ -4477,6 +4481,10 @@ msgid "https://www.linkedin.com/in/…\n"
 msgstr "https://www.linkedin.com/in/…\n"
 "https://your-portfolio.example/…"
 
+#: apps/web/src/cover-letter-risk.tsx
+msgid "I accept the risk, draft it"
+msgstr "I accept the risk, draft it"
+
 #: apps/web/src/beta-sign-up.tsx
 msgid "I accept the terms of use and the privacy policy."
 msgstr "I accept the terms of use and the privacy policy."
@@ -6113,6 +6121,7 @@ msgstr "not linked to candidate materials"
 msgid "Not named in the job posting"
 msgstr "Not named in the job posting"
 
+#: apps/web/src/cover-letter-risk.tsx
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Not now"
 msgstr "Not now"
@@ -7316,6 +7325,10 @@ msgstr "Recorded cause"
 msgid "Recording… speak your answer."
 msgstr "Recording… speak your answer."
 
+#: apps/web/src/cover-letter-risk.tsx
+msgid "Recruiters and AI-detection tools often spot a letter written entirely by AI, and it can count against you. Use what DraftLoop gives you here as material, then write the letter in your own words."
+msgstr "Recruiters and AI-detection tools often spot a letter written entirely by AI, and it can count against you. Use what DraftLoop gives you here as material, then write the letter in your own words."
+
 #: apps/web/src/operator-model.ts
 #: apps/web/src/operator.tsx
 msgid "Redeemed"
@@ -8517,6 +8530,10 @@ msgstr "Send the conversation"
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Send the job description to the writing model?"
 msgstr "Send the job description to the writing model?"
+
+#: apps/web/src/cover-letter-risk.tsx
+msgid "Sending it as it is can be spotted and can count against you. Draft it to read and rewrite in your own words."
+msgstr "Sending it as it is can be spotted and can count against you. Draft it to read and rewrite in your own words."
 
 #: apps/web/src/consent-model.ts
 msgid "Sending to providers"
@@ -10484,6 +10501,14 @@ msgstr "This is the first artifact version."
 msgid "This job posting looks {label}."
 msgstr "This job posting looks {label}."
 
+#: apps/web/src/cover-letter-risk-model.ts
+msgid "This letter is still the AI draft. Sent as it is, it can be spotted and can count against you. Download it anyway?"
+msgstr "This letter is still the AI draft. Sent as it is, it can be spotted and can count against you. Download it anyway?"
+
+#: apps/web/src/cover-letter-risk.tsx
+msgid "This letter is written by AI."
+msgstr "This letter is written by AI."
+
 #: packages/ui/src/career-interview-live.tsx
 msgid "This live conversation reached its time limit. Start it again to go on."
 msgstr "This live conversation reached its time limit. Start it again to go on."
@@ -11512,6 +11537,10 @@ msgstr "Write its documents in"
 #: apps/web/src/interview-guide-model.ts
 msgid "Write the interview, company, role and market again"
 msgstr "Write the interview, company, role and market again"
+
+#: apps/web/src/cover-letter-risk.tsx
+msgid "Write the letter yourself."
+msgstr "Write the letter yourself."
 
 #: apps/web/src/interview-guide-model.ts
 msgid "Write the pitch, stories and weak points again"
