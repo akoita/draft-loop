@@ -8,7 +8,14 @@
 //   node scripts/failure-taxonomy-rounds.mjs --out ~/ftx --preset economy --total-cap-usd 3
 import { execFileSync } from "node:child_process";
 import console from "node:console";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import process from "node:process";
 import { DatabaseSync } from "node:sqlite";
@@ -77,7 +84,14 @@ function collect(workspace) {
 }
 
 mkdirSync(out, { recursive: true });
-let spent = 0;
+// Earlier rounds in --out count toward the total cap, so a resumed run keeps the same ceiling.
+let spent = readdirSync(out)
+  .map((name) => join(out, name, "round.json"))
+  .filter((path) => existsSync(path))
+  .reduce(
+    (sum, path) => sum + Number(JSON.parse(readFileSync(path, "utf8")).run?.total_cost_usd ?? 0),
+    0,
+  );
 const summary = [];
 rounds: for (const testCase of cases) {
   const count = repetitions[testCase.cohort] ?? defaultRepetitions;
