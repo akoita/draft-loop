@@ -25,6 +25,7 @@ import { cloudLoggingOptions, errorFields } from "./logging.js";
 import { readModelCallSwitch } from "./model-call-switch.js";
 import { hostedJobPageFetcher } from "./page-fetcher-client.js";
 import { paymentsFrom, readPaymentsConfig } from "./payments-config.js";
+import { readPreviousIssuers, withPreviousIssuers } from "./previous-issuers.js";
 import { readPublicSite } from "./public-site.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 import { readScreeningShadowConfig, screeningShadowFrom } from "./screening-shadow-config.js";
@@ -98,7 +99,14 @@ const directory =
     : undefined;
 const auth: ApiAuthOptions =
   config.auth.mode === "oidc" && directory !== undefined
-    ? { ...config.auth, resolveSignIn: directory.resolveSignIn }
+    ? {
+        ...config.auth,
+        // Members recorded under the provider's earlier host still sign in (#169).
+        resolveSignIn: withPreviousIssuers(
+          directory.resolveSignIn,
+          readPreviousIssuers(process.env.DRAFT_LOOP_OIDC_PREVIOUS_ISSUERS),
+        ),
+      }
     : { mode: "owner" };
 // The identity provider's account client, which deletes a person's sign-in with their account
 // (#3033) and prepares an invited person's sign-in (#3082); without it the sign-in account stays
