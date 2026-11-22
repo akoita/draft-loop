@@ -122,6 +122,10 @@ The landing page (`/`), `/about/`, `/guide/` (each with a `fr/` version),
   where an absolute address belongs: canonical, language links, share image
   and structured data. The API replaces it with the public URL's origin, or
   with nothing, which leaves relative links.
+- **Previous hosts.** `DRAFT_LOOP_PREVIOUS_PUBLIC_HOSTS` lists earlier host
+  names, comma separated, such as the one before a rename. A page read there
+  gets a 301 to the same path on the public URL. `/v1/` and `/.well-known/`
+  stay served on every host, so agents and webhooks keep working.
 - **Sample pages.** `/showcase/` holds fictional data and is always `noindex`.
 - **Compression.** The web build writes a Brotli and a gzip copy beside each
   text asset over 1 KB (`apps/web/scripts/precompress.mjs`); the API sends the
