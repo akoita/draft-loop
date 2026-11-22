@@ -294,6 +294,7 @@ the [threat model](../security/threat-model.md) and
 | [Memory model](memory.md) | Every kind of memory a run uses, who writes and reads it, and the rules they follow |
 | [Runtime and trust](runtime-and-trust.md) | The author–critic loop, model profiles, workflow states, provider and export controls |
 | [Outer loop](outer-loop.md) | How production runs are digested daily into quality patterns and proposed fixes |
+| [Writing authenticity watch](writing-authenticity-watch.md) | How new writing and detection research is reviewed for the cover letter help |
 | [Client-server delivery plan](client-server-delivery-plan.md) | How the hosted service is being delivered |
 
 ## Current limitations
