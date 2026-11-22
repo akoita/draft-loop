@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
 
+import { readPreviousHosts, registerPreviousHostRedirect } from "./previous-hosts.js";
+
 /**
  * How search engines may treat this deployment's public pages. Indexing is off unless the
  * deployment turns it on, so staging and self-hosted servers stay out of search results.
@@ -9,6 +11,8 @@ export interface PublicSiteOptions {
   readonly origin?: string;
   /** Whether search engines may index the public pages; needs `origin`. */
   readonly indexing: boolean;
+  /** Earlier host names whose page reads redirect to `origin`, such as the one before a rename. */
+  readonly previousHosts?: readonly string[];
 }
 
 /** The text the public pages carry where the deployment's origin belongs. */
@@ -42,7 +46,8 @@ const tokenPages: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Reads `DRAFT_LOOP_SEARCH_INDEXING` (`on` or unset) and the origin of `DRAFT_LOOP_PUBLIC_URL`.
+ * Reads `DRAFT_LOOP_SEARCH_INDEXING` (`on` or unset), the origin of `DRAFT_LOOP_PUBLIC_URL` and
+ * the comma-separated `DRAFT_LOOP_PREVIOUS_PUBLIC_HOSTS`.
  * Indexing on without a valid https public address throws, so a deployment never advertises
  * pages at a wrong address.
  */
@@ -55,7 +60,15 @@ export function readPublicSite(env: NodeJS.ProcessEnv): PublicSiteOptions {
   if (flag === "on" && origin === undefined) {
     throw new Error("DRAFT_LOOP_SEARCH_INDEXING=on needs an https DRAFT_LOOP_PUBLIC_URL.");
   }
-  return { indexing: flag === "on", ...(origin === undefined ? {} : { origin }) };
+  const previousHosts = readPreviousHosts(env.DRAFT_LOOP_PREVIOUS_PUBLIC_HOSTS);
+  if (previousHosts.length > 0 && origin === undefined) {
+    throw new Error("DRAFT_LOOP_PREVIOUS_PUBLIC_HOSTS needs an https DRAFT_LOOP_PUBLIC_URL.");
+  }
+  return {
+    indexing: flag === "on",
+    ...(origin === undefined ? {} : { origin }),
+    ...(previousHosts.length === 0 ? {} : { previousHosts }),
+  };
 }
 
 function publicOrigin(text: string | undefined): string | undefined {
@@ -141,6 +154,7 @@ async function readPayload(payload: unknown): Promise<string | undefined> {
  */
 export function registerPublicSite(app: FastifyInstance, site: PublicSiteOptions): void {
   const indexing = site.indexing && site.origin !== undefined;
+  registerPreviousHostRedirect(app, site.origin, site.previousHosts ?? []);
   app.get("/robots.txt", { schema: { hide: true } }, async (_request, reply) =>
     reply
       .header("cache-control", "public, max-age=3600")
