@@ -31,6 +31,44 @@ describe("redakloop-mcp init", () => {
     await rm(root, { recursive: true, force: true });
   });
 
+  it("gives Codex the rule and skills for every project with --user, and no token", async () => {
+    await mkdir(join(root, ".codex"), { recursive: true });
+    await writeFile(join(root, ".codex", "AGENTS.md"), "# My rules\n\nBe brief.\n");
+    await writeFile(join(root, ".codex", "config.toml"), "[mcp_servers.draftloop]\n");
+    const parsed = parseInitArguments(["--host", "codex", "--user"]);
+    if ("problem" in parsed) throw new Error(parsed.problem);
+    expect(parsed).toMatchObject({ user: true, token: false });
+
+    const lines = await runInit(root, parsed, {
+      environment: { DRAFT_LOOP_SERVER_TOKEN: "owner-token" },
+      tokenPath: join(root, "agent-token"),
+    });
+
+    expect(lines.slice(0, 3)).toEqual([
+      "updated: .codex/AGENTS.md",
+      "created: .agents/skills/log-work/SKILL.md",
+      "created: .agents/skills/add-project/SKILL.md",
+    ]);
+    expect(lines.join("\n")).not.toContain("agent token");
+    const agents = await readFile(join(root, ".codex", "AGENTS.md"), "utf8");
+    expect(agents).toBe(`# My rules\n\nBe brief.\n\n${instructionsSnippet}\n`);
+    expect(await readFile(join(root, ".agents/skills/log-work/SKILL.md"), "utf8")).toBe(
+      logWorkSkill,
+    );
+    expect(await readFile(join(root, ".codex", "config.toml"), "utf8")).toBe(
+      "[mcp_servers.draftloop]\n",
+    );
+
+    const again = await runInit(root, parsed);
+    expect(again.slice(0, 3).every((line) => line.startsWith("unchanged:"))).toBe(true);
+  });
+
+  it("refuses --user for hosts other than Codex", () => {
+    expect(parseInitArguments(["--host", "claude-code", "--user"])).toEqual({
+      problem: "--user is for Codex only; Claude Code gets the same through the plugin.",
+    });
+  });
+
   it("sets up Claude Code with the server, snippet, skill and opt-in hook", async () => {
     await writeFile(
       join(root, ".mcp.json"),
