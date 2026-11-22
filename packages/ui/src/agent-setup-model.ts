@@ -158,7 +158,7 @@ export function agentConfiguration(host: AgentHost, connection: AgentConnection)
       return [
         "# In Claude Code",
         "/plugin marketplace add akoita/draft-loop",
-        "/plugin install draftloop@draftloop",
+        "/plugin install redakloop@redakloop",
         "# In a terminal: paste the token, then press Enter and Ctrl-D",
         "redakloop-mcp save-token",
         ...(exports.length === 0

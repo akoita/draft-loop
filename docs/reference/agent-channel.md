@@ -396,13 +396,13 @@ tool the server offers.
 | Task                     | Plugin skill              | MCP prompt, any host | What it does                                        |
 | ------------------------ | ------------------------- | -------------------- | --------------------------------------------------- |
 | List applications        | `/draftloop:applications` | `applications`       | Lists applications with status and latest run state |
-| One application's status | `/draftloop:status`       | `application-status` | Says where one application stands and the next step |
-| Tailor a CV              | `/draftloop:tailor-cv`    | none                 | Adds a pasted job and follows its CV run            |
-| Start a CV run           | `/draftloop:start-run`    | none                 | Prices a run, asks to confirm, then starts it       |
-| Log work                 | `/draftloop:log-work`     | `log-notable-work`   | Records notable merged work in the work journal     |
+| One application's status | `/redakloop:status`       | `application-status` | Says where one application stands and the next step |
+| Tailor a CV              | `/redakloop:tailor-cv`    | none                 | Adds a pasted job and follows its CV run            |
+| Start a CV run           | `/redakloop:start-run`    | none                 | Prices a run, asks to confirm, then starts it       |
+| Log work                 | `/redakloop:log-work`     | `log-notable-work`   | Records notable merged work in the work journal     |
 
 With the plugin installed, Claude Code also lists each MCP prompt, as
-`/plugin:draftloop:draftloop:<prompt> (MCP)`.
+`/plugin:redakloop:redakloop:<prompt> (MCP)`.
 
 ## Serve the tools over HTTP
 

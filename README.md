@@ -24,12 +24,12 @@ candidate decides what to approve and export.
 
 ## Ways to run Redakloop
 
-| Way to run                                       | Status         | What it is                                                                                                                                                                                       |
-| ------------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [Self-hosted server](#quick-install-with-docker) | Recommended    | The web screen, API, worker and database on your own machine with Docker. Your files stay on your disk.                                                                                          |
-| [Desktop app](#desktop-app)                      | Alpha (v0.9.0) | Redakloop's desktop version beside the web screen, for your self-hosted server and the hosted service once it opens. Workspaces from the retired v0.8 alpha move to the server with one command. |
-| [CLI](#developer-quick-start)                    | Source only    | Every workflow step from a terminal, over the same packages.                                                                                                                                     |
-| Hosted service | Invite-only beta | The same server in the EU with sign-in and consent ([architecture](docs/architecture/hosted-service.md)). It opens by invitation, with a waitlist. |
+| Way to run                                       | Status           | What it is                                                                                                                                                                                       |
+| ------------------------------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Self-hosted server](#quick-install-with-docker) | Recommended      | The web screen, API, worker and database on your own machine with Docker. Your files stay on your disk.                                                                                          |
+| [Desktop app](#desktop-app)                      | Alpha (v0.9.0)   | Redakloop's desktop version beside the web screen, for your self-hosted server and the hosted service once it opens. Workspaces from the retired v0.8 alpha move to the server with one command. |
+| [CLI](#developer-quick-start)                    | Source only      | Every workflow step from a terminal, over the same packages.                                                                                                                                     |
+| Hosted service                                   | Invite-only beta | The same server in the EU with sign-in and consent ([architecture](docs/architecture/hosted-service.md)). It opens by invitation, with a waitlist.                                               |
 
 All of them run the same packages and the same author–critic loop, and differ
 only at their adapters; see the [architecture overview](docs/architecture/overview.md#ways-to-run).
@@ -100,11 +100,11 @@ stay with you. In Claude Code, install the plugin from this repository:
 
 ```text
 /plugin marketplace add akoita/draft-loop
-/plugin install draftloop@draftloop
+/plugin install redakloop@redakloop
 ```
 
 On Claude Code 2.1.275 or later, one line does both:
-`/plugin install draftloop --marketplace akoita/draft-loop`. The
+`/plugin install redakloop --marketplace akoita/draft-loop`. The
 [agent channel](docs/reference/agent-channel.md) covers the token, Codex and
 other agents.
 

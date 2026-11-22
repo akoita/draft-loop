@@ -161,7 +161,7 @@ export const englishHelpGuide: HelpGuide = {
         "1. Install redakloop-mcp once. It is not on npm yet, so install it from the source code in a terminal: git clone https://github.com/akoita/draft-loop, then cd draft-loop, pnpm install, cd apps/mcp and pnpm link --global. Check it with redakloop-mcp --help, which prints its usage. If pnpm refuses the link, run npm link in the same folder.",
         "2. In Settings, open Agents, then Connect an agent. Tick what the agent may do and select Create agent token. The token is shown only once.",
         "3. Pick your agent's tab and copy what it shows. It already holds this server's address and, once created, the token.",
-        "Claude Code plugin: run the two /plugin lines in Claude Code, then run redakloop-mcp save-token in a terminal, paste the token and press Enter, then Ctrl-D. If the tab shows an export line, add it to your shell profile. The plugin adds the Redakloop tools, the /draftloop: commands and a reminder to record notable work.",
+        "Claude Code plugin: run the two /plugin lines in Claude Code, then run redakloop-mcp save-token in a terminal, paste the token and press Enter, then Ctrl-D. If the tab shows an export line, add it to your shell profile. The plugin adds the Redakloop tools, the /redakloop: commands and a reminder to record notable work.",
         "Claude Code: run the claude mcp add command in a terminal. Codex: add the table to ~/.codex/config.toml. Any other MCP agent: add the JSON entry to the agent's MCP settings file.",
         '4. Restart your agent and ask in plain words, such as "list my Redakloop applications". In Claude Code, /mcp lists the Redakloop tools. For notes about work you shipped, also turn on Accept notes from agents in Agents.',
       ],
