@@ -266,3 +266,24 @@ versions and judge. It is manual and paid, and never runs in hosted CI.
   only counts, rates, models, prompt versions, commit and cost.
 - **Pins:** only the current and the previous prompt version of each role
   can be pinned; any other value stops the run.
+
+### Result: the non-tech prompt changes
+
+Author `cli-author-v20` and critic `cli-critic-v11` against `cli-author-v21`
+and `cli-critic-v12` (#3087 to #3091), on the four non-tech cases, two
+rounds each, at commit 0e0a18fb. Both runs together cost $0.76.
+
+| Mode | v20 / v11 | v21 / v12 |
+| --- | --- | --- |
+| `placeholder-left` | 100% | 100% |
+| `chronology-drift` | 50% | 50% |
+| `role-omission` | 25% | 25% |
+| `unsupported-claim` | 0% | 13% |
+| Other tracked modes | 0% | 0% |
+
+- **No measurable change.** The prompt changes targeted wording, such as
+  role-neutral evidence and acronyms, which these modes do not score.
+- **One judge false alarm.** The single `unsupported-claim` fail
+  (case-sales-r2) holds no unsupported claim when read by hand.
+- **Placeholders every time.** Every draft leaves `[Your name]` and
+  `[Phone]` in its contact line, though each profile states the name.
