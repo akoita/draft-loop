@@ -187,7 +187,8 @@ async function main() {
     await window.waitForTimeout(500);
     const opened = await app.evaluate(() => globalThis.acceptanceOpened);
     checks.outsideLinksLeave =
-      new URL(window.url()).origin === origin && opened.includes("https://docs.example.test/help");
+      new URL(window.url()).origin === origin &&
+      opened.some((url) => url === "https://docs.example.test/help");
     checks.otherSchemesBlocked = await window.evaluate(async () => {
       location.href = "file:///";
       await new Promise((resolvePromise) => setTimeout(resolvePromise, 300));
