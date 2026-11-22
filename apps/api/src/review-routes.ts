@@ -281,7 +281,7 @@ export function registerReviewRoutes(parent: FastifyInstance, options: ReviewRou
           runId,
           findingCode: finding?.code,
           category: finding?.category,
-          severity: finding?.severity,
+          findingSeverity: finding?.severity,
           decision: request.body.decision,
         },
         "finding decided",

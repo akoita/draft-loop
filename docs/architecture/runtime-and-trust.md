@@ -399,11 +399,11 @@ The engine can emit content-free spans through a tracing port
 (`packages/orchestrator/src/run-tracing.ts`). Without a tracer it records
 nothing.
 
-| Span                | Opened for                              | Attributes                                                                                          |
-| ------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `invoke_workflow`   | Each advance of a run                   | Run id, last round                                                                                  |
-| `invoke_agent`      | Each author, critic or revision attempt | Step, round, attempt, provider, model, tokens, estimated cost, error type, failure stage and reason |
-| `retrieve_evidence` | Retrieval inside an attempt             | Chunk count, distinct source count                                                                  |
+| Span                | Opened for                                         | Attributes                                                                                                                           |
+| ------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `invoke_workflow`   | Each advance of a run                              | Run id, last round                                                                                                                   |
+| `invoke_agent`      | Each author, critic or revision attempt            | Step, round, attempt, provider, model, tokens, estimated cost, error type, failure stage and reason                                  |
+| `retrieve_evidence` | Retrieval inside an attempt                        | Chunk count, distinct source count                                                                                                   |
 | `evaluate_run`      | A run reaching review, budget exhausted or stopped | The critic's verdict: ready, stop reason, mean readiness, uncovered requirements, error findings, author and critic models, run cost |
 
 - **Failure reason.** A failed attempt also carries the first diagnostic code
@@ -431,7 +431,7 @@ nothing.
   author, critic and revision attempts: duration, model, estimated cost and,
   for a failed attempt, the error type. A run with no trace shows no section.
 - **Finding decisions.** The API logs one `finding decided` line per decision
-  on a finding: run id, finding code, category, severity and decision. It never
+  on a finding: run id, finding code, category, `findingSeverity` and decision. It never
   logs the finding's message or the member's rationale.
 - **Outer loop.** A daily sweep reduces these spans to a digest and a ledger
   of recurring failure patterns: see [Outer loop](outer-loop.md).

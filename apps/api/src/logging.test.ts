@@ -142,4 +142,14 @@ describe("errorReportFields (#3239)", () => {
       stack_trace: "Error: error\n    at main (file.js:1:1)",
     });
   });
+
+  it("keeps the level as the only severity when a log call passes a severity field (#3303)", () => {
+    const options = cloudLoggingOptions({ write: () => undefined });
+    const log = (options as { formatters: { log: (f: Record<string, unknown>) => object } })
+      .formatters.log;
+    expect(log({ event: "finding_decided", severity: "error" })).toEqual({
+      event: "finding_decided",
+      fieldSeverity: "error",
+    });
+  });
 });
