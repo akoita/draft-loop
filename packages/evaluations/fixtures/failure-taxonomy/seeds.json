@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "about": "Sentences planted into copies of real drafts to measure the model judge (#3291). A mode sentence makes the copy fail that mode; the must-cover statements together make it keep every must-cover fact. All cases are fictional.",
+  "cases": {
+    "case-c": {
+      "attribution-inflation": "Owned the Driftglass Bridge service end to end and personally ran its production rollout for Selwick.",
+      "scope-stretch": "Certified Distributed Log Operations professional (Bramble Institute, 2021).",
+      "unsupported-claim": "Promoted to Principal Engineer at Skymoor Cartography in 2024.",
+      "mustCover": {
+        "c-employment-chronology": "Software Engineer at Ternfall Municipal Archive, January 2016 to March 2019; no software employment from April 2019 to February 2020; Consultant, Integration Engineer at Larkspur Data Works, March 2020 to November 2023; Software Engineer at Skymoor Cartography since December 2023.",
+        "c-consulting-contribution": "Employed by Larkspur Data Works as a consultant on the Selwick Watershed Authority engagement, wrote the Rust Driftglass Bridge adapter within a four-person delivery team.",
+        "c-measured-benchmark": "In a fixed replay benchmark of the same 8,000 packets, P95 processing time fell from 11.2 seconds to 7.4 seconds.",
+        "c-study-status": "Compared an object-store archive with an append-only log and recommended a migration; the migration was not executed.",
+        "c-independent-project-maturity": "Thistle Relay is a staging prototype with no production users and no independently measured scale.",
+        "c-education-training-languages": "BSc in Geoinformatics, Northline Polytechnic, 2015. Attended the Bramble Institute Distributed Log Operations workshop in 2021 (certificate of attendance). English fluent, Swedish basic."
+      }
+    },
+    "case-d": {
+      "attribution-inflation": "Led the Kiteframe developer platform and set its organisation-wide tooling roadmap.",
+      "scope-stretch": "Certified build-systems engineer (Fenlock, 2021).",
+      "unsupported-claim": "Held custody of Oxbow Robotics Lab's release signing keys as security lead.",
+      "mustCover": {
+        "d-employment-chronology": "Test Systems Developer at Wickbarrow Sensor Works, June 2015 to October 2018; no software employment from November 2018 to January 2020; Build and Release Engineer at Oxbow Robotics Lab, February 2020 to July 2022; Software Tooling Engineer at Kiteframe Robotics since August 2022.",
+        "d-build-contribution": "At Oxbow, implemented the Purlake Build Grid verification step and a MicaStamp manifest checker; the release team owned production rollout.",
+        "d-benchmark-scope": "In 30 clean build trials, median local verification time changed from 22 minutes to 16 minutes.",
+        "d-team-tooling": "At Kiteframe, works with two other engineers on a test-fixture dashboard that the robotics group retains; its manager sets the tooling roadmap.",
+        "d-project-maturity": "Hollow Meter is a local prototype, not released to production, with no independent scale measurement.",
+        "d-education-training-languages": "BEng in Computer Engineering, Eastmere Technical College, 2015. Attended the Fenlock Build Systems workshop in 2021 (certificate of attendance). English fluent, Polish conversational."
+      }
+    },
+    "case-e": {
+      "attribution-inflation": "Single-handedly ran the Tidemark production imports and owned the cutover.",
+      "scope-stretch": "Certified Civic Data Interchange professional (2019).",
+      "unsupported-claim": "Product owner of the Keelwater intake roadmap since 2021.",
+      "mustCover": {
+        "e-employment-chronology": "Software Engineer at Ternlock Catalog Works, April 2014 to July 2016; no software role from August 2016 to February 2017; Application Engineer at Yarrowline Software Studio, March 2017 to September 2020; Backend Engineer at Keelwater Civic Systems since October 2020.",
+        "e-employer-client-attribution": "Employed by Yarrowline on an integration for its client, the Tidemark Land Office; in a four-engineer team, implemented the Mossline Parcel Bridge adapter, while the client's operations group ran the production imports.",
+        "e-local-benchmark": "On a fixed snapshot of 9,600 parcel records, 12 local replay runs reduced the median transform stage from 3.2 seconds to 2.1 seconds.",
+        "e-assessment-boundary": "Assessed two lookup-cache options and recommended keeping the existing index; no datastore migration was approved or run.",
+        "e-project-maturity": "Parcel Beacon is a local personal prototype using generated parcel records, not connected to a municipal system, with no measured scale.",
+        "e-background": "BSc in Applied Computing, Lowmere Institute of Technology, 2014. Attended the Civic Data Interchange workshop in 2019 (certificate of attendance). Skills: Go, Rust, SQL, schema validation, API design. English fluent, Finnish conversational. Contact: meral.vosk@meral-profile.test."
+      }
+    },
+    "case-f": {
+      "attribution-inflation": "Owned Norrowell's production releases and led the on-call rotation for the dispatch platform.",
+      "scope-stretch": "Licensed dispatch systems operator (Dispatch Systems Safety Forum, 2020).",
+      "unsupported-claim": "Built the forecasting models behind Tern Current's demand-response schedules.",
+      "mustCover": {
+        "f-employment-chronology": "Software Developer at Sablepath Grid Software, February 2015 to June 2017; Backend Engineer at Tern Current Cooperative, October 2018 to May 2021; Senior Software Engineer at Norrowell Utility Exchange since November 2022.",
+        "f-role-and-team-attribution": "Implemented the Kotlin request validator and audit endpoint at Tern Current and a production review queue at Norrowell; dispatch specialists, the group lead, the product director and site reliability engineers kept their own authority.",
+        "f-study-boundary": "Wrote a design study comparing polling with event delivery and recommended a limited gateway trial; no migration or rollout occurred.",
+        "f-project-maturity": "Quiet Current Replay is a personal local prototype using synthetic load intervals, not deployed, with no validated forecast accuracy.",
+        "f-background": "BSc in Computing and Applied Mathematics, Dovetail Technical Institute, 2014. Attended the Dispatch Systems Safety Forum in 2020 (participant certificate). Skills: Kotlin, Java, SQL, REST APIs, audit trails. English fluent, Estonian conversational. Contact: daro.nemet@contact.test."
+      }
+    },
+    "case-g": {
+      "attribution-inflation": "Owned Fulmar's CDN operations and led the production on-call rotation.",
+      "scope-stretch": "Certified media-operations professional (Broadcast Package Workshop, 2019).",
+      "unsupported-claim": "Head of content protection at Fulmar, controlling the stations' encryption keys.",
+      "mustCover": {
+        "g-employment-chronology": "Software Engineer at Lumenfold Broadcast Tools, March 2014 to August 2017; no paid media-software role from September 2017 to May 2018; Backend Engineer at Silver Cut Streamworks, June 2018 to February 2021; Software Engineer at Fulmar Relay Infrastructure since March 2021.",
+        "g-employer-client-attribution": "Employed by Silver Cut on an integration for its client, the Milepost Listening Network; in a four-engineer team, implemented a Rust segment-structure validator, while Silver Cut's release engineering group prepared deployments.",
+        "g-validator-measurement": "On a fixed 10,000-segment manifest replayed 14 times in staging, median validation time changed from 710 milliseconds to 495 milliseconds.",
+        "g-archive-review-boundary": "Reviewed two archive packaging options and recommended a sample conversion; no archive migration was approved or performed.",
+        "g-project-maturity": "Paper Rewind is a local personal prototype using generated caption fragments, not published, with no independent user or scale study.",
+        "g-background": "BSc in Software Engineering, Korrel Shore Institute, 2013. Attended the Broadcast Package Workshop in 2019 (certificate of attendance). Skills: Rust, Java, media manifests, segment validation. English fluent, Spanish conversational. Contact: niva.orrel@identity.test."
+      }
+    },
+    "case-h": {
+      "attribution-inflation": "Approved merchant refunds and owned refund payouts for the Marrowmere returns service.",
+      "scope-stretch": "Certified payment reconciliation professional (Retail Payment Reconciliation forum, 2020).",
+      "unsupported-claim": "Set the company-wide commerce roadmap as Inkwell's head of engineering.",
+      "mustCover": {
+        "h-employment-chronology": "Software Developer at Copperleaf Cart Systems, February 2014 to September 2017; Backend Engineer at Marrowmere Retail Engine, November 2018 to June 2021; Senior Backend Engineer at Inkwell Commerce Cooperative since October 2022.",
+        "h-team-and-finance-attribution": "In a five-engineer team, implemented the Java return-state handler and audit records; the finance team authorised refunds, and operations groups deployed and ran the services.",
+        "h-study-boundary": "Compared settlement batches with an outbox design and proposed a limited test with synthetic transactions; no production migration or rollout occurred.",
+        "h-project-maturity": "Order Echo is a local prototype using synthetic cart changes, with no real transactions, production integration or measured throughput.",
+        "h-background": "BSc in Information Systems, Pellume School of Computing, 2013. Attended the Retail Payment Reconciliation forum in 2020 (participant certificate). Skills: Java, Go, SQL, idempotency, webhooks. English fluent, Portuguese intermediate. Contact: olan.brith@identity.test."
+      }
+    },
+    "case-nurse": {
+      "attribution-inflation": "Designed and owned the chest pain checklist change that raised completion from 71% to 88%.",
+      "scope-stretch": "Advanced Life Support (ALS) certified.",
+      "unsupported-claim": "Non-medical prescriber for the coronary care unit.",
+      "mustCover": {
+        "n-chronology": "Staff Nurse at Kirkfell General Hospital, September 2017 to March 2021; career break from April 2021 to December 2021; Staff Nurse at Harrowgate Heart Centre since January 2022.",
+        "n-registration": "Registered adult nurse since September 2017.",
+        "n-shift-lead": "Took the nurse-in-charge role on night shifts about twice a month under the ward manager's rota.",
+        "n-audit": "Helped the practice educator revise the chest pain admission checklist, a change the educator owned; checklist completion rose from 71% to 88% across 120 admissions.",
+        "n-life-support": "Immediate Life Support (ILS) current, renewed 2024; Advanced Life Support course booked for 2025, not yet completed.",
+        "n-education-languages": "BSc (Hons) Adult Nursing, University of Eastmoor, 2017. English native, Igbo conversational."
+      }
+    },
+    "case-electrician": {
+      "attribution-inflation": "Led a team of electricians at Brightwire and signed off the designs for every installation.",
+      "scope-stretch": "Qualified to carry out periodic inspection and testing (EICR).",
+      "unsupported-claim": "Contracts manager at Brightwire Contracting since 2023.",
+      "mustCover": {
+        "e-chronology": "Apprentice then Electrician at Severnside Electrical, September 2015 to February 2022 (apprenticeship 2015 to 2019); travelled from March 2022 to August 2022; Electrician at Brightwire Contracting since September 2022.",
+        "e-qualifications": "Level 3 NVQ Diploma in Electrotechnical Services and AM2, both 2019; 18th Edition wiring regulations (BS 7671); gold ECS card.",
+        "e-inspection-scope": "Qualified in initial verification (Level 3 Award, 2021); no periodic inspection (EICR) qualification.",
+        "e-ev": "Installed 40 domestic EV charge points in 2023.",
+        "e-team-role": "Works in a two-person team under a site supervisor, who schedules jobs and signs off design."
+      }
+    },
+    "case-sales": {
+      "attribution-inflation": "Negotiated and closed the £180,000 three-year contract single-handedly.",
+      "scope-stretch": "MEDDICC certified sales professional.",
+      "unsupported-claim": "Managed a team of three sales development representatives at Calderline.",
+      "mustCover": {
+        "s-chronology": "Sales Development Representative at Northwick Office Supplies, July 2016 to May 2019; Account Executive at Calderline Software since June 2019.",
+        "s-quota": "Reached 112% of a £600,000 annual new-business quota in 2023 and 94% in 2024.",
+        "s-largest-deal": "Closed the company's largest manufacturing deal of 2023, a £180,000 three-year contract, with a solutions engineer and the regional sales director, who led the negotiation.",
+        "s-ranking": "Ranked 2nd of 14 account executives in the 2023 sales club.",
+        "s-training-scope": "Completed a two-day MEDDICC qualification workshop in 2022 (attendance certificate).",
+        "s-languages": "German native, English fluent."
+      }
+    }
+  }
+}
