@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { stopHookAdvice } from "./hook.js";
+import { stopHookRecordReason } from "./hook.js";
 
 const bin = fileURLToPath(new URL("../bin/redakloop-mcp.mjs", import.meta.url));
 
@@ -65,7 +65,7 @@ describe("the redakloop-mcp command", () => {
     expect(outcome.stdout).toContain("created: AGENTS.md");
   });
 
-  it("prints the stop hook's advice from standard input, and nothing for bad input", async () => {
+  it("hands merged work back to the agent from standard input, and nothing for bad input", async () => {
     const transcriptPath = join(root, "transcript.jsonl");
     await writeFile(
       transcriptPath,
@@ -87,7 +87,7 @@ describe("the redakloop-mcp command", () => {
       input: JSON.stringify({ transcript_path: transcriptPath }),
     });
     expect(advised.code).toBe(0);
-    expect(JSON.parse(advised.stdout)).toEqual({ systemMessage: stopHookAdvice });
+    expect(JSON.parse(advised.stdout)).toEqual({ decision: "block", reason: stopHookRecordReason });
 
     const quiet = await run(["hook", "stop"], { cwd: root, input: "not json" });
     expect(quiet).toEqual({ code: 0, stdout: "", stderr: "" });

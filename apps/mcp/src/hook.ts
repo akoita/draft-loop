@@ -1,13 +1,28 @@
 import { readFile } from "node:fs/promises";
 
 /**
- * The opt-in Claude Code Stop hook (#2025, #2555). When the turn just ended merged work and never
- * called `record_work`, it adds one advisory line; it never blocks the turn and never calls the
- * tool by itself. A push to a feature branch, or merging main into one, is not shipped work.
+ * The Claude Code Stop hook (#2025, #2555, #3309). When the turn just ended merged work and never
+ * looked at the work journal, it hands the work back to the agent once (`record`, the default), or
+ * shows the person one advisory line (`advise`), or stays quiet (`off`). It never calls a tool by
+ * itself, and a note still waits for the candidate's review. A push to a feature branch, or
+ * merging main into one, is not shipped work.
  */
+
+/** How the hook reacts to unrecorded merged work, from `REDAKLOOP_JOURNAL_HOOK`. */
+export type JournalHookMode = "record" | "advise" | "off";
+
+/** The mode `REDAKLOOP_JOURNAL_HOOK` names; anything else is the default, `record`. */
+export function journalHookMode(value: string | undefined): JournalHookMode {
+  const mode = value?.trim().toLowerCase();
+  return mode === "advise" || mode === "off" ? mode : "record";
+}
 
 export const stopHookAdvice =
   "This turn merged work without a Redakloop record_work call. If it is a user-visible feature worth a CV line, record it with /log-work.";
+
+/** What the agent reads when the hook hands the work back to it; it continues the turn once. */
+export const stopHookRecordReason =
+  "This turn merged work but did not check the Redakloop work journal. Call list_work for this project, then call record_work once for each user-visible feature, integration, migration or measured improvement that is not recorded yet, following draftloop://work-journal/guide. If nothing merged is notable, record nothing and say so in one line. The notes wait for the candidate's review.";
 
 /** A pull request merged from the shell, or a push straight to the default branch. */
 const mergeCommand =
@@ -59,14 +74,21 @@ export function turnNeedsAdvice(transcript: string): boolean {
     const command = (block.input as { readonly command?: unknown } | undefined)?.command;
     return typeof command === "string" && mergeCommand.test(command);
   });
+  // Calling list_work counts too: the agent looked and may have found nothing worth a note.
   const recorded = uses.some(
-    (block) => typeof block.name === "string" && block.name.endsWith("record_work"),
+    (block) =>
+      typeof block.name === "string" &&
+      (block.name.endsWith("record_work") || block.name.endsWith("list_work")),
   );
   return shipped && !recorded;
 }
 
-/** What the hook prints for its input: a JSON line with the advice, or nothing. */
-export async function runStopHook(input: string): Promise<string> {
+/** What the hook prints for its input: a JSON line for the agent or the person, or nothing. */
+export async function runStopHook(
+  input: string,
+  mode: JournalHookMode = "record",
+): Promise<string> {
+  if (mode === "off") return "";
   let transcriptPath: unknown;
   let active: unknown;
   try {
@@ -78,5 +100,8 @@ export async function runStopHook(input: string): Promise<string> {
   }
   if (active === true || typeof transcriptPath !== "string") return "";
   const transcript = await readFile(transcriptPath, "utf8").catch(() => "");
-  return turnNeedsAdvice(transcript) ? JSON.stringify({ systemMessage: stopHookAdvice }) : "";
+  if (!turnNeedsAdvice(transcript)) return "";
+  return mode === "advise"
+    ? JSON.stringify({ systemMessage: stopHookAdvice })
+    : JSON.stringify({ decision: "block", reason: stopHookRecordReason });
 }
