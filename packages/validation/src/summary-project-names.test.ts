@@ -119,4 +119,19 @@ describe("internal project names in the summary (#3160)", () => {
     const finding = result.issues.find(({ code }) => code === "editorial-project-name");
     expect(finding).toMatchObject({ category: "quality", severity: "warning" });
   });
+
+  it("reads long runs of whitespace in evidence and project lines in linear time", () => {
+    const spaces = "\t".repeat(50_000);
+    const named = artifact(`Engineer${spaces}x`, `Delivery${spaces}x`);
+    const heavy: Artifact = {
+      ...named,
+      claims: named.claims.map((claim) => ({
+        ...claim,
+        evidence: [{ sourcePath: "/local/profile.md", excerpt: `# Project${spaces}x${spaces}#` }],
+      })) as unknown as Artifact["claims"],
+    };
+    const started = performance.now();
+    findSummaryProjectNames(heavy);
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
 });
