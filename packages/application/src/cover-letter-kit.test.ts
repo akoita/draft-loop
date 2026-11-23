@@ -3,6 +3,8 @@ import { coverLetterKitSchema } from "@draft-loop/schemas/cover-letter-kit";
 import { describe, expect, it } from "vitest";
 
 import type { ApplicationMaterialFact } from "./application-material.js";
+import { applicationMaterialMaxOutputTokens } from "./application-material-model.js";
+import { worstCallCostUsd } from "./call-cost-guard.js";
 import {
   type CoverLetterKitAnswer,
   CoverLetterKitError,
@@ -13,6 +15,8 @@ import {
   draftCoverLetterKit,
 } from "./cover-letter-kit.js";
 import {
+  coverLetterKitMaxCostUsd,
+  coverLetterKitMaxOutputTokens,
   coverLetterKitModelId,
   coverLetterKitPromptVersion,
   createModelCoverLetterKitWriter,
@@ -304,5 +308,13 @@ describe("cover letter writing kit", () => {
     expect(reply.answer.requirements).toEqual([{ requirementId: "req_1", factIds: ["f3"] }]);
     expect(reply.answer.employerFindingIds).toEqual(["fnd_1"]);
     expect(reply.model).toEqual({ provider: "anthropic", model: coverLetterKitModelId });
+    // A live Haiku kit hit 2,048 output tokens on every attempt: the kit gets the material budget,
+    // and its first attempt and retry, each at their worst, still fit the kit's cost cap.
+    const sentRequest = seen[0] as ModelRequest<JsonValue>;
+    expect(sentRequest.maxOutputTokens).toBe(applicationMaterialMaxOutputTokens);
+    expect(coverLetterKitMaxOutputTokens).toBeGreaterThanOrEqual(8_192);
+    const worst = worstCallCostUsd(sentRequest as never);
+    expect(worst).toBeDefined();
+    expect(2 * (worst ?? Number.POSITIVE_INFINITY)).toBeLessThan(coverLetterKitMaxCostUsd);
   });
 });
