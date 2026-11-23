@@ -897,6 +897,222 @@
           "suggestions"
         ]
       },
+      "CoverLetterKitFactInput": {
+        "type": "object",
+        "properties": {
+          "fact_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "The career record fact's id."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1200,
+            "description": "The fact as the candidate stored it."
+          }
+        },
+        "required": [
+          "fact_id",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "CoverLetterKitInput": {
+        "type": "object",
+        "properties": {
+          "requirements": {
+            "minItems": 1,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "requirement_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1200,
+                  "description": "The requirement as the job's brief states it."
+                },
+                "facts": {
+                  "minItems": 1,
+                  "maxItems": 2,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoverLetterKitFactInput"
+                  },
+                  "description": "The approved facts that prove the requirement, with their source."
+                }
+              },
+              "required": [
+                "requirement_id",
+                "text",
+                "facts"
+              ],
+              "additionalProperties": false
+            },
+            "description": "The requirements the letter should answer, most important first."
+          },
+          "angles": {
+            "minItems": 2,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "note": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "fact_ids": {
+                  "maxItems": 4,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": "Career record facts the note rests on; each is listed in the kit."
+                },
+                "finding_ids": {
+                  "maxItems": 2,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": "Research findings the note rests on; each is one of the kit's employer facts."
+                }
+              },
+              "required": [
+                "note",
+                "fact_ids",
+                "finding_ids"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Ways to open the letter, as notes; never a sentence to paste."
+          },
+          "employer_facts": {
+            "maxItems": 2,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "finding_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1200,
+                  "description": "The finding as the research brief states it."
+                },
+                "published_on": {
+                  "type": "string",
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                  "description": "The newest date among the finding's sources."
+                }
+              },
+              "required": [
+                "finding_id",
+                "text",
+                "published_on"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Dated facts about the employer from the newest research brief."
+          },
+          "outline": {
+            "minItems": 4,
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "paragraph": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4
+                },
+                "purpose": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120,
+                  "description": "What the paragraph must do, as a note."
+                },
+                "requirement_ids": {
+                  "maxItems": 3,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "fact_ids": {
+                  "maxItems": 4,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": "Career record facts the note rests on; each is listed in the kit."
+                },
+                "finding_ids": {
+                  "maxItems": 2,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": "Research findings the note rests on; each is one of the kit's employer facts."
+                }
+              },
+              "required": [
+                "paragraph",
+                "purpose",
+                "requirement_ids",
+                "fact_ids",
+                "finding_ids"
+              ],
+              "additionalProperties": false
+            },
+            "description": "One entry for each of the letter's four paragraphs, in order."
+          },
+          "avoid": {
+            "maxItems": 60,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
+            },
+            "description": "Phrases readers associate with model-written letters, and the candidate's own forbidden terms."
+          }
+        },
+        "required": [
+          "requirements",
+          "angles",
+          "employer_facts",
+          "outline",
+          "avoid"
+        ],
+        "additionalProperties": false
+      },
       "InterviewDetailsInput": {
         "type": "object",
         "properties": {
@@ -1313,9 +1529,14 @@
             "enum": [
               "cover-letter",
               "interview-questions",
-              "interview-guide"
+              "interview-guide",
+              "cover-letter-kit"
             ],
-            "description": "A cover letter, interview questions, or an interview preparation guide, which its own route drafts."
+            "description": "A cover letter, interview questions, an interview preparation guide, or a cover letter writing kit; the guide and the kit each have their own route."
+          },
+          "kit": {
+            "description": "For a writing kit: its requirements, angles, employer facts, outline and phrases to avoid. A kit has no items.",
+            "$ref": "#/components/schemas/CoverLetterKitInput"
           },
           "guidance": {
             "description": "The guidance the draft was written with, as the model received it.",
@@ -11340,6 +11561,222 @@
         ],
         "additionalProperties": false
       },
+      "CoverLetterKitFact": {
+        "type": "object",
+        "properties": {
+          "fact_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "The career record fact's id."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1200,
+            "description": "The fact as the candidate stored it."
+          }
+        },
+        "required": [
+          "fact_id",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "CoverLetterKit": {
+        "type": "object",
+        "properties": {
+          "requirements": {
+            "minItems": 1,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "requirement_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1200,
+                  "description": "The requirement as the job's brief states it."
+                },
+                "facts": {
+                  "minItems": 1,
+                  "maxItems": 2,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoverLetterKitFact"
+                  },
+                  "description": "The approved facts that prove the requirement, with their source."
+                }
+              },
+              "required": [
+                "requirement_id",
+                "text",
+                "facts"
+              ],
+              "additionalProperties": false
+            },
+            "description": "The requirements the letter should answer, most important first."
+          },
+          "angles": {
+            "minItems": 2,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "note": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "fact_ids": {
+                  "maxItems": 4,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": "Career record facts the note rests on; each is listed in the kit."
+                },
+                "finding_ids": {
+                  "maxItems": 2,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": "Research findings the note rests on; each is one of the kit's employer facts."
+                }
+              },
+              "required": [
+                "note",
+                "fact_ids",
+                "finding_ids"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Ways to open the letter, as notes; never a sentence to paste."
+          },
+          "employer_facts": {
+            "maxItems": 2,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "finding_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1200,
+                  "description": "The finding as the research brief states it."
+                },
+                "published_on": {
+                  "type": "string",
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                  "description": "The newest date among the finding's sources."
+                }
+              },
+              "required": [
+                "finding_id",
+                "text",
+                "published_on"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Dated facts about the employer from the newest research brief."
+          },
+          "outline": {
+            "minItems": 4,
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "paragraph": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4
+                },
+                "purpose": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120,
+                  "description": "What the paragraph must do, as a note."
+                },
+                "requirement_ids": {
+                  "maxItems": 3,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "fact_ids": {
+                  "maxItems": 4,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": "Career record facts the note rests on; each is listed in the kit."
+                },
+                "finding_ids": {
+                  "maxItems": 2,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "description": "Research findings the note rests on; each is one of the kit's employer facts."
+                }
+              },
+              "required": [
+                "paragraph",
+                "purpose",
+                "requirement_ids",
+                "fact_ids",
+                "finding_ids"
+              ],
+              "additionalProperties": false
+            },
+            "description": "One entry for each of the letter's four paragraphs, in order."
+          },
+          "avoid": {
+            "maxItems": 60,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
+            },
+            "description": "Phrases readers associate with model-written letters, and the candidate's own forbidden terms."
+          }
+        },
+        "required": [
+          "requirements",
+          "angles",
+          "employer_facts",
+          "outline",
+          "avoid"
+        ],
+        "additionalProperties": false
+      },
       "InterviewDetails": {
         "type": "object",
         "properties": {
@@ -11762,9 +12199,14 @@
             "enum": [
               "cover-letter",
               "interview-questions",
-              "interview-guide"
+              "interview-guide",
+              "cover-letter-kit"
             ],
-            "description": "A cover letter, interview questions, or an interview preparation guide, which its own route drafts."
+            "description": "A cover letter, interview questions, an interview preparation guide, or a cover letter writing kit; the guide and the kit each have their own route."
+          },
+          "kit": {
+            "description": "For a writing kit: its requirements, angles, employer facts, outline and phrases to avoid. A kit has no items.",
+            "$ref": "#/components/schemas/CoverLetterKit"
           },
           "guidance": {
             "description": "The guidance the draft was written with, as the model received it.",
@@ -31997,7 +32439,8 @@
               "enum": [
                 "cover-letter",
                 "interview-questions",
-                "interview-guide"
+                "interview-guide",
+                "cover-letter-kit"
               ]
             },
             "in": "query",
@@ -32125,7 +32568,7 @@
     "/v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/versions": {
       "post": {
         "summary": "Save the candidate's edit of a draft as a new version",
-        "description": "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. 400 when the item count differs from the draft's; 404 when the application has no such draft.",
+        "description": "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. 400 when the item count differs from the draft's, or not_editable for a writing kit; 404 when the application has no such draft.",
         "requestBody": {
           "required": true,
           "content": {
@@ -32202,7 +32645,7 @@
     "/v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/document": {
       "get": {
         "summary": "Download a saved cover letter or question set as Word or PDF",
-        "description": "Draws the saved draft with a CV template, Modern by default, and answers the document as an attachment. A cover letter opens with the application's name; interview questions get one heading each. Nothing is stored. 404 when the application has no such draft.",
+        "description": "Draws the saved draft with a CV template, Modern by default, and answers the document as an attachment. A cover letter opens with the application's name; interview questions get one heading each. Nothing is stored. 404 when the application has no such draft; 409 not_a_document for a writing kit.",
         "parameters": [
           {
             "schema": {
@@ -32279,6 +32722,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -32321,6 +32774,114 @@
             "description": "Default Response"
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/cover-letter-kit": {
+      "post": {
+        "summary": "Prepare a writing kit for an application's cover letter",
+        "description": "Returns the material for the candidate to write their own letter, never a letter: the three requirements to answer (fewer when the brief lists fewer), each with one or two approved career facts; two or three opening angles and a four-paragraph outline as short notes; up to two dated facts about the employer from the newest research brief; and phrases to avoid. Every fact cites a career record fact id or a finding id, and a note is refused when it reads as a sentence. One call on claude-haiku-5-5, capped at US$0.1 across its retry. A server that keeps drafts saves it as a `cover-letter-kit` version. Errors as the material route: 403 consent_required, 503 material_model_unavailable, 409 material_quarantined, material_unscreened, no_citable_facts or cost_cap_reached, 502 material_model_failed; 409 no_requirements when the brief lists none, 422 invalid_kit when the answer breaks the kit's rules twice.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationMaterialDraft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
             "description": "Default Response",
             "content": {
               "application/json": {

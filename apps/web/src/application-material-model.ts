@@ -66,6 +66,7 @@ export const applicationMaterialKindLabels = (): Readonly<
   "cover-letter": t`Cover letter`,
   "interview-questions": t`Interview questions`,
   "interview-guide": t`Interview preparation guide`,
+  "cover-letter-kit": t`Cover letter writing kit`,
 });
 
 /** The Draft button names the open tab, so it reads as that tab's action (#2595). */

@@ -199,6 +199,61 @@ self-hosted server saves each draft as a new version and returns its `id` and
 Each model call is logged with its model, tokens and cost, never the draft. A
 refused or failed draft is not saved.
 
+## Cover letter writing kits
+
+A writing kit is the material for a candidate to write their own letter,
+never the letter (#3278). A letter written entirely by a model can be spotted;
+the facts and the employer research are what Redakloop adds.
+
+`POST /v1/workspaces/{workspaceId}/applications/{applicationId}/cover-letter-kit`
+takes no body and returns a saved version of kind `cover-letter-kit`, with no
+items and the kit in `kit`:
+
+| Field            | What it holds                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------- |
+| `requirements`   | Three requirements from the newest brief, fewer when it lists fewer, each with one or two facts    |
+| `angles`         | Two or three ways to open, as notes citing the kit's facts or employer facts                       |
+| `employer_facts` | Up to two dated findings from the newest research brief, each with its `published_on` date         |
+| `outline`        | Four entries, paragraphs 1 to 4, each saying what the paragraph must do and what it uses          |
+| `avoid`          | The candidate's forbidden terms, then the [writing check](#writing-check)'s stock phrases          |
+
+```mermaid
+flowchart LR
+  record["Allowed facts"] --> picker["Fact picker"]
+  brief["Brief requirements"] --> model["Claude Haiku"]
+  picker --> model
+  research["Dated research findings"] --> model
+  model --> rules{"Ids offered?<br/>Notes, not sentences?"}
+  rules -- "yes" --> kit["Kit saved"]
+  rules -- "no, twice" --> refused["422 invalid_kit"]
+```
+
+The model returns ids and notes only. The server fills each citation's text
+from the record or the brief, so a fact reads as the candidate stored it. It
+refuses an answer that cites an id it did not offer, and asks once again.
+
+A note is a fragment, never a sentence of the letter. It holds at most 14
+words and 120 characters, no full stop, `!`, `?` or `…` before a space or at
+its end, and no first person (I, my, me, je, mon, ma, mes). A number in a note
+must appear in a fact, finding or requirement it cites.
+
+The route follows [the hosted route](#the-hosted-route)'s consent, screening
+and error answers, with these differences:
+
+| Answer                  | When                                                    |
+| ----------------------- | ------------------------------------------------------- |
+| 409 `no_requirements`   | The newest brief lists no requirement.                  |
+| 409 `cost_cap_reached`  | The next call could pass the kit's cap of US$0.10.      |
+| 422 `invalid_kit`       | Both answers broke the kit's rules.                     |
+
+**Limits.** Each kit is one Prepare call: the application's fair-use limit
+when its run kept a credit, else the plan's model calls per day. A plan
+override of `modelCallsPerDay` stops it for one organisation, and the global
+model call switch answers 503 `model_calls_paused`. An agent token with
+`runs:start` calls it as `get_cover_letter_kit`, reserving one draft's cost
+cap. A kit cannot be edited or downloaded as a document; the screen that shows
+it is #3279.
+
 ## Interview preparation guides
 
 A guide prepares the candidate for one interview (#2615 to #2632). It is a

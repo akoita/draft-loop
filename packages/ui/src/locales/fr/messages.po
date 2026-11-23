@@ -2663,6 +2663,10 @@ msgstr "Lettre de motivation"
 msgid "Cover letter or interview"
 msgstr "Lettre ou entretien"
 
+#: apps/web/src/application-material-model.ts
+msgid "Cover letter writing kit"
+msgstr "Kit pour écrire votre lettre de motivation"
+
 #: packages/ui/src/start-requirements-model.ts
 msgid "Coverage scoring is less reliable without reviewed requirements."
 msgstr "La notation de la couverture est moins fiable sans exigences relues."

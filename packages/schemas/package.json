@@ -83,6 +83,10 @@
       "types": "./src/research-brief.ts",
       "import": "./src/research-brief.ts"
     },
+    "./cover-letter-kit": {
+      "types": "./src/cover-letter-kit.ts",
+      "import": "./src/cover-letter-kit.ts"
+    },
     "./saved-application-material": {
       "types": "./src/saved-application-material.ts",
       "import": "./src/saved-application-material.ts"

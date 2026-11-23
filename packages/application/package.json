@@ -167,6 +167,14 @@
       "types": "./src/material-review.ts",
       "import": "./src/material-review.ts"
     },
+    "./cover-letter-kit": {
+      "types": "./src/cover-letter-kit.ts",
+      "import": "./src/cover-letter-kit.ts"
+    },
+    "./cover-letter-kit-model": {
+      "types": "./src/cover-letter-kit-model.ts",
+      "import": "./src/cover-letter-kit-model.ts"
+    },
     "./interview-guide": {
       "types": "./src/interview-guide.ts",
       "import": "./src/interview-guide.ts"

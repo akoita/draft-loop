@@ -135,6 +135,16 @@ export const modelCallPaths: ReadonlyArray<ModelCallPath> = [
     reaches: ["apps/api/src/interview-guide-routes.ts", "apps/worker/src/research-handler.ts"],
   },
   {
+    id: "cover-letter-kit",
+    routes: [{ method: "POST", url: `${application}/cover-letter-kit` }],
+    whilePaused: "refused",
+    limit:
+      "The application's fair-use limit when its run kept a credit, else the plan's model calls per day (model-call-gate.ts).",
+    costCap: `The fair-use or daily count times ${outputTokens}; each kit also stops at US$0.10.`,
+    killSwitch: "A plan override of modelCallsPerDay for one organisation.",
+    reaches: ["apps/api/src/cover-letter-kit-routes.ts"],
+  },
+  {
     id: "research",
     routes: [{ method: "POST", url: `${application}/research` }],
     whilePaused: "refused",

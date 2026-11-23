@@ -124,4 +124,51 @@ describe("drafting tools", () => {
     });
     await client.close();
   });
+
+  it("get a cover letter writing kit, with its cited facts and no letter", async () => {
+    const kit = {
+      requirements: [
+        {
+          requirement_id: "req_1",
+          text: "A fictional requirement.",
+          facts: [{ fact_id: "fact-1", text: "A fictional career fact." }],
+        },
+      ],
+      angles: [
+        { note: "Lead with the fictional migration", fact_ids: ["fact-1"], finding_ids: [] },
+        { note: "Open on the ledger work", fact_ids: ["fact-1"], finding_ids: [] },
+      ],
+      employer_facts: [],
+      outline: [1, 2, 3, 4].map((paragraph) => ({
+        paragraph,
+        purpose: "A fictional purpose",
+        requirement_ids: [],
+        fact_ids: [],
+        finding_ids: [],
+      })),
+      avoid: ["proven track record"],
+    };
+    const { config, requests } = scripted(
+      json({ ...letter, id: "amd_kit00001", kind: "cover-letter-kit", items: [], kit }),
+    );
+    const client = await connect(config);
+    const prepared = await client.callTool({
+      name: "get_cover_letter_kit",
+      arguments: { application_id: "app_fixture_0001" },
+    });
+    expect(prepared.structuredContent).toMatchObject({
+      application_id: "app_fixture_0001",
+      material_id: "amd_kit00001",
+      created_at: "2026-11-09T10:00:00.000Z",
+      kit,
+    });
+    expect(requests).toEqual([
+      { line: `POST ${base}/applications/app_fixture_0001/cover-letter-kit`, body: {} },
+    ]);
+    const { tools } = await client.listTools();
+    const tool = tools.find((each) => each.name === "get_cover_letter_kit");
+    expect(tool?.annotations?.readOnlyHint).toBe(false);
+    expect(tool?.description).toContain("runs:start");
+    await client.close();
+  });
 });

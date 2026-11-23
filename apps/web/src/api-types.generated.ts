@@ -158,7 +158,8 @@ export interface ApiSchemas {
   "ApplicationMaterialDraft": {
     readonly id?: string;
     readonly created_at?: string;
-    readonly kind: "cover-letter" | "interview-questions" | "interview-guide";
+    readonly kind: "cover-letter" | "interview-questions" | "interview-guide" | "cover-letter-kit";
+    readonly kit?: ApiSchemas["CoverLetterKit"];
     readonly guidance?: ApiSchemas["ApplicationMaterialGuidance"];
     readonly career_profile?: ApiSchemas["CareerProfileSource"];
     readonly interview_details?: ApiSchemas["InterviewDetails"];
@@ -496,6 +497,35 @@ export interface ApiSchemas {
       readonly "provider-transmission": ApiSchemas["ConsentEntry"] | null;
     };
     readonly history: readonly (ApiSchemas["ConsentEntry"])[];
+  };
+  "CoverLetterKit": {
+    readonly requirements: readonly ({
+      readonly requirement_id: string;
+      readonly text: string;
+      readonly facts: readonly (ApiSchemas["CoverLetterKitFact"])[];
+    })[];
+    readonly angles: readonly ({
+      readonly note: string;
+      readonly fact_ids: readonly (string)[];
+      readonly finding_ids: readonly (string)[];
+    })[];
+    readonly employer_facts: readonly ({
+      readonly finding_id: string;
+      readonly text: string;
+      readonly published_on: string;
+    })[];
+    readonly outline: readonly ({
+      readonly paragraph: number;
+      readonly purpose: string;
+      readonly requirement_ids: readonly (string)[];
+      readonly fact_ids: readonly (string)[];
+      readonly finding_ids: readonly (string)[];
+    })[];
+    readonly avoid: readonly (string)[];
+  };
+  "CoverLetterKitFact": {
+    readonly fact_id: string;
+    readonly text: string;
   };
   "CreatedBetaInvite": {
     readonly invite: ApiSchemas["BetaInvite"];
@@ -3054,7 +3084,7 @@ export interface ApiOperations {
       readonly applicationId: string;
     };
     readonly query?: {
-      readonly kind?: "cover-letter" | "interview-questions" | "interview-guide";
+      readonly kind?: "cover-letter" | "interview-questions" | "interview-guide" | "cover-letter-kit";
     };
     readonly response: ApiSchemas["ApplicationMaterialDraftList"];
   };
@@ -3097,6 +3127,13 @@ export interface ApiOperations {
       readonly materialId: string;
     };
     readonly response: void;
+  };
+  "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/cover-letter-kit": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly response: ApiSchemas["ApplicationMaterialDraft"];
   };
   "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/interview-guide": {
     readonly path: {

@@ -159,7 +159,35 @@ const draftTitles: Readonly<Record<string, string>> = {
   "cover-letter": "Cover letter",
   "interview-questions": "Interview questions",
   "interview-guide": "Interview guide",
+  "cover-letter-kit": "Cover letter kit",
 };
+
+const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+
+/** A cover letter writing kit (#3278) as Markdown sections: requirements, angles, outline. */
+function kitLines(kit: Readonly<Record<string, unknown>>): string[] {
+  const lines: string[] = ["", "## Requirements to answer"];
+  for (const entry of list(kit.requirements).map(record)) {
+    lines.push("", `- ${text(entry?.text) ?? ""}`);
+    for (const fact of list(entry?.facts).map(record)) lines.push(`  - ${text(fact?.text) ?? ""}`);
+  }
+  lines.push("", "## Opening angles", "");
+  for (const angle of list(kit.angles).map(record)) lines.push(`- ${text(angle?.note) ?? ""}`);
+  const employer = list(kit.employer_facts).map(record);
+  if (employer.length > 0) {
+    lines.push("", "## About the employer", "");
+    for (const fact of employer) {
+      lines.push(`- ${text(fact?.text) ?? ""} (${text(fact?.published_on) ?? ""})`);
+    }
+  }
+  lines.push("", "## Outline", "");
+  for (const entry of list(kit.outline).map(record)) {
+    lines.push(`${String(entry?.paragraph ?? "")}. ${text(entry?.purpose) ?? ""}`);
+  }
+  lines.push("", "## Phrases to avoid", "");
+  for (const phrase of list(kit.avoid)) lines.push(`- ${String(phrase)}`);
+  return lines;
+}
 
 /** A saved cover letter or interview set as Markdown: each item's question and text only. */
 function draftText(row: SqlRow): string {
@@ -177,6 +205,8 @@ function draftText(row: SqlRow): string {
     const trap = text(entry?.trap);
     if (trap !== undefined) lines.push("", `Avoid: ${trap}`);
   }
+  const kit = record(draft?.kit);
+  if (kit !== undefined) lines.push(...kitLines(kit));
   return `${lines.join("\n")}\n`;
 }
 

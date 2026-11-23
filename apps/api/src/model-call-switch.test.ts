@@ -55,6 +55,7 @@ describe("global model call switch", () => {
       "/v1/workspaces/owner/support/conversations",
       "/v1/workspaces/owner/support/conversations/c_1/messages",
       "/v1/workspaces/owner/runs",
+      "/v1/workspaces/owner/applications/app_fixture0001/cover-letter-kit",
     ]) {
       const response = await app.inject({ method: "POST", url, headers: owner, payload: {} });
       expect(response.statusCode, url).toBe(503);

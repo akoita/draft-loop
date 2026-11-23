@@ -88,6 +88,11 @@ export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
     refusal:
       "An agent token drafts with the default model only; choosing another model is the person's choice in Redakloop.",
   },
+  // A cover letter writing kit (#3278) within the same cap: notes and cited facts, no letter.
+  [`POST ${workspace}/applications/:applicationId/cover-letter-kit`]: {
+    scope: "runs:start",
+    charge: "draft",
+  },
   // Pasted job text only: approving a job page fetch stays with the person (D17).
   [`POST ${workspace}/applications`]: {
     scope: "jobs:write",

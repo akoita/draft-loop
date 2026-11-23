@@ -310,11 +310,18 @@ const commonWords = new Set(
   ),
 );
 
+/** A word without its trailing dots and hyphens, trimmed in linear time. */
+function withoutTrailingPunctuation(word: string): string {
+  let end = word.length;
+  while (end > 0 && (word[end - 1] === "." || word[end - 1] === "-")) end -= 1;
+  return word.slice(0, end);
+}
+
 /** The words of a text that can tell a match: lower case, without common English and French words. */
 export function applicationMaterialMatchWords(text: string): Set<string> {
   return new Set(
     (text.toLowerCase().match(/\p{L}[\p{L}\p{N}+#.-]*/gu) ?? [])
-      .map((word) => word.replace(/[.-]+$/u, ""))
+      .map(withoutTrailingPunctuation)
       .filter((word) => word.length >= 3 && !commonWords.has(word)),
   );
 }
