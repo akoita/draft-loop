@@ -35,6 +35,11 @@ import {
 } from "./application-folder-bridge.js";
 import { Refusal, refuse } from "./bridge-refusal.js";
 import {
+  createCoverLetterCheckAnswers,
+  hostedCoverLetterCheckCapabilities,
+  isCoverLetterCheckCommand,
+} from "./cover-letter-check-bridge.js";
+import {
   createFactSuggestionAnswers,
   hostedFactSuggestionCapabilities,
   isFactSuggestionCommand,
@@ -90,6 +95,7 @@ export const hostedBridgeCapabilities = [
   "application.set-language",
   "application.choose-run",
   "application.move",
+  ...hostedCoverLetterCheckCapabilities,
   ...hostedApplicationFolderCapabilities,
   ...hostedFactUsageCapabilities,
   ...hostedFactSuggestionCapabilities,
@@ -274,6 +280,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const answerProfile = createProfileAnswers(client);
   const answerFolder = createApplicationFolderAnswers(client);
   const answerFactUsage = createFactUsageAnswers(client);
+  const answerCoverLetterCheck = createCoverLetterCheckAnswers(client);
   const answerFactSuggestions = createFactSuggestionAnswers(client);
   const answerRunTrace = createRunTraceAnswers(client);
   const answerRequirementEvidence = createRunRequirementEvidenceAnswers(client);
@@ -328,6 +335,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
     if (isProfileCommand(command)) return answerProfile(command);
     if (isApplicationFolderCommand(command)) return answerFolder(command);
     if (isFactUsageCommand(command)) return answerFactUsage(command);
+    if (isCoverLetterCheckCommand(command)) return answerCoverLetterCheck(command);
     if (isFactSuggestionCommand(command)) return answerFactSuggestions(command);
     if (isRunTraceCommand(command)) return answerRunTrace(command);
     if (isRunRequirementEvidenceCommand(command)) return answerRequirementEvidence(command);

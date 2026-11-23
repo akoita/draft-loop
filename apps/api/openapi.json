@@ -5634,6 +5634,311 @@
           "workspaces"
         ]
       },
+      "CoverLetterCheckRequestInput": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000,
+            "description": "The letter as the candidate wrote it, paragraphs split by blank lines."
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "CoverLetterClaimFindingInput": {
+        "type": "object",
+        "properties": {
+          "paragraph": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sentence": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000,
+            "description": "The sentence as the candidate wrote it."
+          },
+          "about": {
+            "type": "string",
+            "enum": [
+              "candidate",
+              "employer"
+            ],
+            "description": "Whom the sentence makes a claim about."
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "no_supporting_fact",
+              "number_not_in_fact",
+              "joins_different_roles"
+            ]
+          },
+          "numbers": {
+            "description": "For number_not_in_fact: the numbers no approved fact states.",
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            }
+          },
+          "closest_fact": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "fact_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1200
+                  }
+                },
+                "required": [
+                  "fact_id",
+                  "text"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The approved fact closest to the sentence, or null when none shares a word."
+          }
+        },
+        "required": [
+          "paragraph",
+          "sentence",
+          "about",
+          "reason",
+          "closest_fact"
+        ],
+        "additionalProperties": false
+      },
+      "CoverLetterCheckInput": {
+        "type": "object",
+        "properties": {
+          "claims": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "checked",
+                  "skipped"
+                ]
+              },
+              "reason": {
+                "description": "Set when the claim check was skipped.",
+                "type": "string",
+                "enum": [
+                  "model_calls_paused",
+                  "model_unavailable",
+                  "consent_required",
+                  "no_facts"
+                ]
+              },
+              "checked_sentences": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "findings": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CoverLetterClaimFindingInput"
+                }
+              }
+            },
+            "required": [
+              "status",
+              "checked_sentences",
+              "findings"
+            ],
+            "additionalProperties": false,
+            "description": "Sentences the candidate's approved record does not support."
+          },
+          "requirements": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string",
+                "enum": [
+                  "kit",
+                  "brief",
+                  "none"
+                ],
+                "description": "The latest saved writing kit, else the job brief's top requirements."
+              },
+              "kit_id": {
+                "description": "The writing kit the requirements came from.",
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "unanswered": {
+                "maxItems": 20,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "requirement_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1200
+                    },
+                    "facts": {
+                      "maxItems": 4,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "fact_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "text": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1200
+                          }
+                        },
+                        "required": [
+                          "fact_id",
+                          "text"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The kit's approved facts that prove it; empty without a kit."
+                    }
+                  },
+                  "required": [
+                    "requirement_id",
+                    "text",
+                    "facts"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "source",
+              "total",
+              "unanswered"
+            ],
+            "additionalProperties": false,
+            "description": "Requirements the letter does not answer yet."
+          },
+          "wording": {
+            "maxItems": 400,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "job_ad_echo",
+                    "empty_superlative",
+                    "stock_phrase",
+                    "heavy_dashes",
+                    "list_of_three",
+                    "mirrored_openings",
+                    "word_count"
+                  ]
+                },
+                "paragraph": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "sentence": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 8000
+                },
+                "match": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 400
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Wording that reads as machine-made, found without a model."
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "provider",
+                  "model"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The model that linked sentences to facts; null when the claim check skipped."
+          },
+          "prompt_version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cost_usd": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "claims",
+          "requirements",
+          "wording",
+          "model",
+          "prompt_version",
+          "cost_usd"
+        ],
+        "additionalProperties": false
+      },
       "CreditPackCheckoutInput": {
         "type": "object",
         "properties": {
@@ -15693,6 +15998,311 @@
         },
         "required": [
           "workspaces"
+        ],
+        "additionalProperties": false
+      },
+      "CoverLetterCheckRequest": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000,
+            "description": "The letter as the candidate wrote it, paragraphs split by blank lines."
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "CoverLetterClaimFinding": {
+        "type": "object",
+        "properties": {
+          "paragraph": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sentence": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000,
+            "description": "The sentence as the candidate wrote it."
+          },
+          "about": {
+            "type": "string",
+            "enum": [
+              "candidate",
+              "employer"
+            ],
+            "description": "Whom the sentence makes a claim about."
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "no_supporting_fact",
+              "number_not_in_fact",
+              "joins_different_roles"
+            ]
+          },
+          "numbers": {
+            "description": "For number_not_in_fact: the numbers no approved fact states.",
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            }
+          },
+          "closest_fact": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "fact_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1200
+                  }
+                },
+                "required": [
+                  "fact_id",
+                  "text"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The approved fact closest to the sentence, or null when none shares a word."
+          }
+        },
+        "required": [
+          "paragraph",
+          "sentence",
+          "about",
+          "reason",
+          "closest_fact"
+        ],
+        "additionalProperties": false
+      },
+      "CoverLetterCheck": {
+        "type": "object",
+        "properties": {
+          "claims": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "checked",
+                  "skipped"
+                ]
+              },
+              "reason": {
+                "description": "Set when the claim check was skipped.",
+                "type": "string",
+                "enum": [
+                  "model_calls_paused",
+                  "model_unavailable",
+                  "consent_required",
+                  "no_facts"
+                ]
+              },
+              "checked_sentences": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "findings": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CoverLetterClaimFinding"
+                }
+              }
+            },
+            "required": [
+              "status",
+              "checked_sentences",
+              "findings"
+            ],
+            "additionalProperties": false,
+            "description": "Sentences the candidate's approved record does not support."
+          },
+          "requirements": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string",
+                "enum": [
+                  "kit",
+                  "brief",
+                  "none"
+                ],
+                "description": "The latest saved writing kit, else the job brief's top requirements."
+              },
+              "kit_id": {
+                "description": "The writing kit the requirements came from.",
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "unanswered": {
+                "maxItems": 20,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "requirement_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1200
+                    },
+                    "facts": {
+                      "maxItems": 4,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "fact_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "text": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1200
+                          }
+                        },
+                        "required": [
+                          "fact_id",
+                          "text"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The kit's approved facts that prove it; empty without a kit."
+                    }
+                  },
+                  "required": [
+                    "requirement_id",
+                    "text",
+                    "facts"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "source",
+              "total",
+              "unanswered"
+            ],
+            "additionalProperties": false,
+            "description": "Requirements the letter does not answer yet."
+          },
+          "wording": {
+            "maxItems": 400,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "job_ad_echo",
+                    "empty_superlative",
+                    "stock_phrase",
+                    "heavy_dashes",
+                    "list_of_three",
+                    "mirrored_openings",
+                    "word_count"
+                  ]
+                },
+                "paragraph": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "sentence": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 8000
+                },
+                "match": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 400
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Wording that reads as machine-made, found without a model."
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "provider",
+                  "model"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The model that linked sentences to facts; null when the claim check skipped."
+          },
+          "prompt_version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cost_usd": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "claims",
+          "requirements",
+          "wording",
+          "model",
+          "prompt_version",
+          "cost_usd"
         ],
         "additionalProperties": false
       },
@@ -32817,6 +33427,124 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApplicationMaterialDraft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/cover-letter-check": {
+      "post": {
+        "summary": "Check a cover letter the candidate wrote",
+        "description": "Checks the letter in `text` (at most 8,000 characters) and returns three groups, never a rewrite: `claims`, sentences the approved career record does not support, each with the closest approved fact; `requirements`, the latest writing kit's requirements (else the brief's top three) no sentence answers; and `wording`, job-ad echoes, empty superlatives and the writing-tells rules. Only the claim check calls a model, claude-haiku-5-5, capped at US$0.05. It is skipped, and `claims.reason` says why, while model calls are paused, without a model route, without consent to send career material to Anthropic, or when no fact is allowed. The letter is not stored. Errors: 409 material_quarantined, material_unscreened or cost_cap_reached, 502 material_model_failed.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoverLetterCheckRequestInput"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverLetterCheck"
                 }
               }
             }

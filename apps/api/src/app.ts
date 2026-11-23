@@ -67,6 +67,7 @@ import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
 import { registerContentScreening } from "./content-screening-routes.js";
 import type { HostedContentScreening } from "./content-screening-service.js";
+import { registerCoverLetterCheckRoutes } from "./cover-letter-check-routes.js";
 import { registerCoverLetterKitRoutes } from "./cover-letter-kit-routes.js";
 import { registerCreditPurchaseRoutes } from "./credit-purchase-routes.js";
 import { registerMemberCreditsRoute, registerRunEstimateRoute } from "./credit-routes.js";
@@ -463,7 +464,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   registerModelCallSwitch(app, modelCallSwitch);
   // Before any route, so every route registered below is counted where it calls a model.
   if (auth.mode === "oidc" && options.tenants?.entitlementsFor !== undefined) {
-    registerModelCallGate(app, { entitlementsFor: options.tenants.entitlementsFor });
+    registerModelCallGate(app, {
+      entitlementsFor: options.tenants.entitlementsFor,
+      paused: modelCallSwitch,
+    });
   }
   if (auth.mode === "oidc" && options.directory !== undefined) {
     const directory = options.directory;
@@ -968,6 +972,28 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         ...(application.writingSamples === undefined
           ? {}
           : { writingSamples: application.writingSamples }),
+        ...(application.applicationMaterialDrafts === undefined
+          ? {}
+          : { drafts: application.applicationMaterialDrafts }),
+        ...(application.researchBriefs === undefined
+          ? {}
+          : { researchBriefs: application.researchBriefs }),
+      });
+      registerCoverLetterCheckRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        material: {
+          get route() {
+            return interview.route;
+          },
+          get allowProviderData() {
+            return interview.allowProviderData;
+          },
+        },
+        paused: modelCallSwitch,
+        ...(application.consents === undefined ? {} : { consents: application.consents }),
+        ...(screening === undefined ? {} : { screening }),
+        ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
         ...(application.applicationMaterialDrafts === undefined
           ? {}
           : { drafts: application.applicationMaterialDrafts }),

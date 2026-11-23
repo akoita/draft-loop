@@ -19,6 +19,10 @@
       "types": "./src/help-panel.tsx",
       "import": "./src/help-panel.tsx"
     },
+    "./cover-letter-check-panel": {
+      "types": "./src/cover-letter-check-panel.tsx",
+      "import": "./src/cover-letter-check-panel.tsx"
+    },
     "./job-requirements-extraction": {
       "types": "./src/job-requirements-extraction.tsx",
       "import": "./src/job-requirements-extraction.tsx"

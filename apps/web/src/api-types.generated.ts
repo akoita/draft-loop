@@ -498,6 +498,53 @@ export interface ApiSchemas {
     };
     readonly history: readonly (ApiSchemas["ConsentEntry"])[];
   };
+  "CoverLetterCheck": {
+    readonly claims: {
+      readonly status: "checked" | "skipped";
+      readonly reason?: "model_calls_paused" | "model_unavailable" | "consent_required" | "no_facts";
+      readonly checked_sentences: number;
+      readonly findings: readonly (ApiSchemas["CoverLetterClaimFinding"])[];
+    };
+    readonly requirements: {
+      readonly source: "kit" | "brief" | "none";
+      readonly kit_id?: string;
+      readonly total: number;
+      readonly unanswered: readonly ({
+        readonly requirement_id: string;
+        readonly text: string;
+        readonly facts: readonly ({
+          readonly fact_id: string;
+          readonly text: string;
+        })[];
+      })[];
+    };
+    readonly wording: readonly ({
+      readonly code: "job_ad_echo" | "empty_superlative" | "stock_phrase" | "heavy_dashes" | "list_of_three" | "mirrored_openings" | "word_count";
+      readonly paragraph?: number;
+      readonly sentence?: string;
+      readonly match?: string;
+    })[];
+    readonly model: {
+      readonly provider: string;
+      readonly model: string;
+    } | null;
+    readonly prompt_version: string | null;
+    readonly cost_usd: number;
+  };
+  "CoverLetterCheckRequestInput": {
+    readonly text: string;
+  };
+  "CoverLetterClaimFinding": {
+    readonly paragraph: number;
+    readonly sentence: string;
+    readonly about: "candidate" | "employer";
+    readonly reason: "no_supporting_fact" | "number_not_in_fact" | "joins_different_roles";
+    readonly numbers?: readonly (string)[];
+    readonly closest_fact: {
+      readonly fact_id: string;
+      readonly text: string;
+    } | null;
+  };
   "CoverLetterKit": {
     readonly requirements: readonly ({
       readonly requirement_id: string;
@@ -3134,6 +3181,14 @@ export interface ApiOperations {
       readonly applicationId: string;
     };
     readonly response: ApiSchemas["ApplicationMaterialDraft"];
+  };
+  "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/cover-letter-check": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly body: ApiSchemas["CoverLetterCheckRequestInput"];
+    readonly response: ApiSchemas["CoverLetterCheck"];
   };
   "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/interview-guide": {
     readonly path: {
