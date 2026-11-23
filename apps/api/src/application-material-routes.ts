@@ -46,6 +46,7 @@ import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { CallCostBudgetError } from "@draft-loop/orchestrator";
 import { materialReviewOutcomes } from "@draft-loop/run-queue";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
+import { coverLetterKitSchema } from "@draft-loop/schemas/cover-letter-kit";
 import { interviewDetailsSchema } from "@draft-loop/schemas/interview-details";
 import { researchTopics } from "@draft-loop/schemas/research-brief";
 import {
@@ -199,7 +200,12 @@ export const draftView = z
     kind: z
       .enum(savedApplicationMaterialKinds)
       .describe(
-        "A cover letter, interview questions, or an interview preparation guide, which its own route drafts.",
+        "A cover letter, interview questions, an interview preparation guide, or a cover letter writing kit; the guide and the kit each have their own route.",
+      ),
+    kit: coverLetterKitSchema
+      .optional()
+      .describe(
+        "For a writing kit: its requirements, angles, employer facts, outline and phrases to avoid. A kit has no items.",
       ),
     guidance: applicationMaterialGuidanceSchema
       .optional()
@@ -863,7 +869,7 @@ export function registerApplicationMaterialRoutes(
       schema: {
         summary: "Save the candidate's edit of a draft as a new version",
         description:
-          "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. 400 when the item count differs from the draft's; 404 when the application has no such draft.",
+          "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. 400 when the item count differs from the draft's, or not_editable for a writing kit; 404 when the application has no such draft.",
         params: draftParams,
         body: editBody,
         response: { 200: draftView, 400: apiErrorSchema, 404: apiErrorSchema },
@@ -876,6 +882,11 @@ export function registerApplicationMaterialRoutes(
         return reply.code(404).send(apiError("not_found", "There is no such saved draft."));
       }
       const texts = request.body.items.map((item) => item.text);
+      if (base.kind === "cover-letter-kit") {
+        return reply
+          .code(400)
+          .send(apiError("not_editable", "A writing kit has no text to edit; prepare a new one."));
+      }
       if (texts.length !== base.items.length) {
         return reply
           .code(400)
@@ -920,12 +931,13 @@ export function registerApplicationMaterialRoutes(
       schema: {
         summary: "Download a saved cover letter or question set as Word or PDF",
         description:
-          "Draws the saved draft with a CV template, Modern by default, and answers the document as an attachment. A cover letter opens with the application's name; interview questions get one heading each. Nothing is stored. 404 when the application has no such draft.",
+          "Draws the saved draft with a CV template, Modern by default, and answers the document as an attachment. A cover letter opens with the application's name; interview questions get one heading each. Nothing is stored. 404 when the application has no such draft; 409 not_a_document for a writing kit.",
         params: draftParams,
         querystring: documentQuery,
         response: {
           200: z.any().describe("The document's bytes, in its media type."),
           404: apiErrorSchema,
+          409: apiErrorSchema,
         },
       },
     },
@@ -934,6 +946,13 @@ export function registerApplicationMaterialRoutes(
       const saved = await drafts.get(workspaceId, materialId);
       if (saved === undefined || saved.application_id !== applicationId) {
         return reply.code(404).send(apiError("not_found", "There is no such saved draft."));
+      }
+      if (saved.kind === "cover-letter-kit") {
+        return reply
+          .code(409)
+          .send(
+            apiError("not_a_document", "A writing kit is notes to write from, not a document."),
+          );
       }
       const root = workspaceRoot(workspaceId);
       const [application, workspace] = await Promise.all([

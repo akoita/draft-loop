@@ -1,12 +1,13 @@
 import { z } from "zod";
 
 import { applicationIdSchema } from "./application.js";
+import { coverLetterKitSchema } from "./cover-letter-kit.js";
 import { interviewDetailsSchema } from "./interview-details.js";
 import { researchTopics } from "./research-brief.js";
 
 /**
- * A cover letter, interview question set or interview preparation guide (#2615) saved with its
- * application (#2477), so the candidate
+ * A cover letter, interview question set, interview preparation guide (#2615) or cover letter
+ * writing kit (#3278) saved with its application (#2477), so the candidate
  * can reopen it, compare versions and delete it. It holds the draft as the candidate saw it,
  * with each item's citations, the model that wrote it and what it cost. It is candidate
  * material: it lives in the workspace's storage under its consent and is erased with it.
@@ -16,6 +17,7 @@ export const savedApplicationMaterialKinds = [
   "cover-letter",
   "interview-questions",
   "interview-guide",
+  "cover-letter-kit",
 ] as const;
 
 export const maximumSavedApplicationMaterialItems = 10;
@@ -126,8 +128,10 @@ export const savedApplicationMaterialSchema = z
             .optional(),
         }),
       )
-      .min(1)
-      .max(maximumSavedInterviewGuideItems),
+      .max(maximumSavedInterviewGuideItems)
+      .describe("At least one item; none for a writing kit, which holds `kit` instead."),
+    /** A cover letter writing kit (#3278); set on every kit and nothing else. */
+    kit: coverLetterKitSchema.optional(),
     guidance: applicationMaterialGuidanceSchema.optional(),
     /** The interview a guide was written for (#2616); set on every guide and nothing else. */
     interview_details: interviewDetailsSchema.optional(),
@@ -183,6 +187,21 @@ export const savedApplicationMaterialSchema = z
   })
   .superRefine((material, context) => {
     const guide = material.kind === "interview-guide";
+    const kit = material.kind === "cover-letter-kit";
+    if (kit !== (material.kit !== undefined)) {
+      context.addIssue({
+        code: "custom",
+        path: ["kit"],
+        message: kit ? "a writing kit needs its kit" : "only a writing kit has a kit",
+      });
+    }
+    if (kit !== (material.items.length === 0)) {
+      context.addIssue({
+        code: "custom",
+        path: ["items"],
+        message: kit ? "a writing kit holds no items" : "holds at least one item",
+      });
+    }
     if (guide !== (material.interview_details !== undefined)) {
       context.addIssue({
         code: "custom",

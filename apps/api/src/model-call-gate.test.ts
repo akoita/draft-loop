@@ -55,6 +55,7 @@ async function server(
   app.get("/v1/workspaces/:workspaceId/career-interview/sessions/:sessionId/live", ok);
   app.post("/v1/workspaces/:workspaceId/applications/:applicationId/material", ok);
   app.post("/v1/workspaces/:workspaceId/applications/:applicationId/interview-guide", ok);
+  app.post("/v1/workspaces/:workspaceId/applications/:applicationId/cover-letter-kit", ok);
   app.post("/v1/workspaces/:workspaceId/applications/:applicationId/research", ok);
   app.post("/v1/workspaces/:workspaceId/profiles/:profileId/derivation", ok);
   app.post("/v1/workspaces/:workspaceId/brief", ok);
@@ -67,6 +68,7 @@ const routes = [
   ["GET", "/v1/workspaces/r1/career-interview/sessions/s1/live", undefined],
   ["POST", "/v1/workspaces/r1/applications/a1/material", {}],
   ["POST", "/v1/workspaces/r1/applications/a1/interview-guide", {}],
+  ["POST", "/v1/workspaces/r1/applications/a1/cover-letter-kit", {}],
   ["POST", "/v1/workspaces/r1/applications/a1/research", {}],
   ["POST", "/v1/workspaces/r1/profiles/p1/derivation", {}],
 ] as const;
@@ -165,7 +167,7 @@ describe("model calls outside runs", () => {
     expect(take).not.toHaveBeenCalled();
   });
 
-  const prepareRoutes = ["material", "interview-guide", "research"] as const;
+  const prepareRoutes = ["material", "interview-guide", "cover-letter-kit", "research"] as const;
   const prepare = (api: FastifyInstance, applicationId: string, route: string) =>
     api.inject({
       method: "POST",

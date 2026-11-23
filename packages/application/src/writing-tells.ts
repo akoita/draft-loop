@@ -24,8 +24,8 @@ export interface WritingTell {
 /** The brief's length for a cover letter, in words. */
 export const coverLetterWordRange = { minimum: 250, maximum: 350 } as const;
 
-/** Phrases that open, pad or close a letter the way models do. Lower case, accents kept. */
-export const stockPhrases: readonly string[] = [
+/** English phrases that open, pad or close a letter the way models do. Lower case. */
+export const englishStockPhrases: readonly string[] = [
   "i am writing to express",
   "i am excited to apply",
   "i am thrilled",
@@ -53,8 +53,12 @@ export const stockPhrases: readonly string[] = [
   "skills i bring",
   "a skill i can name",
   "is familiar to me",
-  "fait partie de mes compétences",
   "aligns perfectly",
+];
+
+/** The French ones, accents kept. */
+export const frenchStockPhrases: readonly string[] = [
+  "fait partie de mes compétences",
   "je me permets de vous adresser",
   "c'est avec un grand enthousiasme",
   "passionné par",
@@ -68,6 +72,9 @@ export const stockPhrases: readonly string[] = [
   "je serais ravi",
   "je serais ravie",
 ];
+
+/** Every stock phrase the check flags, whatever the letter's language. */
+export const stockPhrases: readonly string[] = [...englishStockPhrases, ...frenchStockPhrases];
 
 const sentencePattern = /[^.!?…]+(?:[.!?…]+|$)/gu;
 

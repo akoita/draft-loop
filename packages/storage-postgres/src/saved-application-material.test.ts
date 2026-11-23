@@ -70,6 +70,37 @@ describe.runIf(connectionString !== undefined)("Postgres saved application mater
       expect(await storeA.list("owner", "application-3", { kind: "interview-guide" })).toEqual([
         guide,
       ]);
+      const kit = draft("amd_fixture0006", {
+        application_id: "application-3",
+        kind: "cover-letter-kit",
+        items: [],
+        kit: {
+          requirements: [
+            {
+              requirement_id: "req_1",
+              text: "Fictional requirement",
+              facts: [{ fact_id: "fact-1", text: "experience outcome: Fictional migration" }],
+            },
+          ],
+          angles: [
+            { note: "Lead with the fictional migration", fact_ids: ["fact-1"], finding_ids: [] },
+            { note: "Open on the ledger work", fact_ids: ["fact-1"], finding_ids: [] },
+          ],
+          employer_facts: [],
+          outline: [1, 2, 3, 4].map((paragraph) => ({
+            paragraph,
+            purpose: "Fictional purpose",
+            requirement_ids: [],
+            fact_ids: [],
+            finding_ids: [],
+          })),
+          avoid: ["proven track record"],
+        },
+      });
+      await storeA.insert(kit);
+      expect(await storeA.list("owner", "application-3", { kind: "cover-letter-kit" })).toEqual([
+        kit,
+      ]);
 
       await tenancy.close();
       tenancy = await openTenancy();

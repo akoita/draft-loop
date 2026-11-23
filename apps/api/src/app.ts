@@ -67,6 +67,7 @@ import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
 import { registerContentScreening } from "./content-screening-routes.js";
 import type { HostedContentScreening } from "./content-screening-service.js";
+import { registerCoverLetterKitRoutes } from "./cover-letter-kit-routes.js";
 import { registerCreditPurchaseRoutes } from "./credit-purchase-routes.js";
 import { registerMemberCreditsRoute, registerRunEstimateRoute } from "./credit-routes.js";
 import { createEntitlementGate, type EntitlementGate } from "./entitlement-gate.js";
@@ -946,6 +947,30 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         ...(application.materialReviews === undefined
           ? {}
           : { reviews: application.materialReviews }),
+        ...(application.researchBriefs === undefined
+          ? {}
+          : { researchBriefs: application.researchBriefs }),
+      });
+      registerCoverLetterKitRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        material: {
+          get route() {
+            return interview.route;
+          },
+          get allowProviderData() {
+            return interview.allowProviderData;
+          },
+        },
+        ...(application.consents === undefined ? {} : { consents: application.consents }),
+        ...(screening === undefined ? {} : { screening }),
+        ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
+        ...(application.writingSamples === undefined
+          ? {}
+          : { writingSamples: application.writingSamples }),
+        ...(application.applicationMaterialDrafts === undefined
+          ? {}
+          : { drafts: application.applicationMaterialDrafts }),
         ...(application.researchBriefs === undefined
           ? {}
           : { researchBriefs: application.researchBriefs }),

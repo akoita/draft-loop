@@ -27,6 +27,7 @@ const meteredRoutes: ReadonlyArray<{
   { method: "GET", url: "/v1/workspaces/:workspaceId/career-interview/sessions/:sessionId/live" },
   { method: "POST", url: `${applicationRoute}/material`, prepare: true },
   { method: "POST", url: `${applicationRoute}/interview-guide`, prepare: true },
+  { method: "POST", url: `${applicationRoute}/cover-letter-kit`, prepare: true },
   { method: "POST", url: `${applicationRoute}/research`, prepare: true },
   { method: "POST", url: "/v1/workspaces/:workspaceId/profiles/:profileId/derivation" },
 ];

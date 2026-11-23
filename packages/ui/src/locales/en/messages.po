@@ -2669,6 +2669,10 @@ msgstr "Cover letter"
 msgid "Cover letter or interview"
 msgstr "Cover letter or interview"
 
+#: apps/web/src/application-material-model.ts
+msgid "Cover letter writing kit"
+msgstr "Cover letter writing kit"
+
 #: packages/ui/src/start-requirements-model.ts
 msgid "Coverage scoring is less reliable without reviewed requirements."
 msgstr "Coverage scoring is less reliable without reviewed requirements."

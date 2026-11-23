@@ -343,6 +343,7 @@ returns a run's open draft, its findings or career evidence.
 | `start_cv_run`             | `runs:start`        | Starts a CV run on the newest reviewed brief, within the cap                                                                     |
 | `draft_cover_letter`       | `runs:start`        | Drafts and saves a cover letter, within the cap                                                                                  |
 | `draft_interview_prep`     | `runs:start`        | Drafts and saves interview questions with talking points, within the cap                                                         |
+| `get_cover_letter_kit` | `runs:start` | Prepares and saves a cover letter writing kit with its cited facts, never a letter, within the cap |
 | `send_feedback`            | `journal`           | Passes the candidate's own note about Redakloop to the people who run it                                                         |
 | `add_project`              | `evidence:write`    | Files a project card about one repository, pending the candidate's approval                                                      |
 | `get_profile`              | `profile:suggest`   | Reads the reviewed career profile with fact ids, without the facts marked never-say                                              |
