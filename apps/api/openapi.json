@@ -1482,6 +1482,13 @@
           "guidance": {
             "description": "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
             "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
+          },
+          "drafted_for": {
+            "description": "`annotated-draft` for a cover letter drafted only to be rewritten beside it (#3281): it is saved with this mark and gets no critic pass. Cover letters only.",
+            "type": "string",
+            "enum": [
+              "annotated-draft"
+            ]
           }
         },
         "required": [
@@ -1660,6 +1667,13 @@
             "type": "string",
             "enum": [
               "candidate"
+            ]
+          },
+          "drafted_for": {
+            "description": "`annotated-draft` for a cover letter a model drafted only for the candidate to rewrite beside it (#3281).",
+            "type": "string",
+            "enum": [
+              "annotated-draft"
             ]
           },
           "model": {
@@ -1888,6 +1902,13 @@
               "additionalProperties": false
             },
             "description": "Every item's text, in the saved draft's order; one entry for each of its items."
+          },
+          "written_by": {
+            "description": "`candidate` saves the texts as the candidate's own cover letter, based on a drafted cover letter they rewrote beside it (the annotated draft, #3281).",
+            "type": "string",
+            "enum": [
+              "candidate"
+            ]
           }
         },
         "required": [
@@ -12463,6 +12484,13 @@
           "guidance": {
             "description": "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
             "$ref": "#/components/schemas/ApplicationMaterialGuidance"
+          },
+          "drafted_for": {
+            "description": "`annotated-draft` for a cover letter drafted only to be rewritten beside it (#3281): it is saved with this mark and gets no critic pass. Cover letters only.",
+            "type": "string",
+            "enum": [
+              "annotated-draft"
+            ]
           }
         },
         "required": [
@@ -12645,6 +12673,13 @@
             "type": "string",
             "enum": [
               "candidate"
+            ]
+          },
+          "drafted_for": {
+            "description": "`annotated-draft` for a cover letter a model drafted only for the candidate to rewrite beside it (#3281).",
+            "type": "string",
+            "enum": [
+              "annotated-draft"
             ]
           },
           "model": {
@@ -12880,6 +12915,13 @@
               "additionalProperties": false
             },
             "description": "Every item's text, in the saved draft's order; one entry for each of its items."
+          },
+          "written_by": {
+            "description": "`candidate` saves the texts as the candidate's own cover letter, based on a drafted cover letter they rewrote beside it (the annotated draft, #3281).",
+            "type": "string",
+            "enum": [
+              "candidate"
+            ]
           }
         },
         "required": [
@@ -32939,7 +32981,7 @@
     "/v1/workspaces/{workspaceId}/applications/{applicationId}/material": {
       "post": {
         "summary": "Draft a cover letter or interview questions for an application",
-        "description": "Drafts from the career record's facts (identity and contact withheld) and the application's newest brief requirements, and returns the draft with each item's citations. A server that keeps drafts saves it as a new version and returns its id; nothing is saved when drafting fails. Needs the record's consent to send career material to Anthropic (403 consent_required) and a server Claude route (503 material_model_unavailable). A brief whose job source is quarantined or unscreened answers 409 material_quarantined or material_unscreened, as a run would. 409 no_citable_facts when the record holds no fact to cite, 422 invalid_draft when the model's draft breaks the citation rules twice, 409 cost_cap_reached when the next call could pass the request's cost cap, and 502 material_model_failed when the model's answer cannot be used, such as one cut off at its output limit.",
+        "description": "Drafts from the career record's facts (identity and contact withheld) and the application's newest brief requirements, and returns the draft with each item's citations. A server that keeps drafts saves it as a new version and returns its id; nothing is saved when drafting fails. Needs the record's consent to send career material to Anthropic (403 consent_required) and a server Claude route (503 material_model_unavailable). A brief whose job source is quarantined or unscreened answers 409 material_quarantined or material_unscreened, as a run would. 400 not_a_letter when `drafted_for` is set on another kind. 409 no_citable_facts when the record holds no fact to cite, 422 invalid_draft when the model's draft breaks the citation rules twice, 409 cost_cap_reached when the next call could pass the request's cost cap, and 502 material_model_failed when the model's answer cannot be used, such as one cut off at its output limit.",
         "requestBody": {
           "required": true,
           "content": {
@@ -33192,7 +33234,7 @@
     "/v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/versions": {
       "post": {
         "summary": "Save the candidate's edit of a draft as a new version",
-        "description": "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. Based on a writing kit, or on a letter the candidate wrote, it saves the candidate's own cover letter instead: one item per paragraph, up to ten, with `written_by: candidate` and no citations. 400 when the item count differs from the draft's; 404 when the application has no such draft.",
+        "description": "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. Based on a writing kit, on a letter the candidate wrote, or on a drafted cover letter with `written_by: candidate`, it saves the candidate's own cover letter instead: one item per paragraph, up to ten, with `written_by: candidate` and no citations. 400 when the item count differs from the draft's, or not_a_letter for `written_by` on another kind; 404 when the application has no such draft.",
         "requestBody": {
           "required": true,
           "content": {

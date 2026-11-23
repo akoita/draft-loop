@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createCapabilityPort, type NativeBridge, validateBridgeCommand } from "./bridge.js";
 import { bridgeCapabilities } from "./bridge-capabilities.js";
 import { CoverLetterCheckPanel } from "./cover-letter-check-panel.js";
-import { AnnotatedDraftComingSoon, CoverLetterHelpChoice } from "./cover-letter-help.js";
+import { CoverLetterHelpChoice } from "./cover-letter-help.js";
 import { createCoverLetterKitCapabilities } from "./cover-letter-kit-capabilities.js";
 import { normalizeCoverLetterKitLoadResult } from "./cover-letter-kit-contract.js";
 import { fixtureKit } from "./cover-letter-kit-fixture.test-support.js";
@@ -29,18 +29,21 @@ const render = (extra: Partial<CoverLetterKitPanelProps> = {}) =>
   renderToStaticMarkup(<CoverLetterKitPanel {...props} {...extra} />);
 
 describe("the help choice", () => {
-  it("asks how much help, with the kit recommended and the annotated draft not ready", () => {
+  it("asks how much help, with the kit recommended and the annotated draft second", () => {
     const html = renderToStaticMarkup(<CoverLetterHelpChoice value="kit" onChange={() => {}} />);
     expect(html).toContain("<legend>How much help do you want?</legend>");
     expect(html.match(/type="radio"/g)).toHaveLength(3);
     expect(html).toMatch(/checked="" value="kit"/);
     expect(html).toContain('Writing kit<span class="cover-letter-help-badge">Recommended');
-    expect(html).toContain("Annotated draft<span");
-    expect(html).toContain("Coming soon");
+    expect(html).toContain("Annotated draft</span>");
+    expect(html).not.toContain("Coming soon");
     expect(html).toContain("Full draft");
-    expect(renderToStaticMarkup(<AnnotatedDraftComingSoon onUseKit={() => {}} />)).toContain(
-      "Use the writing kit",
+    // A host that cannot draft the annotated letter leaves its choice out.
+    const two = renderToStaticMarkup(
+      <CoverLetterHelpChoice value="kit" annotated={false} onChange={() => {}} />,
     );
+    expect(two.match(/type="radio"/g)).toHaveLength(2);
+    expect(two).not.toContain("Annotated draft");
   });
 });
 

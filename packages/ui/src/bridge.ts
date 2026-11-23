@@ -110,6 +110,12 @@ import {
   workspaceEvidenceMigrationResultKeys,
 } from "./career-evidence-contract.js";
 import {
+  type AnnotatedDraftLoadResult,
+  type AnnotatedDraftPrepareResult,
+  normalizeAnnotatedDraftLoadResult,
+  normalizeAnnotatedDraftPrepareResult,
+} from "./cover-letter-annotated-contract.js";
+import {
   type CoverLetterCheckInput,
   type CoverLetterCheckResult,
   normalizeCoverLetterCheckResult,
@@ -2620,6 +2626,8 @@ export interface BridgeCommandInputMap {
   "cover-letter-kit.prepare": CoverLetterKitScopeInput;
   "cover-letter-kit.save-letter": OwnCoverLetterSaveInput;
   "cover-letter-kit.download-letter": OwnCoverLetterDownloadInput;
+  "cover-letter-kit.load-draft": CoverLetterKitScopeInput;
+  "cover-letter-kit.prepare-draft": CoverLetterKitScopeInput;
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
@@ -2720,6 +2728,8 @@ export interface BridgeCommandOutputMap {
   "cover-letter-kit.prepare": CoverLetterKitPrepareResult;
   "cover-letter-kit.save-letter": OwnCoverLetterSaveResult;
   "cover-letter-kit.download-letter": OwnCoverLetterDownloadResult;
+  "cover-letter-kit.load-draft": AnnotatedDraftLoadResult;
+  "cover-letter-kit.prepare-draft": AnnotatedDraftPrepareResult;
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
@@ -4860,6 +4870,16 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "cover-letter-kit.download-letter",
         input: validateOwnCoverLetterDownloadInput(command.input) ?? invalidInput(),
       };
+    case "cover-letter-kit.load-draft":
+      return {
+        type: "cover-letter-kit.load-draft",
+        input: validateCoverLetterKitScopeInput(command.input) ?? invalidInput(),
+      };
+    case "cover-letter-kit.prepare-draft":
+      return {
+        type: "cover-letter-kit.prepare-draft",
+        input: validateCoverLetterKitScopeInput(command.input) ?? invalidInput(),
+      };
     case "knowledge.create":
       return { type: "knowledge.create", input: validateKnowledgeStoreCreateInput(command.input) };
     case "knowledge.open":
@@ -6910,6 +6930,10 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeOwnCoverLetterSaveResult(value) ?? invalidInput();
     case "cover-letter-kit.download-letter":
       return normalizeOwnCoverLetterDownloadResult(value) ?? invalidInput();
+    case "cover-letter-kit.load-draft":
+      return normalizeAnnotatedDraftLoadResult(value) ?? invalidInput();
+    case "cover-letter-kit.prepare-draft":
+      return normalizeAnnotatedDraftPrepareResult(value) ?? invalidInput();
     case "application.delete":
       return normalizeApplicationDelete(value);
     case "application.import":

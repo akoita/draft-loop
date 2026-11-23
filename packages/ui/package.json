@@ -19,6 +19,10 @@
       "types": "./src/cover-letter-help.tsx",
       "import": "./src/cover-letter-help.tsx"
     },
+    "./cover-letter-annotated-screen": {
+      "types": "./src/cover-letter-annotated-screen.tsx",
+      "import": "./src/cover-letter-annotated-screen.tsx"
+    },
     "./cover-letter-kit-screen": {
       "types": "./src/cover-letter-kit-screen.tsx",
       "import": "./src/cover-letter-kit-screen.tsx"
