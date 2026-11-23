@@ -31,6 +31,12 @@ export {
 export { createConsentLedger } from "./consent-ledger.js";
 export { createContentScreening } from "./content-screening.js";
 export {
+  CoverLetterCheckCountError,
+  type CoverLetterCheckCounts,
+  createCoverLetterCheckCounts,
+} from "./cover-letter-checks.js";
+export type { CoverLetterUseRow } from "./cover-letter-digest.js";
+export {
   type CloseCreditReservationResult,
   type CreditBalance,
   type CreditClock,

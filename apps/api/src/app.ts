@@ -67,7 +67,10 @@ import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
 import { registerContentScreening } from "./content-screening-routes.js";
 import type { HostedContentScreening } from "./content-screening-service.js";
-import { registerCoverLetterCheckRoutes } from "./cover-letter-check-routes.js";
+import {
+  type CoverLetterCheckTally,
+  registerCoverLetterCheckRoutes,
+} from "./cover-letter-check-routes.js";
 import { registerCoverLetterKitRoutes } from "./cover-letter-kit-routes.js";
 import { registerCreditPurchaseRoutes } from "./credit-purchase-routes.js";
 import { registerMemberCreditsRoute, registerRunEstimateRoute } from "./credit-routes.js";
@@ -316,6 +319,8 @@ export interface ApiOptions {
   readonly liveSpeech?: LiveInterviewSpeech;
   /** Each member's live voice use shared by every instance; without it, instance memory. */
   readonly liveVoiceUsage?: LiveVoiceUsage;
+  /** Check my letter's daily count for the quality digest (#3282); unset, nothing is counted. */
+  readonly coverLetterChecks?: CoverLetterCheckTally;
   /** Each member's daily live voice minutes; 30 when unset. */
   readonly liveMinutesPerDay?: number;
   /** The payment provider that sells credit packs (#2708); without one nothing is sold. */
@@ -993,6 +998,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
           },
         },
         paused: modelCallSwitch,
+        ...(options.coverLetterChecks === undefined ? {} : { tally: options.coverLetterChecks }),
         ...(application.consents === undefined ? {} : { consents: application.consents }),
         ...(screening === undefined ? {} : { screening }),
         ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
