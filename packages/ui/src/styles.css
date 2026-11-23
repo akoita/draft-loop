@@ -11947,26 +11947,6 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   white-space: nowrap;
 }
 
-.cover-letter-help-badge-soon {
-  background: var(--surface-3);
-  color: var(--text-3);
-}
-
-.cover-letter-help-soon {
-  display: grid;
-  gap: var(--space-2);
-  max-width: 76ch;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-  background: var(--surface-2);
-  font-size: var(--text-sm);
-}
-
-.cover-letter-help-soon p {
-  margin: 0;
-}
-
 /* The kit beside the person's letter; the columns stack, kit first, when the panel is narrow. */
 .cover-letter-kit {
   display: grid;
@@ -12115,6 +12095,139 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 /* The "Check my letter" panel (#3280) under the editor; hidden on a host without it. */
 .cover-letter-kit-check:empty {
   display: none;
+}
+
+/* The annotated draft (#3281): each drafted paragraph and its note beside the person's version;
+   a row stacks, draft above the box, when the panel is narrow. */
+.cover-letter-annotated {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.cover-letter-annotated h3,
+.cover-letter-annotated h4,
+.cover-letter-annotated p,
+.cover-letter-annotated dl,
+.cover-letter-annotated dd {
+  margin: 0;
+}
+
+.cover-letter-annotated h3 {
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.cover-letter-annotated-rows {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cover-letter-annotated-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
+  align-items: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.cover-letter-annotated-model {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+}
+
+.cover-letter-annotated-model h4 {
+  color: var(--text-4);
+  font-size: var(--text-micro);
+  font-weight: 650;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.cover-letter-annotated-text {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.cover-letter-annotated-generic {
+  background: none;
+  color: inherit;
+  text-decoration: underline wavy var(--amber);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.cover-letter-annotated-note {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.cover-letter-annotated-note dt {
+  margin-top: var(--space-1);
+  color: var(--text-4);
+  font-weight: 650;
+}
+
+.cover-letter-annotated-note dd {
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+.cover-letter-annotated-mine {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+
+.cover-letter-annotated-mine label {
+  font-weight: 600;
+}
+
+.cover-letter-annotated-input {
+  width: 100%;
+  min-height: 9rem;
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.cover-letter-annotated-footer {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.cover-letter-annotated-meter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.cover-letter-annotated-meter meter {
+  flex: 1 1 8rem;
+  max-width: 16rem;
+  height: 0.75rem;
+}
+
+.cover-letter-annotated [role="alert"] {
+  color: var(--red);
 }
 
 /* Check my letter (#3280): findings under the candidate's own letter. */

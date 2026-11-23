@@ -9,7 +9,8 @@ export interface CoverLetterUseRow {
   readonly kits: number;
   /**
    * Full letters a model drafted: `cover-letter` versions not based on another one. The web
-   * offers them only after the one-time risk choice, which the browser keeps (#3277).
+   * offers them only after the one-time risk choice, which the browser keeps (#3277). A draft
+   * made only to be rewritten beside it (`drafted_for: annotated-draft`, #3281) is not one.
    */
   readonly fullDrafts: number;
   /** Applications with a cover letter version saved that day. */
@@ -20,7 +21,8 @@ export interface CoverLetterUseRow {
 
 // Times stored as text are ISO 8601; the casts compare them as times. A version is the
 // candidate's when one item was rewritten, or when it is based on another version and no critic
-// wrote it (the web's `isUneditedModelLetter`, inverted).
+// wrote it (the web's `isUneditedModelLetter`, inverted). An annotated draft (#3281) is a
+// reference the candidate rewrites, so it is neither a full draft nor the day's letter.
 const coverLetterUseSql = `
   WITH day_rows AS (
     SELECT workspace_id, application_id, kind, draft, created_at::timestamptz AS at
@@ -29,13 +31,14 @@ const coverLetterUseSql = `
        AND created_at::timestamptz >= $1 AND created_at::timestamptz < $2
   ), newest AS (
     SELECT DISTINCT ON (workspace_id, application_id) draft FROM day_rows
-     WHERE kind = 'cover-letter'
+     WHERE kind = 'cover-letter' AND draft->'drafted_for' IS NULL
      ORDER BY workspace_id, application_id, at DESC
   )
   SELECT
     (SELECT count(*) FROM day_rows WHERE kind = 'cover-letter-kit') AS kits,
     (SELECT count(*) FROM day_rows
-      WHERE kind = 'cover-letter' AND draft->'based_on' IS NULL) AS full_drafts,
+      WHERE kind = 'cover-letter' AND draft->'based_on' IS NULL
+        AND draft->'drafted_for' IS NULL) AS full_drafts,
     (SELECT count(*) FROM newest) AS letters,
     (SELECT count(*) FROM newest
       WHERE coalesce(draft->'items', '[]'::jsonb) @> '[{"edited": true}]'::jsonb

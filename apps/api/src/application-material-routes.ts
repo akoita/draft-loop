@@ -77,7 +77,7 @@ import { consentRecordId } from "./consent-routes.js";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { MaterialReviews } from "./material-reviews.js";
-import { isOwnLetterBase, ownCoverLetterVersion } from "./own-cover-letter.js";
+import { isLetterBase, isOwnLetterBase, ownCoverLetterVersion } from "./own-cover-letter.js";
 
 /** What drafting application material needs from a deployment (#2216). */
 export interface ApplicationMaterialParts {
@@ -162,6 +162,12 @@ const body = z
       .optional()
       .describe(
         "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
+      ),
+    drafted_for: z
+      .enum(["annotated-draft"])
+      .optional()
+      .describe(
+        "`annotated-draft` for a cover letter drafted only to be rewritten beside it (#3281): it is saved with this mark and gets no critic pass. Cover letters only.",
       ),
   })
   .meta({ id: "ApplicationMaterialRequest" });
@@ -267,6 +273,12 @@ export const draftView = z
       .optional()
       .describe(
         "`candidate` for a cover letter the candidate wrote beside a writing kit; no model wrote any of it.",
+      ),
+    drafted_for: z
+      .enum(["annotated-draft"])
+      .optional()
+      .describe(
+        "`annotated-draft` for a cover letter a model drafted only for the candidate to rewrite beside it (#3281).",
       ),
     model: z.object({ provider: z.string(), model: z.string() }),
     critic_findings: z
@@ -377,6 +389,12 @@ const editBody = z
       .min(1)
       .max(maximumSavedInterviewGuideItems)
       .describe("Every item's text, in the saved draft's order; one entry for each of its items."),
+    written_by: z
+      .enum(["candidate"])
+      .optional()
+      .describe(
+        "`candidate` saves the texts as the candidate's own cover letter, based on a drafted cover letter they rewrote beside it (the annotated draft, #3281).",
+      ),
   })
   .meta({ id: "ApplicationMaterialEdit" });
 
@@ -485,7 +503,7 @@ export function registerApplicationMaterialRoutes(
       schema: {
         summary: "Draft a cover letter or interview questions for an application",
         description:
-          "Drafts from the career record's facts (identity and contact withheld) and the application's newest brief requirements, and returns the draft with each item's citations. A server that keeps drafts saves it as a new version and returns its id; nothing is saved when drafting fails. Needs the record's consent to send career material to Anthropic (403 consent_required) and a server Claude route (503 material_model_unavailable). A brief whose job source is quarantined or unscreened answers 409 material_quarantined or material_unscreened, as a run would. 409 no_citable_facts when the record holds no fact to cite, 422 invalid_draft when the model's draft breaks the citation rules twice, 409 cost_cap_reached when the next call could pass the request's cost cap, and 502 material_model_failed when the model's answer cannot be used, such as one cut off at its output limit.",
+          "Drafts from the career record's facts (identity and contact withheld) and the application's newest brief requirements, and returns the draft with each item's citations. A server that keeps drafts saves it as a new version and returns its id; nothing is saved when drafting fails. Needs the record's consent to send career material to Anthropic (403 consent_required) and a server Claude route (503 material_model_unavailable). A brief whose job source is quarantined or unscreened answers 409 material_quarantined or material_unscreened, as a run would. 400 not_a_letter when `drafted_for` is set on another kind. 409 no_citable_facts when the record holds no fact to cite, 422 invalid_draft when the model's draft breaks the citation rules twice, 409 cost_cap_reached when the next call could pass the request's cost cap, and 502 material_model_failed when the model's answer cannot be used, such as one cut off at its output limit.",
         params,
         body,
         response: { 200: draftView, ...errors },
@@ -493,6 +511,12 @@ export function registerApplicationMaterialRoutes(
     },
     async (request, reply) => {
       const { workspaceId, applicationId } = request.params;
+      const draftedFor = request.body.drafted_for;
+      if (draftedFor !== undefined && request.body.kind !== "cover-letter") {
+        return reply
+          .code(400)
+          .send(apiError("not_a_letter", "Only a cover letter is drafted for an annotated draft."));
+      }
       const root = workspaceRoot(workspaceId);
       const workspace = await service.readWorkspace(root);
       const application = await service.getApplication({ root, applicationId });
@@ -673,6 +697,7 @@ export function registerApplicationMaterialRoutes(
         );
         const view = {
           kind: draft.kind,
+          ...(draftedFor === undefined ? {} : { drafted_for: draftedFor }),
           ...(guidance === undefined ? {} : { guidance }),
           items: draft.items.map((item) => ({
             question: item.question,
@@ -714,7 +739,9 @@ export function registerApplicationMaterialRoutes(
           { workspaceId, applicationId, materialId: saved.id, kind: saved.kind },
           "application material saved",
         );
-        const reviewed = await queueReview(saved, workspace, recordId);
+        // A draft made to be rewritten (#3281) is never sent as it is, so no critic checks it.
+        const reviewed =
+          draftedFor === undefined ? await queueReview(saved, workspace, recordId) : false;
         return reply.send({
           ...viewOf(saved),
           ...(reviewed ? { review: { status: "pending" as const } } : {}),
@@ -878,7 +905,7 @@ export function registerApplicationMaterialRoutes(
       schema: {
         summary: "Save the candidate's edit of a draft as a new version",
         description:
-          "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. Based on a writing kit, or on a letter the candidate wrote, it saves the candidate's own cover letter instead: one item per paragraph, up to ten, with `written_by: candidate` and no citations. 400 when the item count differs from the draft's; 404 when the application has no such draft.",
+          "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. Based on a writing kit, on a letter the candidate wrote, or on a drafted cover letter with `written_by: candidate`, it saves the candidate's own cover letter instead: one item per paragraph, up to ten, with `written_by: candidate` and no citations. 400 when the item count differs from the draft's, or not_a_letter for `written_by` on another kind; 404 when the application has no such draft.",
         params: draftParams,
         body: editBody,
         response: { 200: draftView, 400: apiErrorSchema, 404: apiErrorSchema },
@@ -891,7 +918,12 @@ export function registerApplicationMaterialRoutes(
         return reply.code(404).send(apiError("not_found", "There is no such saved draft."));
       }
       const texts = request.body.items.map((item) => item.text);
-      if (isOwnLetterBase(base)) {
+      if (request.body.written_by === "candidate" && !isLetterBase(base)) {
+        return reply
+          .code(400)
+          .send(apiError("not_a_letter", "Only a cover letter can be rewritten as your own."));
+      }
+      if (isOwnLetterBase(base, request.body.written_by)) {
         if (texts.length > maximumSavedApplicationMaterialItems) {
           return reply
             .code(400)

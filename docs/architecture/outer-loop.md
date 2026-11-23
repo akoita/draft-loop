@@ -103,7 +103,9 @@ sequenceDiagram
 - **Full drafts and the risk choice.** The one-time "I accept the risk"
   choice is kept in the browser, not on the server. The web drafts a full
   letter only after it, so `fullDrafts` counts the drafts made after the
-  choice. A draft an agent asks for through the API is counted too.
+  choice. A draft an agent asks for through the API is counted too. An
+  annotated draft, made only to be rewritten beside it, is not counted, and
+  neither is it the day's letter; the candidate's rewrite is.
 - **Edited share.** Downloading a letter is not recorded, so the share reads
   saved versions, not exports. A version counts as edited when the candidate
   rewrote one paragraph, or saved it from another version without the critic.

@@ -1,4 +1,5 @@
 import type { BridgeCommand } from "@draft-loop/ui/bridge";
+import type { AnnotatedDraftView } from "@draft-loop/ui/cover-letter-annotated-contract";
 import type {
   CoverLetterKitView,
   OwnCoverLetterView,
@@ -20,6 +21,8 @@ export const hostedCoverLetterKitCapabilities = [
   "cover-letter-kit.prepare",
   "cover-letter-kit.save-letter",
   "cover-letter-kit.download-letter",
+  "cover-letter-kit.load-draft",
+  "cover-letter-kit.prepare-draft",
 ] as const;
 
 type CoverLetterKitCommandType = (typeof hostedCoverLetterKitCapabilities)[number];
@@ -95,6 +98,26 @@ function letterView(draft: ApplicationMaterialDraft): OwnCoverLetterView {
   };
 }
 
+/** A letter a model drafted, paragraph by paragraph with its citations, for the annotated draft. */
+function annotatedDraftView(draft: ApplicationMaterialDraft): AnnotatedDraftView {
+  if (draft.id === undefined) {
+    return refuse(t`This server keeps no drafts, so it cannot keep your version beside one.`);
+  }
+  return {
+    id: draft.id,
+    createdAt: draft.created_at ?? new Date().toISOString(),
+    model: draft.model.model,
+    paragraphs: draft.items.map((item) => ({
+      text: item.text,
+      facts: item.citations.map((citation) => ({ factId: citation.fact_id, text: citation.text })),
+      employerFacts: (item.company_citations ?? []).map((citation) => ({
+        findingId: citation.finding_id,
+        text: citation.text,
+      })),
+    })),
+  };
+}
+
 /** Answers the kit screen's commands over the material and writing kit routes. */
 export function createCoverLetterKitAnswers(client: ApiClient, download: DownloadFile) {
   const list = async (
@@ -139,13 +162,33 @@ export function createCoverLetterKitAnswers(client: ApiClient, download: Downloa
           );
           return { kit: kitView(prepared) };
         }
+        case "cover-letter-kit.load-draft": {
+          const letters = await list(workspaceId, applicationId, "cover-letter");
+          // The newest letter a model drafted; the person's own letters are not drafts.
+          const drafted = letters.find(
+            (draft) => draft.id !== undefined && draft.written_by !== "candidate",
+          );
+          return { draft: drafted === undefined ? null : annotatedDraftView(drafted) };
+        }
+        case "cover-letter-kit.prepare-draft": {
+          const drafted = await client.call(
+            "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material",
+            {
+              path: { workspaceId, applicationId },
+              body: { kind: "cover-letter", drafted_for: "annotated-draft" },
+            },
+          );
+          return { draft: annotatedDraftView(drafted) };
+        }
         case "cover-letter-kit.save-letter": {
           const { basedOn, paragraphs } = command.input;
+          // Always the person's own letter, whether it follows a kit, their letter or a draft
+          // they rewrote in the annotated draft (#3281).
           const saved = await client.call(
             "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/versions",
             {
               path: { workspaceId, applicationId, materialId: basedOn },
-              body: { items: paragraphs.map((text) => ({ text })) },
+              body: { items: paragraphs.map((text) => ({ text })), written_by: "candidate" },
             },
           );
           return { letter: letterView(saved) };

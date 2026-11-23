@@ -146,10 +146,54 @@ describe("the writing kit over HTTP", () => {
         operation: `POST ${base}/material/{materialId}/versions`,
         input: {
           path: { ...scope, materialId: "amd_fixturekit01" },
-          body: { items: [{ text: "Dear team," }, { text: "Mine." }] },
+          body: { items: [{ text: "Dear team," }, { text: "Mine." }], written_by: "candidate" },
         },
       },
     ]);
+  });
+
+  it("reads the newest model letter for the annotated draft, and drafts one marked for it", async () => {
+    const cited: ApplicationMaterialDraft = {
+      ...modelLetter,
+      items: [
+        {
+          question: "",
+          text: "Model text.",
+          citations: [{ fact_id: "f1", text: "Cut report time by 40%" }],
+          company_citations: [{ finding_id: "e1", text: "Opened an office" }],
+        },
+      ],
+    };
+    const { calls, port } = harness((operation) =>
+      operation.startsWith("GET")
+        ? { drafts: [ownLetter("amd_fixtureown01", ["Mine."]), cited] }
+        : cited,
+    );
+    const paragraphs = [
+      {
+        text: "Model text.",
+        facts: [{ factId: "f1", text: "Cut report time by 40%" }],
+        employerFacts: [{ findingId: "e1", text: "Opened an office" }],
+      },
+    ];
+    expect(await port.execute({ type: "cover-letter-kit.load-draft", input: scope })).toEqual({
+      ok: true,
+      value: {
+        draft: {
+          id: "amd_fixturemodel",
+          createdAt: "2026-11-21T10:00:00.000Z",
+          model: "claude-haiku-4-5",
+          paragraphs,
+        },
+      },
+    });
+    expect(
+      await port.execute({ type: "cover-letter-kit.prepare-draft", input: scope }),
+    ).toMatchObject({ ok: true, value: { draft: { id: "amd_fixturemodel", paragraphs } } });
+    expect(calls.at(-1)).toEqual({
+      operation: `POST ${base}/material`,
+      input: { path: scope, body: { kind: "cover-letter", drafted_for: "annotated-draft" } },
+    });
   });
 
   it("downloads the person's letter at once, with no AI-draft confirm", async () => {

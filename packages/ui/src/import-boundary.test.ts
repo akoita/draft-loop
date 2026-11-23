@@ -19,6 +19,8 @@ const allowedRuntimeImports: readonly RegExp[] = [
   /^@draft-loop\/domain(?:\/[a-z-]+)?$/u,
   /^@draft-loop\/application\/model-profile-(?:budget|catalog|selection)$/u,
   /^@draft-loop\/application\/model-profiles$/u,
+  // The writing rules' phrase lists (#3281): plain data and string functions, no import.
+  /^@draft-loop\/application\/writing-tells$/u,
   // The user guide's text and search (#2881): plain data and string functions, no dependency.
   /^@draft-loop\/user-guide$/u,
   // The export preview's PDF pages (#2498): a browser-only library, loaded when a preview opens.
@@ -55,6 +57,11 @@ describe("shared UI import boundary", () => {
       );
 
     expect(offenders).toEqual([]);
+  });
+
+  it("keeps the writing rules the screens read free of any import", () => {
+    const rules = join(sourceDirectory, "../../application/src/writing-tells.ts");
+    expect(runtimeImports(readFileSync(rules, "utf8"))).toEqual([]);
   });
 
   it("recognises a forbidden runtime import and ignores a type-only one", () => {

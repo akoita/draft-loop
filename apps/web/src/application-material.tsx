@@ -1,5 +1,6 @@
+import { CoverLetterAnnotatedScreen } from "@draft-loop/ui/cover-letter-annotated-screen";
 import { CoverLetterCheckPanel } from "@draft-loop/ui/cover-letter-check-panel";
-import { AnnotatedDraftComingSoon, CoverLetterHelpChoice } from "@draft-loop/ui/cover-letter-help";
+import { CoverLetterHelpChoice } from "@draft-loop/ui/cover-letter-help";
 import type { CoverLetterKitCapabilities } from "@draft-loop/ui/cover-letter-kit-capabilities";
 import {
   type CoverLetterHelp,
@@ -133,11 +134,13 @@ export interface ApplicationMaterialViewProps {
   readonly onAcceptLetterRisk?: () => void;
   /**
    * How much help the Cover letter tab gives (#3279). With `kitScreen` the tab asks, and shows the
-   * kit screen, the annotated draft's notice or the full draft below; without it, the full draft.
+   * kit screen, the annotated draft (#3281) or the full draft below; without it, the full draft.
+   * Without `annotatedScreen` the annotated choice is left out.
    */
   readonly help?: CoverLetterHelp;
   readonly onHelp?: (help: CoverLetterHelp) => void;
   readonly kitScreen?: ReactNode;
+  readonly annotatedScreen?: ReactNode;
 }
 
 const kinds = (): readonly ApplicationMaterialPanelKind[] => ["cover-letter", "interview-guide"];
@@ -208,14 +211,13 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
           <CoverLetterHelpChoice
             value={help}
             disabled={busy}
+            annotated={props.annotatedScreen !== undefined}
             onChange={(next) => props.onHelp?.(next)}
           />
         ) : null}
         {props.research}
         {asksHelp && help === "kit" ? props.kitScreen : null}
-        {asksHelp && help === "annotated" ? (
-          <AnnotatedDraftComingSoon onUseKit={() => props.onHelp?.("kit")} />
-        ) : null}
+        {asksHelp && help === "annotated" ? props.annotatedScreen : null}
         {asksHelp && help !== "full" ? null : (
           <>
             {draft === undefined && kind === "cover-letter" ? (
@@ -833,6 +835,21 @@ export function ApplicationMaterialSection({
                 checkPanel={(letter) => <CoverLetterCheckPanel text={letter.text} check={check} />}
               />
             ),
+            ...(coverLetterKit.draft === undefined
+              ? {}
+              : {
+                  annotatedScreen: (
+                    <CoverLetterAnnotatedScreen
+                      workspaceId={workspaceId}
+                      applicationId={applicationId}
+                      capabilities={coverLetterKit}
+                      draft={coverLetterKit.draft}
+                      checkPanel={(letter) => (
+                        <CoverLetterCheckPanel text={letter.text} check={check} />
+                      )}
+                    />
+                  ),
+                }),
           })}
       guideForm={
         <InterviewGuideForm

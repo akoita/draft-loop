@@ -84,6 +84,8 @@ export const bridgeCapabilities = [
   "cover-letter-kit.prepare",
   "cover-letter-kit.save-letter",
   "cover-letter-kit.download-letter",
+  "cover-letter-kit.load-draft",
+  "cover-letter-kit.prepare-draft",
   "review.load",
   "review.dispatch",
   "review.preview-evidence",

@@ -481,11 +481,14 @@ model, so it costs nothing.
 The request must send one text for each item, in order; another count answers
 400. The route is for the person only: agents cannot reach it.
 
-**The candidate's own letter (#3279).** Sent to a writing kit, or to a letter
-the candidate wrote, the same route saves their own letter instead. It is a
+**The candidate's own letter (#3279).** Sent to a writing kit, to a letter
+the candidate wrote, or to a drafted cover letter with
+`written_by: "candidate"` ([the annotated draft](#the-annotated-draft)), the
+same route saves their own letter instead. It is a
 `cover-letter` version with one item per paragraph, up to ten, each marked
-`edited`, no citations and `written_by: candidate`. `based_on` names the kit
-or the earlier letter. No number is flagged, since nothing is cited, and Word
+`edited`, no citations and `written_by: candidate`. `based_on` names the kit,
+the drafted letter or the earlier letter. `written_by` on another kind
+answers 400 `not_a_letter`. No number is flagged, since nothing is cited, and Word
 and PDF downloads work as for any cover letter.
 
 ## The web panel
@@ -548,13 +551,14 @@ The Cover letter tab asks **How much help do you want?** (#3279):
 | Choice          | What the tab shows                                                                 |
 | --------------- | ---------------------------------------------------------------------------------- |
 | Writing kit     | The default, marked **Recommended**: the kit beside an editor for the candidate's own letter |
-| Annotated draft | Marked **Coming soon**: a short notice and **Use the writing kit** (#3281)          |
+| Annotated draft | A drafted letter, a note on each paragraph and a column for the candidate's version ([below](#the-annotated-draft)) |
 | Full draft      | The drafting controls above, with the one-time risk choice and the AI-draft confirm |
 
 The kit screen is shared: `packages/ui/src/cover-letter-kit-screen.tsx`,
 reached through the capability port's `cover-letter-kit.*` commands, which
 `apps/web/src/cover-letter-kit-bridge.ts` answers over the API. A host
-without those commands shows the full draft only.
+without those commands shows the full draft only, and one without the two
+`*-draft` commands leaves out the annotated choice.
 
 ```mermaid
 flowchart LR
@@ -581,6 +585,45 @@ flowchart LR
   current text, saved or not. The web binds it with `webCoverLetterCheck`.
 
 The full draft's version list leaves out the candidate's own letters.
+
+### The annotated draft
+
+The second choice (#3281) shows a letter a model drafted, paragraph by
+paragraph, beside a column where the candidate writes their own version. Only
+that column is saved and downloaded, so the screen asks for no risk choice:
+the drafted letter is a reference, never saved as theirs or downloaded from
+here. The screen is `packages/ui/src/cover-letter-annotated-screen.tsx`.
+
+```mermaid
+flowchart LR
+  load["Newest drafted letter"] -->|none yet| prepare["Prepare the annotated draft: one draft call"]
+  prepare --> rows
+  load --> rows["Each paragraph: note, underlines, your box"]
+  rows --> meter["In your own words: share"]
+  rows --> save["Save my letter: written_by candidate"]
+  save --> download["Download Word or PDF, no confirm"]
+```
+
+| Part              | Where it comes from, with no model call                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| Why it is there   | The kit requirement whose facts the paragraph cites, or shares two words with; else its place: opening, proof, employer or closing |
+| Which fact backs it | The paragraph's citations: career facts, then employer facts                                  |
+| Say this your way | A fixed English and French prompt for the paragraph's role                                      |
+| Underlines        | The writing check's stock phrases and Check my letter's empty superlatives, as whole words      |
+| Meter             | Share of the candidate's words outside any five-word run the draft also has                     |
+
+- **Drafting.** With no drafted letter yet, **Prepare the annotated draft**
+  drafts one on the candidate's press, through the material route with
+  `drafted_for: "annotated-draft"`. That version is saved with the mark, so
+  usage counts can tell it from a full draft, and no critic checks it.
+- **The column.** One box per paragraph, filled from the candidate's newest own
+  letter. **Save my letter** sends the boxes to the versions route based on the
+  drafted letter with `written_by: "candidate"`, which saves their own letter
+  as in [Editing a draft](#editing-a-draft).
+- **Downloads.** As on the kit screen: save any change, then download with no
+  confirm. [Check my letter](#check-my-letter) sits under the column.
+- **Layout.** Each row stacks, drafted paragraph above the box, when the panel
+  is narrower than two 22rem columns.
 
 ### The guide tab
 
