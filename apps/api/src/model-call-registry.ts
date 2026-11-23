@@ -145,6 +145,16 @@ export const modelCallPaths: ReadonlyArray<ModelCallPath> = [
     reaches: ["apps/api/src/cover-letter-kit-routes.ts"],
   },
   {
+    id: "cover-letter-check",
+    routes: [{ method: "POST", url: `${application}/cover-letter-check` }],
+    // The wording and requirement checks need no model, so they still answer while paused.
+    whilePaused: "skipped",
+    limit: "The plan's model calls per day (model-call-gate.ts); a paused check is not counted.",
+    costCap: `The daily count times ${outputTokens}; each check also stops at US$0.05.`,
+    killSwitch: "A plan override of modelCallsPerDay for one organisation.",
+    reaches: ["apps/api/src/cover-letter-check-routes.ts"],
+  },
+  {
     id: "research",
     routes: [{ method: "POST", url: `${application}/research` }],
     whilePaused: "refused",

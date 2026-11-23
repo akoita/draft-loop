@@ -36,4 +36,10 @@ describe("sentencesOf", () => {
   it("returns nothing for blank text", () => {
     expect(sentencesOf("  \n ")).toEqual([]);
   });
+  it("splits long runs of end marks in linear time", () => {
+    const text = `${"!".repeat(100_000)}x ${" ".repeat(100_000)}`;
+    const started = performance.now();
+    sentencesOf(text);
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
 });

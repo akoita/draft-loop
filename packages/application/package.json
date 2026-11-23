@@ -175,6 +175,10 @@
       "types": "./src/cover-letter-kit-model.ts",
       "import": "./src/cover-letter-kit-model.ts"
     },
+    "./cover-letter-check": {
+      "types": "./src/cover-letter-check.ts",
+      "import": "./src/cover-letter-check.ts"
+    },
     "./interview-guide": {
       "types": "./src/interview-guide.ts",
       "import": "./src/interview-guide.ts"

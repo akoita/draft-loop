@@ -171,4 +171,52 @@ describe("drafting tools", () => {
     expect(tool?.description).toContain("runs:start");
     await client.close();
   });
+  it("checks the candidate's own letter and returns the findings, with no rewrite", async () => {
+    const check = {
+      claims: {
+        status: "checked",
+        checked_sentences: 2,
+        findings: [
+          {
+            paragraph: 0,
+            sentence: "I led a fictional team of 40.",
+            about: "candidate",
+            reason: "no_supporting_fact",
+            closest_fact: { fact_id: "fact-1", text: "A fictional career fact." },
+          },
+        ],
+      },
+      requirements: { source: "brief", total: 1, unanswered: [] },
+      wording: [
+        {
+          code: "empty_superlative",
+          paragraph: 1,
+          sentence: "I am exceptional.",
+          match: "exceptional",
+        },
+      ],
+      model: { provider: "anthropic", model: "claude-haiku-5-5" },
+      prompt_version: "cover-letter-claims-v2",
+      cost_usd: 0.002,
+    };
+    const { config, requests } = scripted(json(check));
+    const client = await connect(config);
+    const text = "I led a fictional team of 40.\n\nI am exceptional.";
+    const checked = await client.callTool({
+      name: "check_cover_letter",
+      arguments: { application_id: "app_fixture_0001", text },
+    });
+    expect(checked.structuredContent).toMatchObject({
+      application_id: "app_fixture_0001",
+      ...check,
+    });
+    expect(requests).toEqual([
+      { line: `POST ${base}/applications/app_fixture_0001/cover-letter-check`, body: { text } },
+    ]);
+    const { tools } = await client.listTools();
+    const tool = tools.find((each) => each.name === "check_cover_letter");
+    expect(tool?.description).toContain("runs:start");
+    expect(tool?.description).toContain("not stored");
+    await client.close();
+  });
 });

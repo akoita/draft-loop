@@ -87,6 +87,10 @@
       "types": "./src/cover-letter-kit.ts",
       "import": "./src/cover-letter-kit.ts"
     },
+    "./cover-letter-check": {
+      "types": "./src/cover-letter-check.ts",
+      "import": "./src/cover-letter-check.ts"
+    },
     "./saved-application-material": {
       "types": "./src/saved-application-material.ts",
       "import": "./src/saved-application-material.ts"

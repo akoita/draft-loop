@@ -20,6 +20,7 @@ async function server(
   caller: Caller,
   used = 0,
   prepared?: { readonly used: number },
+  paused?: boolean,
 ) {
   let calls = used;
   const take = vi.fn(async ({ limit }: { limit: number }) => {
@@ -49,13 +50,18 @@ async function server(
   app.addHook("onRequest", async (request) => {
     request.caller = caller;
   });
-  registerModelCallGate(app, { entitlementsFor: () => tenant, now: () => now });
+  registerModelCallGate(app, {
+    entitlementsFor: () => tenant,
+    now: () => now,
+    ...(paused === undefined ? {} : { paused: async () => paused }),
+  });
   const ok = async () => ({ ok: true });
   app.post("/v1/workspaces/:workspaceId/career-interview/sessions/:sessionId/actions", ok);
   app.get("/v1/workspaces/:workspaceId/career-interview/sessions/:sessionId/live", ok);
   app.post("/v1/workspaces/:workspaceId/applications/:applicationId/material", ok);
   app.post("/v1/workspaces/:workspaceId/applications/:applicationId/interview-guide", ok);
   app.post("/v1/workspaces/:workspaceId/applications/:applicationId/cover-letter-kit", ok);
+  app.post("/v1/workspaces/:workspaceId/applications/:applicationId/cover-letter-check", ok);
   app.post("/v1/workspaces/:workspaceId/applications/:applicationId/research", ok);
   app.post("/v1/workspaces/:workspaceId/profiles/:profileId/derivation", ok);
   app.post("/v1/workspaces/:workspaceId/brief", ok);
@@ -69,11 +75,28 @@ const routes = [
   ["POST", "/v1/workspaces/r1/applications/a1/material", {}],
   ["POST", "/v1/workspaces/r1/applications/a1/interview-guide", {}],
   ["POST", "/v1/workspaces/r1/applications/a1/cover-letter-kit", {}],
+  ["POST", "/v1/workspaces/r1/applications/a1/cover-letter-check", { text: "A letter." }],
   ["POST", "/v1/workspaces/r1/applications/a1/research", {}],
   ["POST", "/v1/workspaces/r1/profiles/p1/derivation", {}],
 ] as const;
 
 describe("model calls outside runs", () => {
+  it("does not count a letter check while model calls are paused, which skips its model part", async () => {
+    const url = "/v1/workspaces/r1/applications/a1/cover-letter-check";
+    const { app: api, take } = await server("beta", member, 20, undefined, true);
+    const paused = await api.inject({ method: "POST", url, payload: { text: "A letter." } });
+    expect(paused.statusCode).toBe(200);
+    expect(take).not.toHaveBeenCalled();
+
+    // A refused route stays counted: the switch refuses it before the gate runs.
+    const kit = await api.inject({
+      method: "POST",
+      url: "/v1/workspaces/r1/applications/a1/cover-letter-kit",
+      payload: {},
+    });
+    expect(kit.statusCode).toBe(429);
+  });
+
   it.each(routes)(
     "refuses %s %s for a Beta organisation past 20 a day",
     async (method, url, body) => {

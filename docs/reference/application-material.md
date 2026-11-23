@@ -254,6 +254,89 @@ model call switch answers 503 `model_calls_paused`. An agent token with
 cap. A kit cannot be edited or downloaded as a document; the screen that shows
 it is #3279.
 
+## Check my letter
+
+Check my letter reads a cover letter the candidate wrote and returns
+findings, never a rewrite (#3280). The letter reaches a model only when the
+candidate presses **Check my letter**, and the server does not store it.
+
+`POST /v1/workspaces/{workspaceId}/applications/{applicationId}/cover-letter-check`
+takes `{"text": "..."}`, at most 8,000 characters, paragraphs split by blank
+lines. It answers 200 with three groups:
+
+| Group          | What it holds                                                                                          | Model |
+| -------------- | ------------------------------------------------------------------------------------------------------ | ----- |
+| `claims`       | Sentences the approved record does not support, each with its `reason` and the `closest_fact`          | Haiku |
+| `requirements` | The latest [kit](#cover-letter-writing-kits)'s requirements, else the brief's top three, not answered   | none  |
+| `wording`      | `job_ad_echo`, `empty_superlative` and the [writing check](#writing-check)'s tells                     | none  |
+
+```mermaid
+flowchart LR
+  letter["Candidate's letter"] --> split["Sentences"]
+  split --> wording["Wording rules<br/>no model"]
+  split --> answered["Requirement match<br/>no model"]
+  split --> paused{"Calls paused,<br/>no consent or route?"}
+  paused -- "no" --> haiku["Claim linker<br/>Claude Haiku"]
+  haiku --> rules["Claim rules"]
+  paused -- "yes" --> skipped["claims: skipped"]
+  rules --> result["Findings, not stored"]
+  wording --> result
+  answered --> result
+  skipped --> result
+```
+
+**Claims.** The free-form letter's [claim check](#free-form-cover-letters)
+links each sentence to the allowed facts, research findings and job
+requirements behind it. A sentence about the candidate or the employer that
+fails is reported with one reason:
+
+| `reason`                | Meaning                                                  |
+| ----------------------- | -------------------------------------------------------- |
+| `no_supporting_fact`    | No approved fact, finding or requirement states it       |
+| `number_not_in_fact`    | A number in `numbers` that no linked fact states         |
+| `joins_different_roles` | It joins facts from different roles or projects          |
+
+`closest_fact` is the allowed fact sharing the most words with the
+sentence, or `null`. Only the sentences, up to 60 allowed facts ranked by
+their match to the letter, the research findings and the requirements reach
+the model. Contact and identity facts, and facts the candidate marked never
+to use, stay out.
+
+**Requirements.** A requirement counts as answered when a sentence shares two
+of its words, or of its kit facts' words, or links to one of its kit facts.
+`requirements.source` says `kit`, `brief` or `none`.
+
+**Wording.** A `job_ad_echo` is a run of six or more words copied from the
+brief's role, responsibilities, requirements or priorities. An
+`empty_superlative` is praise such as "highly motivated", "world-class" or
+"candidat idéal". Both run without a model, as do the writing-check tells.
+
+**When the claim check is skipped.** `claims.status` is `skipped` and
+`claims.reason` says why; the other two groups are complete.
+
+| `claims.reason`      | When                                                         |
+| -------------------- | ------------------------------------------------------------ |
+| `model_calls_paused` | The global model call switch is paused                       |
+| `model_unavailable`  | The server has no model route for application material       |
+| `consent_required`   | The record's consent does not allow sending to Anthropic     |
+| `no_facts`           | No fact is allowed for a cover letter                        |
+
+Other answers: 400 for an empty or too long `text`, 404 for an unknown
+application, 409 `material_quarantined`, `material_unscreened` or
+`cost_cap_reached` (US$0.05 per check), and 502 `material_model_failed`.
+
+**Limits.** Each check counts against the plan's model calls per day; a check
+made while calls are paused is not counted. A plan override of
+`modelCallsPerDay` stops it for one organisation. An agent token with
+`runs:start` calls it as `check_cover_letter`, reserving one draft's cost cap.
+Each model call is logged with its model, tokens and cost, never the letter.
+
+**Screen.** `CoverLetterCheckPanel` in `packages/ui` shows the button, the
+line saying the letter goes to the model once and is not kept, and the three
+groups. The web reaches the route through the
+`application.check-cover-letter` capability. The Cover letter tab (#3279)
+places it under the candidate's editor.
+
 ## Interview preparation guides
 
 A guide prepares the candidate for one interview (#2615 to #2632). It is a

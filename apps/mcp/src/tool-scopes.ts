@@ -25,6 +25,7 @@ export const toolScopes: Readonly<Record<string, string | null>> = {
   draft_cover_letter: "runs:start",
   draft_interview_prep: "runs:start",
   get_cover_letter_kit: "runs:start",
+  check_cover_letter: "runs:start",
   add_project: "evidence:write",
   get_profile: "profile:suggest",
   suggest_profile_update: "profile:suggest",

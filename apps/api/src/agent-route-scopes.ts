@@ -93,6 +93,11 @@ export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
     scope: "runs:start",
     charge: "draft",
   },
+  // Check my letter (#3280): findings on the candidate's own letter, within the same cap.
+  [`POST ${workspace}/applications/:applicationId/cover-letter-check`]: {
+    scope: "runs:start",
+    charge: "draft",
+  },
   // Pasted job text only: approving a job page fetch stays with the person (D17).
   [`POST ${workspace}/applications`]: {
     scope: "jobs:write",
