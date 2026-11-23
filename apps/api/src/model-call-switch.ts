@@ -1,7 +1,11 @@
-import type { SecretVersionReader } from "@draft-loop/model-gateway";
-import { createSecretManagerCredentialResolver } from "@draft-loop/model-gateway";
+import {
+  ModelCallSwitchConfigError,
+  parseModelCallSwitchState,
+  readModelCallSwitchReader,
+  type SecretModelCallSwitchOptions,
+  secretModelCallSwitchReader,
+} from "@draft-loop/model-gateway";
 import type { FastifyInstance } from "fastify";
-import { z } from "zod";
 
 import type { BriefExtractionAllowance } from "./brief-extraction-allowance.js";
 import { ApiConfigError } from "./config.js";
@@ -9,13 +13,10 @@ import { modelCallPathOf } from "./model-call-registry.js";
 
 /**
  * The global model call switch (#3112): one value stops every metered model call the registry
- * lists, without a deploy. The operator stores `{"modelCalls":"paused"}` in a Secret Manager
- * version, read within a minute like the support limits; `{}` or `{"modelCalls":"on"}` lets calls
- * through. A self-hosted server without Secret Manager sets `DRAFT_LOOP_MODEL_CALLS=paused`.
+ * lists, without a deploy. Its stored form and its reader live in `@draft-loop/model-gateway`, so
+ * the worker, which reads the same secret for Claude's refusal fallback (#3275), agrees with the
+ * API. `{"modelCalls":"paused"}` pauses calls; `{}` or `{"modelCalls":"on"}` lets them through.
  */
-const storedSwitchSchema = z.strictObject({
-  modelCalls: z.enum(["on", "paused"]).optional(),
-});
 
 /** Whether metered model calls are paused right now. */
 export type ModelCallSwitch = () => Promise<boolean>;
@@ -24,18 +25,7 @@ export const modelCallsRunning: ModelCallSwitch = async () => false;
 
 /** Parses the stored text. Text that is not a valid object throws. */
 export function parseModelCallSwitch(text: string | undefined): boolean {
-  const trimmed = text?.trim() ?? "";
-  if (trimmed === "") return false;
-  return storedSwitchSchema.parse(JSON.parse(trimmed)).modelCalls === "paused";
-}
-
-export interface SecretModelCallSwitchOptions {
-  /** `projects/<project>/secrets/<name>/versions/latest`, from the deployment. */
-  readonly secret: string;
-  readonly client?: SecretVersionReader;
-  /** How long a read stays in memory; a change applies within it. One minute. */
-  readonly ttlMs?: number;
-  readonly onReadError?: (error: unknown) => void;
+  return parseModelCallSwitchState(text).paused;
 }
 
 /**
@@ -43,19 +33,8 @@ export interface SecretModelCallSwitchOptions {
  * is for the operator to stop spending, and an unreadable secret must not take the service down.
  */
 export function secretModelCallSwitch(options: SecretModelCallSwitchOptions): ModelCallSwitch {
-  const resolve = createSecretManagerCredentialResolver({
-    secrets: { switch: options.secret },
-    ttlMs: options.ttlMs ?? 60_000,
-    ...(options.client === undefined ? {} : { client: options.client }),
-  });
-  return async () => {
-    try {
-      return parseModelCallSwitch(await resolve("switch"));
-    } catch (error) {
-      options.onReadError?.(error);
-      return false;
-    }
-  };
+  const read = secretModelCallSwitchReader(options);
+  return async () => (await read()).paused;
 }
 
 /**
@@ -66,12 +45,13 @@ export function readModelCallSwitch(
   env: NodeJS.ProcessEnv,
   options: Omit<SecretModelCallSwitchOptions, "secret"> = {},
 ): ModelCallSwitch {
-  const secret = env.DRAFT_LOOP_MODEL_CALLS_SECRET?.trim() ?? "";
-  if (secret !== "") return secretModelCallSwitch({ ...options, secret });
-  const value = env.DRAFT_LOOP_MODEL_CALLS?.trim() ?? "";
-  if (value === "" || value === "on") return modelCallsRunning;
-  if (value === "paused") return async () => true;
-  throw new ApiConfigError("DRAFT_LOOP_MODEL_CALLS must be on or paused.");
+  try {
+    const read = readModelCallSwitchReader(env, options);
+    return async () => (await read()).paused;
+  } catch (error) {
+    if (error instanceof ModelCallSwitchConfigError) throw new ApiConfigError(error.message);
+    throw error;
+  }
 }
 
 /**

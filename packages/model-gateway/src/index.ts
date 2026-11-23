@@ -1,3 +1,4 @@
+export * from "./claude-refusal-fallback.js";
 export * from "./claude-search.js";
 export * from "./content-screener.js";
 export * from "./decision-screening-shadow.js";
@@ -5,6 +6,7 @@ export * from "./file-credentials.js";
 export * from "./google-speech.js";
 export * from "./hosted-routes.js";
 export * from "./linkup-search.js";
+export * from "./model-call-switch.js";
 export * from "./routed-adapter.js";
 export * from "./secret-credentials.js";
 export * from "./vertex-client.js";

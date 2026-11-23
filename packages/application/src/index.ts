@@ -1198,6 +1198,7 @@ export * from "./sensitive-knowledge-consent-service.js";
 export * from "./server-import-backup.js";
 export * from "./source-evidence-kind-service.js";
 export * from "./source-sensitivity-service.js";
+export { unprofiledModelPricing } from "./unprofiled-model-pricing.js";
 export * from "./user-data-root.js";
 export * from "./workspace-application-import.js";
 export * from "./workspace-applications.js";

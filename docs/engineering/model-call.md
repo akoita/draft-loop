@@ -62,3 +62,7 @@ paused, refused routes answer 503 `model_calls_paused` with `retry-after`, and
 a new job brief is saved without reading the job ad. Jobs already queued
 still finish. A secret that cannot be read keeps calls running and logs a
 warning.
+
+To stop only Claude's refusal fallback, store `{"refusalFallback":"off"}`. The
+worker reads the same secret within a minute, and a paused switch also stops
+the fallback ([Claude refusal fallback](../architecture/drafting-and-review.md#claude-refusal-fallback)).
