@@ -3,6 +3,8 @@ import { coverLetterKitSchema } from "@draft-loop/schemas/cover-letter-kit";
 import { describe, expect, it } from "vitest";
 
 import type { ApplicationMaterialFact } from "./application-material.js";
+import { applicationMaterialMaxOutputTokens } from "./application-material-model.js";
+import { worstCallCostUsd } from "./call-cost-guard.js";
 import {
   type CoverLetterKitAnswer,
   CoverLetterKitError,
@@ -12,8 +14,6 @@ import {
   coverLetterKitContext,
   draftCoverLetterKit,
 } from "./cover-letter-kit.js";
-import { applicationMaterialMaxOutputTokens } from "./application-material-model.js";
-import { worstCallCostUsd } from "./call-cost-guard.js";
 import {
   coverLetterKitMaxCostUsd,
   coverLetterKitMaxOutputTokens,
