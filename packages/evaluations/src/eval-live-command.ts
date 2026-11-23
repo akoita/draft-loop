@@ -193,7 +193,9 @@ if (values.record && !values.fixture) {
     resultsPath,
     `${JSON.stringify({ schemaVersion: 1, results: [...history, result] }, null, 2)}\n`,
   );
-  process.stdout.write(`recorded in ${resultsPath}\n`);
+  process.stdout.write(
+    `recorded in ${resultsPath}; add it to the prompt score manifest with pnpm eval:scores:record --label ${result.label}\n`,
+  );
 }
 if (regressions.length > 0) {
   for (const { mode, before, after } of regressions) {

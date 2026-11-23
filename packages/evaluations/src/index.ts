@@ -13,6 +13,7 @@ import { isRequirementCoveredByBlock } from "@draft-loop/validation";
 export * from "./evidence-usage.js";
 export * from "./pilot.js";
 export * from "./pilot-comparison-gate.js";
+export * from "./prompt-scores.js";
 export * from "./readiness-report.js";
 export * from "./requirement-evidence-retrieval.js";
 export * from "./retrieval.js";

@@ -44,6 +44,8 @@ export interface LiveResult {
   readonly cases: readonly string[];
   readonly rounds: number;
   readonly costUsd: number;
+  /** The run's total cost cap; results recorded before #2836 lack it. */
+  readonly costCapUsd?: number;
   readonly failRates: Readonly<Partial<Record<LiveFailureMode, number>>>;
 }
 

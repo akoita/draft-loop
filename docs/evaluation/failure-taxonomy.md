@@ -267,6 +267,8 @@ versions and judge. It is manual and paid, and never runs in hosted CI.
   `pnpm format` before committing it.
 - **Pins:** only the current and the previous prompt version of each role
   can be pinned; any other value stops the run.
+- **Gate:** a new prompt version or default model needs its result in the
+  prompt score manifest; see [Prompt score gate](prompt-score-gate.md).
 
 ### Result: the non-tech prompt changes
 
