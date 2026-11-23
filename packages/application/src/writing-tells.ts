@@ -76,12 +76,24 @@ export const frenchStockPhrases: readonly string[] = [
 /** Every stock phrase the check flags, whatever the letter's language. */
 export const stockPhrases: readonly string[] = [...englishStockPhrases, ...frenchStockPhrases];
 
-const sentencePattern = /[^.!?…]+(?:[.!?…]+|$)/gu;
+const sentenceEndMarks = new Set([".", "!", "?", "…"]);
 
+/** Sentences cut after each run of end marks, in one pass over the paragraph. */
 function sentencesOf(paragraph: string): string[] {
-  return (paragraph.match(sentencePattern) ?? [])
-    .map((sentence) => sentence.trim())
-    .filter(Boolean);
+  const sentences: string[] = [];
+  let from = 0;
+  let index = 0;
+  while (index < paragraph.length) {
+    if (!sentenceEndMarks.has(paragraph[index] ?? "")) {
+      index += 1;
+      continue;
+    }
+    while (index < paragraph.length && sentenceEndMarks.has(paragraph[index] ?? "")) index += 1;
+    sentences.push(paragraph.slice(from, index));
+    from = index;
+  }
+  sentences.push(paragraph.slice(from));
+  return sentences.map((sentence) => sentence.trim()).filter(Boolean);
 }
 
 function wordsOf(text: string): string[] {

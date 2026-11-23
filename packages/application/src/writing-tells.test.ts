@@ -60,4 +60,9 @@ describe("writingTells", () => {
     ]).filter((tell) => tell.code === "stock_phrase");
     expect(tells.map((tell) => tell.match)).toEqual(["is one of my skills", "skills i bring"]);
   });
+  it("reads a long paragraph without end marks in linear time", () => {
+    const started = performance.now();
+    writingTells([`word${" ".repeat(100_000)}x`]);
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
 });
