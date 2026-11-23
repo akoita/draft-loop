@@ -10,9 +10,8 @@ Redakloop is a local-first desktop app. The candidate's evidence, profile,
 runs and exports live on their machine. Model providers receive only the
 bounded material each run sends, after a visible approval. The last
 local-first stage (#1309) brings CV quality to parity with the manual
-Claude/Codex loop. After that stage, the local version stays a supported
-product. It is not frozen: it can keep evolving in parallel with the hosted
-version (D15).
+Claude/Codex loop. Since 2026-11-03 the desktop is a client of the server,
+and the full local option is the self-hosted server (D15, open decision 5).
 
 The next product is a **client-server version**: hosted, professional, with
 **traceability** as a first-class feature and a viable **business model**.
@@ -866,9 +865,11 @@ Notes on phase 4:
    real usage. Keycloak runs self-hosted on Cloud Run, scaling to zero, with
    its database on the existing Cloud SQL instance. The same export path
    keeps a later move to a managed host open.
-5. ~~**The desktop app's future.**~~ **Decided 2026-10-17:** it stays a
-   local-first product that can keep evolving in parallel (D15). Making it
-   a thin client of the service remains a later option.
+5. ~~**The desktop app's future.**~~ **Decided 2026-10-17, revised
+   2026-11-03 and 2026-11-19:** the desktop is an Electron client of a
+   Redakloop server, either the hosted service or the self-hosted server on
+   the person's machine, which is the full local option (D15). The old
+   local-first desktop is retired; only its leftovers are being removed.
 6. ~~**Retention periods.**~~ **Working defaults accepted 2026-10-20**
    (D7). A fixed-price GDPR lawyer review confirms them before phase 2
    admits other users.
@@ -886,6 +887,7 @@ Notes on phase 4:
 - **Lost with the local trust model:** the strongest privacy argument
   ("your material never leaves your machine"). It is replaced by recorded
   consent, minimal transmission, encryption and the right to delete. The
-  desktop app remains for users who need full local control.
+  self-hosted server, with the desktop client over it, remains for users who
+  need full local control.
 - **Two products to keep green.** Every shared-package change is tested
   against both clients, which costs CI time and review care (D15).
