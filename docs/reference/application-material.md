@@ -259,7 +259,9 @@ letter is saved beside it ([Editing a draft](#editing-a-draft)) and shown by
 
 Check my letter reads a cover letter the candidate wrote and returns
 findings, never a rewrite (#3280). The letter reaches a model only when the
-candidate presses **Check my letter**, and the server does not store it.
+candidate presses **Check my letter**, and the server does not store it. The
+server only adds one to the day's count of checks, a date and a number, for
+the [quality digest](../architecture/outer-loop.md#cover-letter-fields).
 
 `POST /v1/workspaces/{workspaceId}/applications/{applicationId}/cover-letter-check`
 takes `{"text": "..."}`, at most 8,000 characters, paragraphs split by blank

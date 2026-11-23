@@ -37,10 +37,10 @@ flowchart TB
 | Part      | What it does                                                                             | Where                                                 |
 | --------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | Signals   | Spans per author, critic, revision and retrieval call; one log line per finding decision | [Run traces](runtime-and-trust.md#run-traces)         |
-| Digest    | Reduces one UTC day of spans to counts, codes, model ids and sample run ids, plus output quality by model pair, member outcomes, step latency, and week-over-week trends | `packages/application/src/quality-digest.ts`          |
+| Digest    | Reduces one UTC day of spans to counts, codes, model ids and sample run ids, plus output quality by model pair, member outcomes, cover letter help, step latency, and week-over-week trends | `packages/application/src/quality-digest.ts`          |
 | Ledger    | Tracks each pattern's status across days                                                 | `packages/application/src/quality-insights.ts`        |
 | Sweep     | Builds the digest, updates the ledger, logs both                                         | `apps/worker/src/quality-digest-sweep.ts`             |
-| Storage   | `quality_digests` and `quality_insights`, deployment-wide, content-free                  | `packages/storage-postgres/src/quality-digests.ts`    |
+| Storage   | `quality_digests`, `quality_insights` and `cover_letter_check_counts`, deployment-wide, content-free | `packages/storage-postgres/src/quality-digests.ts`    |
 | Diagnosis | Verifies patterns, cites code, proposes outputs                                          | An operator's scheduled agent; not in this repository |
 
 ## One day
@@ -83,8 +83,31 @@ sequenceDiagram
   `trend` pair carries `outcomes.current` and `outcomes.previous`, with the
   week's `acceptRate` next to its ready rate; `trend.feedbackNotes` compares
   the two weeks' notes.
+- **Cover letter help.** The digest's `coverLetters` counts how the Cover
+  letter tab's help was used that day, across every organisation (#3282). The
+  table lists each field. No letter, kit or id leaves the database.
 - **Failure.** A sweep error is logged as `quality digest failed` and never
   touches a run. The day stays claimed, so it is not retried.
+
+### Cover letter fields
+
+| Field           | What it counts                                                                                                       |
+| --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `kits`          | Writing kits saved                                                                                                   |
+| `checks`        | Letters Check my letter checked, from `cover_letter_check_counts`, a date and a number                               |
+| `fullDrafts`    | Full letters a model drafted, not based on another version                                                           |
+| `letters`       | Applications with a cover letter version saved that day                                                              |
+| `editedLetters` | Of those, the ones whose newest version that day the candidate edited                                                |
+| `editedShare`   | `editedLetters / letters`, to four places; `null` on a day with no letter                                            |
+
+- **Full drafts and the risk choice.** The one-time "I accept the risk"
+  choice is kept in the browser, not on the server. The web drafts a full
+  letter only after it, so `fullDrafts` counts the drafts made after the
+  choice. A draft an agent asks for through the API is counted too.
+- **Edited share.** Downloading a letter is not recorded, so the share reads
+  saved versions, not exports. A version counts as edited when the candidate
+  rewrote one paragraph, or saved it from another version without the critic.
+  The newest version of the day stands for the one the candidate would send.
 
 ## Pattern statuses
 

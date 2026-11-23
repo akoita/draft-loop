@@ -42,8 +42,14 @@ import type { ModelCallSwitch } from "./model-call-switch.js";
  * Check my letter (#3280): the candidate's own cover letter, checked without a rewrite. The
  * claim check reuses the free-form letter's Haiku linker (#2585); the requirement and wording
  * checks run without a model. The letter reaches the model only on this request and is never
- * stored: the route returns the findings and keeps nothing.
+ * stored: the route returns the findings and keeps nothing but one more in the day's count of
+ * checks (#3282), a date and a number for the quality digest.
  */
+
+/** The day's count of checks across the deployment; it never holds the letter. */
+export interface CoverLetterCheckTally {
+  readonly count: (now: Date) => Promise<void>;
+}
 
 export interface CoverLetterCheckRoutesOptions {
   readonly service: ApplicationService;
@@ -57,6 +63,8 @@ export interface CoverLetterCheckRoutesOptions {
   readonly researchBriefs?: Pick<ResearchBriefStore, "list">;
   /** The global model call switch: while paused the claim check is skipped. */
   readonly paused?: ModelCallSwitch;
+  /** Counts each answered check for the quality digest; without it nothing is counted. */
+  readonly tally?: CoverLetterCheckTally;
 }
 
 export const coverLetterCheckPath =
@@ -85,6 +93,14 @@ export function registerCoverLetterCheckRoutes(
     },
     async (request, reply) => {
       const { workspaceId, applicationId } = request.params;
+      // A failed count is logged and never fails the check.
+      const countCheck = async () => {
+        try {
+          await options.tally?.count(new Date());
+        } catch (error) {
+          request.log.warn({ err: error }, "cover letter check count failed");
+        }
+      };
       const root = workspaceRoot(workspaceId);
       const workspace = await service.readWorkspace(root);
       const application = await service.getApplication({ root, applicationId });
@@ -160,6 +176,7 @@ export function registerCoverLetterCheckRoutes(
           { workspaceId, applicationId, skipped: skip, wording: findings.wording.length },
           "cover letter checked",
         );
+        await countCheck();
         return reply.send({ ...findings, model: null, prompt_version: null, cost_usd: 0 });
       }
       if (brief !== undefined) {
@@ -249,6 +266,7 @@ export function registerCoverLetterCheckRoutes(
           },
           "cover letter checked",
         );
+        await countCheck();
         return reply.send({
           ...findings,
           model:

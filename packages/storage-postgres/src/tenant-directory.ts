@@ -19,6 +19,10 @@ import {
 } from "@draft-loop/storage/tenant-directory";
 import { type BetaInvites, createBetaInvites } from "./beta-invites.js";
 import { type BetaWaitlist, createBetaWaitlist } from "./beta-waitlist.js";
+import {
+  type CoverLetterCheckCounts,
+  createCoverLetterCheckCounts,
+} from "./cover-letter-checks.js";
 import { createPostgresFeedback } from "./feedback-notes.js";
 import { createLiveVoiceUsage, type LiveVoiceUsage } from "./live-voice-usage.js";
 import { createPostgresMemberSettings } from "./member-settings.js";
@@ -45,6 +49,8 @@ export interface PostgresTenantDirectory extends TenantDirectory {
   /** The support assistant's daily questions and spend, shared by every API instance. */
   readonly supportUsage: SupportUsage;
   readonly liveVoiceUsage: LiveVoiceUsage;
+  /** Check my letter's daily count for the quality digest (#3282): a date and a number. */
+  readonly coverLetterChecks: CoverLetterCheckCounts;
   readonly close: () => Promise<void>;
 }
 
@@ -321,6 +327,7 @@ export async function createPostgresTenantDirectory(
     usageFunnel: createUsageFunnelReads(client),
     supportUsage: createSupportUsage(client),
     liveVoiceUsage: createLiveVoiceUsage(client),
+    coverLetterChecks: createCoverLetterCheckCounts(client),
     close: () => client.close(),
   };
 }

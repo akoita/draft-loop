@@ -1,9 +1,11 @@
 import type { RunSpanAttributes, RunSpanName, RunSpanStatus } from "@draft-loop/domain/run-span";
 
+import { type DigestCoverLetters, digestCoverLetters } from "./cover-letter-digest.js";
 import { type DigestLatency, digestLatency } from "./latency-trend.js";
 import type { DigestOutcomes } from "./outcome-digest.js";
 import { type DigestQuality, digestQuality } from "./quality-trend.js";
 
+export * from "./cover-letter-digest.js";
 export * from "./latency-trend.js";
 export * from "./outcome-digest.js";
 export * from "./quality-trend.js";
@@ -72,6 +74,8 @@ export interface QualityDigest {
   readonly latency: readonly DigestLatency[];
   /** What members did with their drafts that day, per model pair (#3245). */
   readonly outcomes: DigestOutcomes;
+  /** How the Cover letter tab's help was used that day (#3282): counts only. */
+  readonly coverLetters: DigestCoverLetters;
 }
 
 /** The most failure patterns one digest lists, the most frequent first. */
@@ -105,6 +109,8 @@ export function buildQualityDigest(input: {
   readonly spans: readonly QualityDigestSpan[];
   /** The day's member outcomes; none when the sweep read none. */
   readonly outcomes?: DigestOutcomes;
+  /** The day's cover letter counts; none when the sweep read none. */
+  readonly coverLetters?: DigestCoverLetters;
 }): QualityDigest {
   const runs = new Set<string>();
   const attempts = new Map<string, { step: string; model: string; ok: number; error: number }>();
@@ -189,5 +195,6 @@ export function buildQualityDigest(input: {
     quality: digestQuality(input.spans),
     latency: digestLatency(input.spans),
     outcomes: input.outcomes ?? { feedbackNotes: 0, pairs: [] },
+    coverLetters: input.coverLetters ?? digestCoverLetters({ organisations: [], checks: 0 }),
   };
 }
