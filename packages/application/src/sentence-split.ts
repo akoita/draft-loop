@@ -19,7 +19,35 @@ const abbreviations = new Set([
   "p.ex.",
 ]);
 
-const endPattern = /[.!?…]+["'”’)]*(?=\s|$)/gu;
+const endMarks = new Set([".", "!", "?", "…"]);
+const closers = new Set(['"', "'", "”", "’", ")"]);
+
+/** The last run of non-space characters before `end`, found without a regular expression. */
+function lastWordBefore(text: string, end: number): string {
+  let start = end;
+  while (start > 0 && !/\s/u.test(text[start - 1] ?? "")) start -= 1;
+  return text.slice(start, end);
+}
+
+/**
+ * Each run of end marks with its closing quotes or brackets that a space or the end follows, as
+ * [start, end) pairs. One pass over the text, so long runs of marks stay linear.
+ */
+function endRuns(text: string): Array<readonly [number, number]> {
+  const runs: Array<readonly [number, number]> = [];
+  let index = 0;
+  while (index < text.length) {
+    if (!endMarks.has(text[index] ?? "")) {
+      index += 1;
+      continue;
+    }
+    const start = index;
+    while (index < text.length && endMarks.has(text[index] ?? "")) index += 1;
+    while (index < text.length && closers.has(text[index] ?? "")) index += 1;
+    if (index === text.length || /\s/u.test(text[index] ?? "")) runs.push([start, index]);
+  }
+  return runs;
+}
 
 function endsSentence(text: string, start: number, end: number): boolean {
   const rest = text.slice(end).trimStart();
@@ -27,7 +55,7 @@ function endsSentence(text: string, start: number, end: number): boolean {
   const next = rest[0] ?? "";
   if (next !== next.toUpperCase() && next === next.toLowerCase()) return false;
   if (text[start] !== ".") return true;
-  const word = (/\S+$/u.exec(text.slice(0, end))?.[0] ?? "").toLowerCase();
+  const word = lastWordBefore(text, end).toLowerCase();
   return !abbreviations.has(word);
 }
 
@@ -35,9 +63,8 @@ export function sentencesOf(text: string): string[] {
   const flat = text.replace(/\s+/gu, " ").trim();
   const sentences: string[] = [];
   let from = 0;
-  for (const match of flat.matchAll(endPattern)) {
-    const end = match.index + match[0].length;
-    if (!endsSentence(flat, match.index, end)) continue;
+  for (const [start, end] of endRuns(flat)) {
+    if (!endsSentence(flat, start, end)) continue;
     sentences.push(flat.slice(from, end).trim());
     from = end;
   }
