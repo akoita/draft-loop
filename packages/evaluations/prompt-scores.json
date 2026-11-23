@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "status": "scored",
+      "author": {
+        "modelId": "claude-haiku-5-5",
+        "promptTemplateVersion": "cli-author-v20"
+      },
+      "critic": {
+        "modelId": "gpt-6-luna",
+        "promptTemplateVersion": "cli-critic-v11"
+      },
+      "recordedAt": "2026-11-22T05:49:11.329Z",
+      "label": "track-a-before",
+      "commit": "0e0a18fb",
+      "judge": {
+        "version": "cohort-judge-v1",
+        "model": "gpt-6-luna"
+      },
+      "fixtureSet": {
+        "cases": ["case-nurse", "case-sales", "case-teacher", "case-electrician"],
+        "rounds": 8
+      },
+      "costUsd": 0.3738,
+      "costCapUsd": 1,
+      "failRates": {
+        "no-draft": 0,
+        "placeholder-left": 1,
+        "altered-number": 0,
+        "role-omission": 0.25,
+        "chronology-drift": 0.5,
+        "attribution-inflation": 0,
+        "scope-stretch": 0,
+        "unsupported-claim": 0
+      }
+    },
+    {
+      "status": "scored",
+      "author": {
+        "modelId": "claude-haiku-5-5",
+        "promptTemplateVersion": "cli-author-v21"
+      },
+      "critic": {
+        "modelId": "gpt-6-luna",
+        "promptTemplateVersion": "cli-critic-v12"
+      },
+      "recordedAt": "2026-11-22T06:00:26.654Z",
+      "label": "track-a-after",
+      "commit": "0e0a18fb",
+      "judge": {
+        "version": "cohort-judge-v1",
+        "model": "gpt-6-luna"
+      },
+      "fixtureSet": {
+        "cases": ["case-nurse", "case-sales", "case-teacher", "case-electrician"],
+        "rounds": 8
+      },
+      "costUsd": 0.3888,
+      "costCapUsd": 1,
+      "failRates": {
+        "no-draft": 0,
+        "placeholder-left": 1,
+        "altered-number": 0,
+        "role-omission": 0.25,
+        "chronology-drift": 0.5,
+        "attribution-inflation": 0,
+        "scope-stretch": 0,
+        "unsupported-claim": 0.125
+      }
+    },
+    {
+      "status": "waived",
+      "author": { "modelId": "claude-haiku-5-5", "promptTemplateVersion": "cli-author-v22" },
+      "critic": { "modelId": "gpt-6-luna", "promptTemplateVersion": "cli-critic-v12" },
+      "recordedAt": "2026-11-23",
+      "until": "2026-12-07",
+      "reason": "cli-author-v22 (#3296, #3160) only fills the candidate's name and keeps project names out of the summary; its paid eval:live run is pending."
+    }
+  ]
+}

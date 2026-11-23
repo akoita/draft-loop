@@ -60,6 +60,10 @@ and what you deferred, under the template's impact sections.
 
 ## Checks
 
+- [ ] A new author or critic prompt version, or a new default model, has its
+      `pnpm eval:live` score or a dated waiver in
+      `packages/evaluations/prompt-scores.json`; `pnpm eval:scores` checks it
+      ([Prompt score gate](../evaluation/prompt-score-gate.md)).
 - [ ] CodeQL and the workflow audit (zizmor) have no new finding on the PR.
       Their CI jobs run only in CI; read their results on the PR.
 - [ ] `pnpm security:audit` passes. A production advisory you cannot fix yet
