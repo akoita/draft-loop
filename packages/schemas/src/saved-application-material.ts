@@ -145,6 +145,11 @@ export const savedApplicationMaterialSchema = z
      * Absent for a letter a model drafted.
      */
     written_by: z.enum(["candidate"]).optional(),
+    /**
+     * `annotated-draft` for a cover letter a model drafted only for the candidate to rewrite
+     * beside it (#3281), never to send as it is. Absent for a full draft.
+     */
+    drafted_for: z.enum(["annotated-draft"]).optional(),
     model: z.strictObject({ provider: shortText, model: shortText }),
     /**
      * The critic's findings this version revised (#2525): each sentence of the version it is based
@@ -206,6 +211,13 @@ export const savedApplicationMaterialSchema = z
         code: "custom",
         path: ["items"],
         message: kit ? "a writing kit holds no items" : "holds at least one item",
+      });
+    }
+    if (material.drafted_for !== undefined && material.kind !== "cover-letter") {
+      context.addIssue({
+        code: "custom",
+        path: ["drafted_for"],
+        message: "only a cover letter is drafted for an annotated draft",
       });
     }
     if (material.written_by !== undefined && material.kind !== "cover-letter") {

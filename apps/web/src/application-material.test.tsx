@@ -283,11 +283,22 @@ describe("the prepare panel", () => {
     expect(html).not.toContain("Guide this draft (optional)");
     expect(html).not.toContain('class="button button-primary"');
 
+    // Without an annotated screen the choice is left out.
+    expect(html).not.toContain("Annotated draft");
+    const annotatedScreen = <div data-screen="annotated">annotated screen</div>;
     const annotated = renderToStaticMarkup(
-      <ApplicationMaterialView {...props} kitScreen={kitScreen} help="annotated" />,
+      <ApplicationMaterialView
+        {...props}
+        kitScreen={kitScreen}
+        annotatedScreen={annotatedScreen}
+        help="annotated"
+      />,
     );
-    expect(annotated).toContain("The annotated draft is not ready yet");
+    expect(annotated).toContain("Annotated draft");
+    expect(annotated).toContain('data-screen="annotated"');
     expect(annotated).not.toContain('data-screen="kit"');
+    // The annotated draft asks for no risk choice and offers no full-draft button.
+    expect(annotated).not.toContain("Guide this draft (optional)");
 
     // The full draft keeps its guidance, its Draft button and its one-time risk choice.
     const full = renderToStaticMarkup(

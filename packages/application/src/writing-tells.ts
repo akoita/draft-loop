@@ -76,6 +76,48 @@ export const frenchStockPhrases: readonly string[] = [
 /** Every stock phrase the check flags, whatever the letter's language. */
 export const stockPhrases: readonly string[] = [...englishStockPhrases, ...frenchStockPhrases];
 
+/**
+ * Praise a letter gives itself without a fact behind it. English and French, lower case; each is
+ * matched as whole words. Check my letter (#3280) flags them, and the annotated draft (#3281)
+ * underlines them; the browser reads this module, so it imports nothing.
+ */
+export const emptySuperlatives: readonly string[] = [
+  "exceptional",
+  "outstanding",
+  "world-class",
+  "best-in-class",
+  "unparalleled",
+  "unmatched",
+  "second to none",
+  "highly motivated",
+  "results-driven",
+  "results-oriented",
+  "detail-oriented",
+  "self-starter",
+  "go-getter",
+  "strong work ethic",
+  "excellent communication skills",
+  "exceptional communication skills",
+  "extensive experience",
+  "unique blend",
+  "perfect fit",
+  "ideal candidate",
+  "exceptionnel",
+  "exceptionnelle",
+  "hors pair",
+  "inégalé",
+  "inégalée",
+  "très motivé",
+  "très motivée",
+  "candidat idéal",
+  "candidate idéale",
+  "profil idéal",
+  "parfaitement adapté",
+  "parfaitement adaptée",
+  "solide expérience",
+  "grande expérience",
+];
+
 const sentencePattern = /[^.!?…]+(?:[.!?…]+|$)/gu;
 
 function sentencesOf(paragraph: string): string[] {

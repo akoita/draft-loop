@@ -33,54 +33,16 @@ import {
   coverLetterSentences,
 } from "./cover-letter-claims.js";
 import type { PickedCoverLetterFact } from "./cover-letter-facts.js";
-import { writingTells } from "./writing-tells.js";
+import { emptySuperlatives, writingTells } from "./writing-tells.js";
+
+/** Kept here too for the check's callers; the list lives with the other writing rules. */
+export { emptySuperlatives };
 
 /** How many words in a row a letter must share with the job ad to echo it. */
 export const jobAdEchoWords = 6;
 
 /** How many requirements a letter is checked against when there is no kit. */
 export const coverLetterCheckBriefRequirements = 3;
-
-/**
- * Praise a letter gives itself without a fact behind it. English and French, lower case; each is
- * matched as whole words.
- */
-export const emptySuperlatives: readonly string[] = [
-  "exceptional",
-  "outstanding",
-  "world-class",
-  "best-in-class",
-  "unparalleled",
-  "unmatched",
-  "second to none",
-  "highly motivated",
-  "results-driven",
-  "results-oriented",
-  "detail-oriented",
-  "self-starter",
-  "go-getter",
-  "strong work ethic",
-  "excellent communication skills",
-  "exceptional communication skills",
-  "extensive experience",
-  "unique blend",
-  "perfect fit",
-  "ideal candidate",
-  "exceptionnel",
-  "exceptionnelle",
-  "hors pair",
-  "inégalé",
-  "inégalée",
-  "très motivé",
-  "très motivée",
-  "candidat idéal",
-  "candidate idéale",
-  "profil idéal",
-  "parfaitement adapté",
-  "parfaitement adaptée",
-  "solide expérience",
-  "grande expérience",
-];
 
 export interface CoverLetterWordingFinding {
   readonly code: CoverLetterWordingCode;

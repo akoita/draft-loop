@@ -414,6 +414,41 @@ describe("application material route", () => {
       ).statusCode,
     ).toBe(404);
     expect(logs.join("\n")).not.toContain("12 teams");
+
+    // The annotated draft (#3281): the candidate's rewrite beside the draft is their own letter,
+    // with any number of paragraphs, no citations and no flagged numbers.
+    const own = await app.inject({
+      method: "POST",
+      url: `${url}/${base.id}/versions`,
+      headers: { authorization },
+      payload: { items: [{ text: "My own fictional line, 12 teams." }], written_by: "candidate" },
+    });
+    expect(own.statusCode).toBe(200);
+    expect(own.json()).toMatchObject({
+      kind: "cover-letter",
+      written_by: "candidate",
+      based_on: base.id,
+      cost_usd: 0,
+      items: [{ text: "My own fictional line, 12 teams.", citations: [] }],
+    });
+    expect(own.json().items[0].unsupported_numbers).toBeUndefined();
+  });
+
+  it("refuses to save another kind of draft as the candidate's own letter", async () => {
+    const drafts = createMemorySavedApplicationMaterialStore();
+    const questions = {
+      items: [{ question: "Why this role?", text: "Because of the data work.", fact_ids: ["t"] }],
+    };
+    await build({ consent: granted, route: scriptedRoute([questions], []), drafts });
+    const base = (await draft("interview-questions")).json() as { id: string };
+    const response = await app.inject({
+      method: "POST",
+      url: `${url}/${base.id}/versions`,
+      headers: { authorization },
+      payload: { items: [{ text: "Mine." }], written_by: "candidate" },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe("not_a_letter");
   });
 
   it("downloads a saved draft as Word or PDF with a template, Modern by default", async () => {
@@ -608,6 +643,42 @@ describe("application material route", () => {
       payload: { samples: [sample] },
     });
     expect(saved.json()).toEqual({ samples: [sample] });
+  });
+
+  it("marks a letter drafted for the annotated draft and sends it to no critic", async () => {
+    const drafts = createMemorySavedApplicationMaterialStore();
+    const queued: unknown[] = [];
+    const letter = {
+      items: [
+        { question: "", text: "As a Data Analyst I cut report time by 40%.", fact_ids: ["t", "o"] },
+      ],
+    };
+    workspaceCritic = { company: "openai", model: "critic-model" };
+    await build({
+      consent: granted,
+      route: scriptedRoute([letter], []),
+      drafts,
+      reviews: {
+        queue: async (job) => {
+          queued.push(job);
+          return true;
+        },
+        state: async () => undefined,
+      },
+    });
+    const post = (payload: Record<string, unknown>) =>
+      app.inject({ method: "POST", url, headers: { authorization }, payload });
+    const refused = await post({ kind: "interview-questions", drafted_for: "annotated-draft" });
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json().error.code).toBe("not_a_letter");
+    const saved = await post({ kind: "cover-letter", drafted_for: "annotated-draft" });
+    expect(saved.statusCode).toBe(200);
+    expect(saved.json()).toMatchObject({ kind: "cover-letter", drafted_for: "annotated-draft" });
+    expect(saved.json()).not.toHaveProperty("review");
+    expect(queued).toEqual([]);
+    expect(await drafts.get("owner", saved.json().id)).toMatchObject({
+      drafted_for: "annotated-draft",
+    });
   });
 
   it("queues the critic pass for a saved cover letter and reports where it stands", async () => {

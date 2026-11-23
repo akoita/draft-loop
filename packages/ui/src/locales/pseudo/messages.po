@@ -393,6 +393,12 @@ msgstr ""
 msgid "{0} of {1} seats used, {2} invites not used yet, {3} left."
 msgstr ""
 
+#. placeholder {0}: share.ownWords
+#. placeholder {1}: share.words
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "{0} of {1} words. Five words in a row taken from the draft count as copied."
+msgstr ""
+
 #. placeholder {0}: requirements.covered
 #. placeholder {1}: responsibilities.covered
 #: packages/ui/src/coverage-kinds.ts
@@ -1508,6 +1514,7 @@ msgstr ""
 msgid "and its completed Round"
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-screen.tsx
 #: packages/ui/src/cover-letter-help.tsx
 msgid "Annotated draft"
 msgstr ""
@@ -1535,6 +1542,12 @@ msgstr ""
 #. placeholder {0}: formatList(numbers.map(String))
 #: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Answers requirement {0}"
+msgstr ""
+
+#. placeholder {0}: requirement.number
+#. placeholder {1}: requirement.text
+#: packages/ui/src/cover-letter-annotated-model.ts
+msgid "Answers requirement {0}: {1}"
 msgstr ""
 
 #: apps/web/src/consent-model.ts
@@ -2470,6 +2483,10 @@ msgstr ""
 msgid "Closed"
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-model.ts
+msgid "Closes the letter: thanks the reader and asks for the next step."
+msgstr ""
+
 #: packages/ui/src/cover-letter-check-panel.tsx
 msgid "Closest approved fact:"
 msgstr ""
@@ -2490,10 +2507,6 @@ msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Combined scenario estimate"
-msgstr ""
-
-#: packages/ui/src/cover-letter-help.tsx
-msgid "Coming soon"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -3254,11 +3267,13 @@ msgid "Download or delete this candidate's data"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
+#: packages/ui/src/cover-letter-annotated-screen.tsx
 #: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Download PDF"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
+#: packages/ui/src/cover-letter-annotated-screen.tsx
 #: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Download Word"
 msgstr ""
@@ -3351,8 +3366,18 @@ msgstr ""
 msgid "Draft view"
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "Draft, paragraph {number}"
+msgstr ""
+
 #: apps/web/src/application-material.tsx
 msgid "Drafted by"
+msgstr ""
+
+#. placeholder {0}: draft.model
+#. placeholder {1}: formatDate(draft.createdAt) ?? draft.createdAt
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "Drafted by {0} on {1}. Read each paragraph, then write it your way in the box beside it. Only your version is saved and downloaded. Underlined phrases are generic: leave them out of yours."
 msgstr ""
 
 #: packages/ui/src/home-model.ts
@@ -3368,6 +3393,7 @@ msgid "Drafting sends this application's job requirements and the facts in your 
 msgstr ""
 
 #: apps/web/src/application-material.tsx
+#: packages/ui/src/cover-letter-annotated-screen.tsx
 msgid "Drafting…"
 msgstr ""
 
@@ -3537,6 +3563,10 @@ msgstr ""
 
 #: packages/ui/src/home.tsx
 msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
+msgstr ""
+
+#: packages/ui/src/cover-letter-annotated-model.ts
+msgid "End as you would end an email to someone you respect: one next step, no flourish."
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
@@ -4206,6 +4236,15 @@ msgstr ""
 msgid "Generation failed"
 msgstr ""
 
+#. placeholder {0}: formatList(genericInYours.map((phrase) => `“${phrase}”`))
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "Generic in yours: {0}"
+msgstr ""
+
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "Generic phrases"
+msgstr ""
+
 #: packages/ui/src/getting-started.tsx
 msgid "Getting started"
 msgstr ""
@@ -4587,6 +4626,10 @@ msgstr ""
 
 #: packages/ui/src/knowledge.tsx
 msgid "In use"
+msgstr ""
+
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "In your own words: {percent}%"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -5825,6 +5868,10 @@ msgstr ""
 msgid "No evidence found for: "
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "No fact cited: add nothing new here."
+msgstr ""
+
 #: apps/web/src/application-material.tsx
 msgid "No fact in your career record supports these sentences, so they are not in the letter."
 msgstr ""
@@ -6188,6 +6235,7 @@ msgstr ""
 msgid "not required"
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-screen.tsx
 #: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Not saved yet"
 msgstr ""
@@ -6519,6 +6567,10 @@ msgstr ""
 
 #: apps/web/src/workspace.tsx
 msgid "Opening your documents…"
+msgstr ""
+
+#: packages/ui/src/cover-letter-annotated-model.ts
+msgid "Opens the letter: names the role and why this employer."
 msgstr ""
 
 #: apps/web/src/operator.tsx
@@ -6908,12 +6960,20 @@ msgstr ""
 msgid "Prepare"
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "Prepare a new draft"
+msgstr ""
+
 #: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Prepare a new kit"
 msgstr ""
 
 #: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Prepare my writing kit"
+msgstr ""
+
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "Prepare the annotated draft"
 msgstr ""
 
 #: packages/ui/src/cover-letter-kit-screen.tsx
@@ -7044,6 +7104,10 @@ msgstr ""
 #. placeholder {0}: issue.id
 #: packages/ui/src/profile.tsx
 msgid "Provenance for issue {0}"
+msgstr ""
+
+#: packages/ui/src/cover-letter-annotated-model.ts
+msgid "Proves what you can do with a fact from your record."
 msgstr ""
 
 #: packages/ui/src/model-profile-details.tsx
@@ -8459,6 +8523,7 @@ msgstr ""
 msgid "Save models"
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-screen.tsx
 #: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Save my letter"
 msgstr ""
@@ -8503,7 +8568,9 @@ msgstr ""
 msgid "Save your issue decisions, then mark the profile reviewed."
 msgstr ""
 
+#. placeholder {0}: formatDateTime(props.savedLetter.createdAt) ?? props.savedLetter.createdAt
 #. placeholder {0}: formatDateTime(savedLetter.createdAt) ?? savedLetter.createdAt
+#: packages/ui/src/cover-letter-annotated-screen.tsx
 #: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Saved {0}"
 msgstr ""
@@ -8565,11 +8632,16 @@ msgid "saving…"
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
+#: packages/ui/src/cover-letter-annotated-screen.tsx
 #: packages/ui/src/cover-letter-kit-screen.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/work-journal-panel.tsx
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Saving…"
+msgstr ""
+
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "Say this your way"
 msgstr ""
 
 #. placeholder {0}: candidate.score.toFixed(2)
@@ -8927,6 +8999,10 @@ msgstr ""
 msgid "shown"
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-model.ts
+msgid "Shows you know the employer, from a dated fact about them."
+msgstr ""
+
 #: packages/ui/src/side-panel-width.tsx
 msgid "Side panel {width} pixels wide"
 msgstr ""
@@ -9024,6 +9100,7 @@ msgstr ""
 msgid "Something is broken"
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-screen.tsx
 #: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Something went wrong."
 msgstr ""
@@ -9455,6 +9532,10 @@ msgstr ""
 msgid "Technologies, separated by commas"
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-model.ts
+msgid "Tell it as a short story: what you faced, what you did, what changed. Keep the facts, use your words."
+msgstr ""
+
 #: packages/ui/src/career-conversation-start.tsx
 msgid "Tell it in a conversation"
 msgstr ""
@@ -9468,6 +9549,7 @@ msgid "Tell us about your career"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
+#: packages/ui/src/cover-letter-annotated-screen.tsx
 #: packages/ui/src/cover-letter-kit-screen.tsx
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
@@ -9539,8 +9621,8 @@ msgstr ""
 msgid "The {name} path parameter is missing."
 msgstr ""
 
-#: packages/ui/src/cover-letter-help.tsx
-msgid "The annotated draft is not ready yet. Use the writing kit for now: it gives the same facts and notes, and you write the letter."
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "The AI drafts a letter from your career record. Each paragraph gets a note: why it is there, which fact backs it, and a prompt to say it your way. You write your version beside it. Only your version is saved and downloaded."
 msgstr ""
 
 #. placeholder {0}: response.status
@@ -10898,6 +10980,10 @@ msgstr ""
 msgid "This server keeps no drafts, so it cannot keep your letter."
 msgstr ""
 
+#: apps/web/src/cover-letter-kit-bridge.ts
+msgid "This server keeps no drafts, so it cannot keep your version beside one."
+msgstr ""
+
 #: apps/web/src/http-bridge.ts
 msgid "This service runs Anthropic, OpenAI and its own local models only."
 msgstr ""
@@ -11161,6 +11247,7 @@ msgstr ""
 msgid "unnamed source"
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-screen.tsx
 #: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Unsaved changes"
 msgstr ""
@@ -11293,10 +11380,6 @@ msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Use the reviewed requirements instead"
-msgstr ""
-
-#: packages/ui/src/cover-letter-help.tsx
-msgid "Use the writing kit"
 msgstr ""
 
 #: packages/ui/src/knowledge.tsx
@@ -11579,6 +11662,10 @@ msgstr ""
 msgid "Week of"
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-model.ts
+msgid "What about this employer made you apply? Name the one thing you would mention in an interview."
+msgstr ""
+
 #: packages/ui/src/career-interview-model.ts
 msgid "what changed thanks to your work"
 msgstr ""
@@ -11703,6 +11790,10 @@ msgstr ""
 msgid "Where your evidence is kept. Most people need only one; choosing a different base replaces the one this workspace uses."
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "Which fact backs it"
+msgstr ""
+
 #: apps/web/src/records.tsx
 msgid "Who can open this candidate's file"
 msgstr ""
@@ -11715,12 +11806,20 @@ msgstr ""
 msgid "Who you will meet, by role"
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-model.ts
+msgid "Why do you want this job? Say it as you would to a friend, in one or two sentences."
+msgstr ""
+
 #: apps/web/src/interview-guide-model.ts
 msgid "Why I left"
 msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "Why is one lineage on both sides acceptable? (required)"
+msgstr ""
+
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "Why it is there"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -11835,6 +11934,10 @@ msgstr ""
 msgid "Write the questions and checklist again"
 msgstr ""
 
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "Write this paragraph your way."
+msgstr ""
+
 #: apps/web/src/screening-model.ts
 msgid "Write why this text is safe to use."
 msgstr ""
@@ -11853,6 +11956,10 @@ msgstr ""
 
 #: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Write your letter here, in your own words."
+msgstr ""
+
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "Write your version in the boxes. A meter here shows how much of it is in your own words."
 msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
@@ -12197,6 +12304,10 @@ msgstr ""
 
 #: apps/web/src/refusal-text.ts
 msgid "Your organisation has other members, so this needs a sign-in with a second factor. Set up a passkey or an authenticator app under Sign-in security in the account menu, sign in again and retry."
+msgstr ""
+
+#: packages/ui/src/cover-letter-annotated-screen.tsx
+msgid "Your paragraph {number}"
 msgstr ""
 
 #: apps/web/src/interview-guide-model.ts

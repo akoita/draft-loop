@@ -182,6 +182,7 @@ export interface ApiSchemas {
     readonly research_brief_id?: string;
     readonly based_on?: string;
     readonly written_by?: "candidate";
+    readonly drafted_for?: "annotated-draft";
     readonly model: {
       readonly provider: string;
       readonly model: string;
@@ -217,6 +218,7 @@ export interface ApiSchemas {
     readonly items: readonly ({
       readonly text: string;
     })[];
+    readonly written_by?: "candidate";
   };
   "ApplicationMaterialGuidance": {
     readonly emphasis?: string;
@@ -241,6 +243,7 @@ export interface ApiSchemas {
     readonly kind: "cover-letter" | "interview-questions";
     readonly model?: "claude-sonnet-5-5" | "claude-haiku-5-5";
     readonly guidance?: ApiSchemas["ApplicationMaterialGuidanceInput"];
+    readonly drafted_for?: "annotated-draft";
   };
   "ApplicationMaterialReview": {
     readonly status: "none" | "pending" | "done" | "failed";
