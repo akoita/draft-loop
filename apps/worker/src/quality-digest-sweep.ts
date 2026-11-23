@@ -8,11 +8,13 @@
 
 import {
   buildQualityDigest,
+  type CoverLetterUseCounts,
   type DigestLatency,
   type DigestOutcomeEvent,
   type DigestOutcomes,
   type DigestQuality,
   type DigestRunPair,
+  digestCoverLetters,
   digestOutcomes,
   latencyTrend,
   type QualityDigest,
@@ -37,6 +39,8 @@ export type QualityDigestPorts = Pick<
   | "spansBetween"
   | "outcomesBetween"
   | "feedbackNotesBetween"
+  | "coverLetterUseBetween"
+  | "coverLetterChecksBetween"
   | "listInsights"
   | "saveInsights"
 > & {
@@ -57,12 +61,15 @@ export async function sweepQualityDigest(
   const spans = [];
   const events: DigestOutcomeEvent[] = [];
   const runPairs: DigestRunPair[] = [];
+  const letterUse: CoverLetterUseCounts[] = [];
   for (const organisationId of organisations) {
     spans.push(...(await ports.spansBetween(organisationId, from, to)));
     // Member outcomes (#3245): run ids stay inside this sweep; the digest keeps counts.
     const outcomes = await ports.outcomesBetween(organisationId, from, to);
     events.push(...outcomes.events);
     runPairs.push(...outcomes.runPairs);
+    // Cover letter help (#3282): counts only, never a letter.
+    letterUse.push(await ports.coverLetterUseBetween(organisationId, from, to));
   }
   const digest = buildQualityDigest({
     day,
@@ -72,6 +79,10 @@ export async function sweepQualityDigest(
       events,
       runPairs,
       feedbackNotes: await ports.feedbackNotesBetween(from, to),
+    }),
+    coverLetters: digestCoverLetters({
+      organisations: letterUse,
+      checks: await ports.coverLetterChecksBetween(from, to),
     }),
   });
   await ports.save(day, digest as unknown as Record<string, unknown>);
@@ -134,6 +145,8 @@ export async function runQualityDigest(wiring: {
         spansBetween: digests.spansBetween,
         outcomesBetween: digests.outcomesBetween,
         feedbackNotesBetween: digests.feedbackNotesBetween,
+        coverLetterUseBetween: digests.coverLetterUseBetween,
+        coverLetterChecksBetween: digests.coverLetterChecksBetween,
         listInsights: digests.listInsights,
         saveInsights: digests.saveInsights,
         log: (message, fields) => console.info(logLine("INFO", message, fields)),

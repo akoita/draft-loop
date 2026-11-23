@@ -160,6 +160,7 @@ async function build(options: {
   consent?: ConsentState;
   paused?: boolean;
   withKit?: boolean;
+  tally?: { count: (now: Date) => Promise<void> };
 }) {
   const consents = { current: async () => options.consent ?? {} } as unknown as ConsentLedger;
   const drafts = createMemorySavedApplicationMaterialStore();
@@ -181,6 +182,7 @@ async function build(options: {
     ownerToken,
     logger: false,
     ...(options.paused === undefined ? {} : { modelCallSwitch: async () => options.paused }),
+    ...(options.tally === undefined ? {} : { coverLetterChecks: options.tally }),
     application: {
       service,
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
@@ -308,6 +310,47 @@ describe("Check my letter route", () => {
     expect((await post("   ")).statusCode).toBe(400);
     expect((await post("a".repeat(8_001))).statusCode).toBe(400);
     expect(calls).toEqual([]);
+  });
+
+  it("counts each answered check for the digest, with no letter, and never fails on the count (#3282)", async () => {
+    const counted: unknown[][] = [];
+    await build({
+      route: scriptedRoute(links, []),
+      consent: granted,
+      tally: {
+        count: async (...args) => {
+          counted.push(args);
+        },
+      },
+    });
+    expect((await post()).statusCode).toBe(200);
+    await app.close();
+    await build({
+      consent: granted,
+      paused: true,
+      tally: {
+        count: async (...args) => {
+          counted.push(args);
+        },
+      },
+    });
+    expect((await post()).statusCode).toBe(200);
+    expect((await post("   ")).statusCode).toBe(400);
+    // One count per answered check, each only a time: the letter never reaches the tally.
+    expect(counted).toHaveLength(2);
+    expect(counted.every((args) => args.length === 1 && args[0] instanceof Date)).toBe(true);
+    await app.close();
+
+    await build({
+      consent: granted,
+      paused: true,
+      tally: {
+        count: async () => {
+          throw new Error("database unavailable");
+        },
+      },
+    });
+    expect((await post()).statusCode).toBe(200);
   });
 
   it("answers 404 for an unknown application", async () => {

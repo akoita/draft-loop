@@ -201,6 +201,7 @@ const app = await buildApi({
         usageFunnel: directory.usageFunnel,
         supportUsage: directory.supportUsage,
         liveVoiceUsage: directory.liveVoiceUsage,
+        coverLetterChecks: directory.coverLetterChecks,
       }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
   ...(legalPublisher === undefined ? {} : { legalPublisher }),

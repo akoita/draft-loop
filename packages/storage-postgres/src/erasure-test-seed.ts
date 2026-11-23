@@ -46,6 +46,8 @@ export const tenantWideTables = new Set([
   "support_daily_spend",
   // Deployment-wide live voice seconds: an opaque member id and a number, swept after a day.
   "live_voice_seconds",
+  // Deployment-wide Check my letter count per day (#3282): a date and a number, no tenant.
+  "cover_letter_check_counts",
 ]);
 
 /**

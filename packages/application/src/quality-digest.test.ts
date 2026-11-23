@@ -1,12 +1,25 @@
 import { describe, expect, it } from "vitest";
 
-import { buildQualityDigest, type QualityDigestSpan } from "./quality-digest.js";
+import {
+  buildQualityDigest,
+  digestCoverLetters,
+  type QualityDigestSpan,
+} from "./quality-digest.js";
 
 const agent = (
   runId: string,
   status: "ok" | "error",
   attributes: QualityDigestSpan["attributes"],
 ): QualityDigestSpan => ({ runId, name: "invoke_agent", status, attributes });
+
+const noLetters = {
+  kits: 0,
+  fullDrafts: 0,
+  letters: 0,
+  editedLetters: 0,
+  checks: 0,
+  editedShare: null,
+};
 
 describe("the daily quality digest (#2916)", () => {
   it("counts attempts, groups failures by mechanism and summarises retrieval", () => {
@@ -83,6 +96,7 @@ describe("the daily quality digest (#2916)", () => {
       quality: { runs: 0, ready: 0, estimatedUsd: 0, costPerReadyDraft: null, pairs: [] },
       latency: [],
       outcomes: { feedbackNotes: 0, pairs: [] },
+      coverLetters: noLetters,
     });
   });
 
@@ -91,6 +105,53 @@ describe("the daily quality digest (#2916)", () => {
       runs: 0,
       failures: [],
       retrieval: { calls: 0, empty: 0, singleSource: 0, medianChunks: 0 },
+      coverLetters: noLetters,
     });
+  });
+});
+
+describe("cover letter help in the digest (#3282)", () => {
+  it("adds the organisations' counts up and rounds the edited share", () => {
+    expect(
+      digestCoverLetters({
+        organisations: [
+          { kits: 2, fullDrafts: 1, letters: 2, editedLetters: 1 },
+          { kits: 0, fullDrafts: 3, letters: 1, editedLetters: 1 },
+        ],
+        checks: 4,
+      }),
+    ).toEqual({
+      kits: 2,
+      fullDrafts: 4,
+      letters: 3,
+      editedLetters: 2,
+      checks: 4,
+      editedShare: 0.6667,
+    });
+  });
+
+  it("has no share on a day without a letter and ignores unreadable counts", () => {
+    expect(
+      digestCoverLetters({
+        organisations: [{ kits: 1, fullDrafts: Number.NaN, letters: 0, editedLetters: -2 }],
+        checks: Number.POSITIVE_INFINITY,
+      }),
+    ).toEqual({ ...noLetters, kits: 1 });
+  });
+
+  it("keeps only numbers, so the digest carries no letter text", () => {
+    const digest = buildQualityDigest({
+      day: "2026-11-16",
+      organisations: 1,
+      spans: [],
+      coverLetters: digestCoverLetters({
+        organisations: [{ kits: 1, fullDrafts: 1, letters: 1, editedLetters: 1 }],
+        checks: 2,
+      }),
+    });
+    expect(Object.values(digest.coverLetters).every((value) => typeof value === "number")).toBe(
+      true,
+    );
+    expect(digest.coverLetters.editedShare).toBe(1);
   });
 });

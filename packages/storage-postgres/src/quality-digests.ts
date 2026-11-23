@@ -1,5 +1,10 @@
 import type { RunSpanAttributes, RunSpanName, RunSpanStatus } from "@draft-loop/domain/run-span";
 
+import {
+  type CoverLetterUseRow,
+  readCoverLetterChecks,
+  readCoverLetterUse,
+} from "./cover-letter-digest.js";
 import type { PostgresSchemaOptions } from "./postgres-storage.js";
 import { createSqlPool, requireTenantId } from "./sql-client.js";
 
@@ -45,6 +50,14 @@ export interface QualityDigests {
   ) => Promise<QualityOutcomeRows>;
   /** How many feedback notes (not support tickets) members sent in [from, to), everywhere. */
   readonly feedbackNotesBetween: (from: Date, to: Date) => Promise<number>;
+  /** One organisation's cover letter kits, full drafts and edited letters in [from, to) (#3282). */
+  readonly coverLetterUseBetween: (
+    organisationId: string,
+    from: Date,
+    to: Date,
+  ) => Promise<CoverLetterUseRow>;
+  /** How many letters Check my letter checked in [from, to), everywhere (#3282). */
+  readonly coverLetterChecksBetween: (from: Date, to: Date) => Promise<number>;
   /** Every insight in the ledger (#2917), at most 1,000. */
   readonly listInsights: () => Promise<readonly QualityInsightRow[]>;
   /** Inserts or replaces each insight, in one transaction. */
@@ -204,6 +217,9 @@ export function createPostgresQualityDigests(options: PostgresSchemaOptions): Qu
       );
       return Number(row?.total ?? 0);
     },
+    coverLetterUseBetween: (organisationId, from, to) =>
+      readCoverLetterUse(pool.forTenant(requireTenantId(organisationId)), from, to),
+    coverLetterChecksBetween: (from, to) => readCoverLetterChecks(pool, from, to),
     spansBetween: async (organisationId, from, to) => {
       const rows = await pool.forTenant(requireTenantId(organisationId)).query(
         `SELECT run_id, name, status, attributes, started_at, ended_at FROM run_spans

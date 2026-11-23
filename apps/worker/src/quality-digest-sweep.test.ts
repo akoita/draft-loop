@@ -1,3 +1,4 @@
+import { noCoverLetterUse } from "@draft-loop/application/quality-digest";
 import type { QualityInsightRow } from "@draft-loop/storage-postgres";
 import { describe, expect, it, vi } from "vitest";
 
@@ -28,6 +29,8 @@ describe("the daily quality digest sweep (#2916)", () => {
         spansBetween,
         outcomesBetween: async () => ({ events: [], runPairs: [] }),
         feedbackNotesBetween: async () => 0,
+        coverLetterUseBetween: async () => noCoverLetterUse,
+        coverLetterChecksBetween: async () => 0,
         listInsights: async () => saved,
         saveInsights: async (insights) => {
           saved.push(...insights);
@@ -82,6 +85,8 @@ describe("the daily quality digest sweep (#2916)", () => {
           spansBetween: async () => [],
           outcomesBetween: async () => ({ events: [], runPairs: [] }),
           feedbackNotesBetween: async () => 0,
+          coverLetterUseBetween: async () => noCoverLetterUse,
+          coverLetterChecksBetween: async () => 0,
           listInsights: async () => [],
           saveInsights: async () => undefined,
           log,
@@ -127,6 +132,8 @@ describe("the daily quality digest sweep (#2916)", () => {
         spansBetween: async () => [],
         outcomesBetween: async () => ({ events: [], runPairs: [] }),
         feedbackNotesBetween: async () => 0,
+        coverLetterUseBetween: async () => noCoverLetterUse,
+        coverLetterChecksBetween: async () => 0,
         listInsights: async () => [],
         saveInsights: async () => undefined,
         log: (message, fields) => lines.push({ message, fields }),
@@ -196,6 +203,8 @@ describe("the daily quality digest sweep (#2916)", () => {
         spansBetween: async () => [],
         outcomesBetween,
         feedbackNotesBetween: async () => 3,
+        coverLetterUseBetween: async () => noCoverLetterUse,
+        coverLetterChecksBetween: async () => 0,
         listInsights: async () => [],
         saveInsights: async () => undefined,
         log: (message, fields) => lines.push({ message, fields }),
@@ -256,5 +265,47 @@ describe("the daily quality digest sweep (#2916)", () => {
         acceptRate: 0.25,
       },
     });
+  });
+
+  it("adds up cover letter help across organisations, with the edited share (#3282)", async () => {
+    const lines: { message: string; fields: Record<string, unknown> }[] = [];
+    const coverLetterUseBetween = vi.fn(async (organisationId: string) =>
+      organisationId === "org-a"
+        ? { kits: 2, fullDrafts: 1, letters: 3, editedLetters: 2 }
+        : { kits: 1, fullDrafts: 0, letters: 1, editedLetters: 0 },
+    );
+    const coverLetterChecksBetween = vi.fn(async () => 5);
+    const digest = await sweepQualityDigest(
+      {
+        claimDay: async () => true,
+        save: async () => undefined,
+        digestsBetween: async () => [],
+        organisationsActiveSince: async () => ["org-a", "org-b"],
+        spansBetween: async () => [],
+        outcomesBetween: async () => ({ events: [], runPairs: [] }),
+        feedbackNotesBetween: async () => 0,
+        coverLetterUseBetween,
+        coverLetterChecksBetween,
+        listInsights: async () => [],
+        saveInsights: async () => undefined,
+        log: (message, fields) => lines.push({ message, fields }),
+      },
+      { now },
+    );
+
+    const from = new Date("2026-11-16T00:00:00.000Z");
+    const to = new Date("2026-11-17T00:00:00.000Z");
+    expect(coverLetterUseBetween).toHaveBeenCalledWith("org-b", from, to);
+    expect(coverLetterChecksBetween).toHaveBeenCalledWith(from, to);
+    const expected = {
+      kits: 3,
+      fullDrafts: 1,
+      letters: 4,
+      editedLetters: 2,
+      checks: 5,
+      editedShare: 0.5,
+    };
+    expect(digest?.coverLetters).toEqual(expected);
+    expect(lines[0]?.fields.coverLetters).toEqual(expected);
   });
 });
