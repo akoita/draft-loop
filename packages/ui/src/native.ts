@@ -61,6 +61,10 @@ import type {
   WorkspaceEvidenceMigrationResult,
 } from "./career-evidence-contract.js";
 import {
+  type CoverLetterKitCapabilities,
+  createCoverLetterKitCapabilities,
+} from "./cover-letter-kit-capabilities.js";
+import {
   createFactSuggestionCapabilities,
   type FactSuggestionCapabilities,
 } from "./fact-suggestions-capabilities.js";
@@ -335,6 +339,8 @@ export interface HostApplicationCapabilities {
   readonly runTrace?: RunTraceCapabilities;
   /** Reads which evidence supports each requirement of a run; absent on a host without it. */
   readonly runRequirementEvidence?: RunRequirementEvidenceCapabilities;
+  /** The cover letter writing kit and the person's own letter (#3279); absent without them. */
+  readonly coverLetterKit?: CoverLetterKitCapabilities;
   /** Sets the model pair one application's new runs use, or clears it with `null`. */
   readonly setApplicationModels?: (
     workspaceId: string,
@@ -446,6 +452,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): HostSetu
   const factSuggestions = createFactSuggestionCapabilities(capabilityPort, unwrap);
   const runTrace = createRunTraceCapabilities(capabilityPort, unwrap);
   const runRequirementEvidence = createRunRequirementEvidenceCapabilities(capabilityPort, unwrap);
+  const coverLetterKit = createCoverLetterKitCapabilities(capabilityPort, unwrap);
   return {
     load,
     ...(capabilityPort.hasCapability("export.write") ? {} : { exportsDownload: true }),
@@ -612,6 +619,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): HostSetu
     ...(factSuggestions === undefined ? {} : { factSuggestions }),
     ...(runTrace === undefined ? {} : { runTrace }),
     ...(runRequirementEvidence === undefined ? {} : { runRequirementEvidence }),
+    ...(coverLetterKit === undefined ? {} : { coverLetterKit }),
     ...(capabilityPort.hasCapability("application.delete")
       ? {
           deleteApplication: async (workspaceId: string, applicationId: string) => {

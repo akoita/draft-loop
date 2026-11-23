@@ -35,6 +35,11 @@ import {
 } from "./application-folder-bridge.js";
 import { Refusal, refuse } from "./bridge-refusal.js";
 import {
+  createCoverLetterKitAnswers,
+  hostedCoverLetterKitCapabilities,
+  isCoverLetterKitCommand,
+} from "./cover-letter-kit-bridge.js";
+import {
   createFactSuggestionAnswers,
   hostedFactSuggestionCapabilities,
   isFactSuggestionCommand,
@@ -108,6 +113,7 @@ export const hostedBridgeCapabilities = [
   "run.stop",
   ...hostedRunTraceCapabilities,
   ...hostedRunRequirementEvidenceCapabilities,
+  ...hostedCoverLetterKitCapabilities,
   "review.load",
   "review.dispatch",
   "models.list",
@@ -278,6 +284,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const answerRunTrace = createRunTraceAnswers(client);
   const answerRequirementEvidence = createRunRequirementEvidenceAnswers(client);
   const reviewAction = createReviewActions(client, idempotencyKey, options.download ?? saveFile);
+  const answerCoverLetterKit = createCoverLetterKitAnswers(client, options.download ?? saveFile);
 
   /** The run as the server projects it, with the workspace named in words, never by its id. */
   const reviewState = async (
@@ -331,6 +338,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
     if (isFactSuggestionCommand(command)) return answerFactSuggestions(command);
     if (isRunTraceCommand(command)) return answerRunTrace(command);
     if (isRunRequirementEvidenceCommand(command)) return answerRequirementEvidence(command);
+    if (isCoverLetterKitCommand(command)) return answerCoverLetterKit(command);
     switch (command.type) {
       case "application.list": {
         const { workspaceId } = command.input;

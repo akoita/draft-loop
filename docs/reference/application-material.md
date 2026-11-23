@@ -251,8 +251,9 @@ when its run kept a credit, else the plan's model calls per day. A plan
 override of `modelCallsPerDay` stops it for one organisation, and the global
 model call switch answers 503 `model_calls_paused`. An agent token with
 `runs:start` calls it as `get_cover_letter_kit`, reserving one draft's cost
-cap. A kit cannot be edited or downloaded as a document; the screen that shows
-it is #3279.
+cap. A kit cannot be edited or downloaded as a document. The candidate's own
+letter is saved beside it ([Editing a draft](#editing-a-draft)) and shown by
+[the writing kit screen](#the-writing-kit-screen).
 
 ## Interview preparation guides
 
@@ -395,6 +396,13 @@ model, so it costs nothing.
 The request must send one text for each item, in order; another count answers
 400. The route is for the person only: agents cannot reach it.
 
+**The candidate's own letter (#3279).** Sent to a writing kit, or to a letter
+the candidate wrote, the same route saves their own letter instead. It is a
+`cover-letter` version with one item per paragraph, up to ten, each marked
+`edited`, no citations and `written_by: candidate`. `based_on` names the kit
+or the earlier letter. No number is flagged, since nothing is cited, and Word
+and PDF downloads work as for any cover letter.
+
 ## The web panel
 
 Each application page on the web shows an optional **Prepare** panel after the CV. It starts folded to one line, and the browser remembers when you open it. The **Cover letter or interview** button above the draft opens it and scrolls to it.
@@ -447,6 +455,46 @@ such as a 503 from a server without a Claude route, shows in the panel; the
 rest of the page keeps working. The panel lives in
 `apps/web/src/application-material.tsx` and fills the shared screens'
 `application` host slot; a host that leaves the slot empty shows nothing new.
+
+### The writing kit screen
+
+The Cover letter tab asks **How much help do you want?** (#3279):
+
+| Choice          | What the tab shows                                                                 |
+| --------------- | ---------------------------------------------------------------------------------- |
+| Writing kit     | The default, marked **Recommended**: the kit beside an editor for the candidate's own letter |
+| Annotated draft | Marked **Coming soon**: a short notice and **Use the writing kit** (#3281)          |
+| Full draft      | The drafting controls above, with the one-time risk choice and the AI-draft confirm |
+
+The kit screen is shared: `packages/ui/src/cover-letter-kit-screen.tsx`,
+reached through the capability port's `cover-letter-kit.*` commands, which
+`apps/web/src/cover-letter-kit-bridge.ts` answers over the API. A host
+without those commands shows the full draft only.
+
+```mermaid
+flowchart LR
+  prepare["Prepare my writing kit"] --> kit["Kit, left"]
+  kit --> editor["Your letter, right"]
+  editor --> save["Save my letter: new version"]
+  save --> download["Download Word or PDF"]
+  editor -.-> check["Check my letter slot (#3280)"]
+```
+
+- **The kit.** Requirements with their facts, ways to open, the four-paragraph
+  outline with what each paragraph uses, dated employer facts and phrases to
+  avoid. **Prepare a new kit** replaces it.
+- **The editor.** A blank line separates paragraphs. It opens on the newest
+  letter the candidate wrote and counts words; **Save my letter** saves a new
+  version only when the text changed.
+- **Downloads.** **Download Word** and **Download PDF** save any change first,
+  then download with the chosen **Template**. No confirm step: the letter is
+  the candidate's.
+- **Layout.** The two columns stack, kit first, when the panel is narrower than
+  two 22rem columns, as on a phone.
+- **Check slot.** The `checkPanel` prop renders under the editor with the
+  letter's text and saved id, for #3280's panel.
+
+The full draft's version list leaves out the candidate's own letters.
 
 ### The guide tab
 

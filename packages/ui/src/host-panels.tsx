@@ -1,4 +1,5 @@
 import { createContext, type ReactNode, useContext } from "react";
+import type { CoverLetterKitCapabilities } from "./cover-letter-kit-capabilities.js";
 import type { LoadExportPreview } from "./export-preview.js";
 
 /**
@@ -67,6 +68,8 @@ export interface EvidenceAdvancedContext {
 /** What the host's panel on an application is given. */
 export interface ApplicationPanelContext {
   readonly applicationId: string;
+  /** The writing kit screen's commands (#3279), when the host offers them. */
+  readonly coverLetterKit?: CoverLetterKitCapabilities | undefined;
 }
 
 /** What the host's panels on Home, in the Career evidence card and Settings, are given. */
