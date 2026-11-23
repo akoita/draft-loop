@@ -133,7 +133,10 @@ The landing page (`/`), `/about/`, `/guide/` (each with a `fr/` version),
 - **Sample pages.** `/showcase/` holds fictional data and is always `noindex`.
 - **Compression.** The web build writes a Brotli and a gzip copy beside each
   text asset over 1 KB (`apps/web/scripts/precompress.mjs`); the API sends the
-  one the browser accepts.
+  one the browser accepts. JSON over 1 KB goes out with Brotli (quality 4) or
+  gzip when the client accepts it (`apps/api/src/response-compression.ts`).
+  Event streams, zip and file downloads and the web files are never compressed
+  again.
 
 ## Run queue
 

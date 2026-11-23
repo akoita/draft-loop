@@ -304,3 +304,55 @@ describe("hosted Anthropic route", () => {
     expect(resolveCredential).not.toHaveBeenCalled();
   });
 });
+
+describe("Claude refusal fallback on the API-key route", () => {
+  it("passes the host's fallback for the call's model to the adapter", async () => {
+    const author: ModelSelection = {
+      ...model,
+      company: "anthropic",
+      modelId: "claude-sonnet-5-5",
+      role: "author",
+    };
+    const refused = {
+      content: [],
+      model: "claude-sonnet-5-5",
+      stop_reason: "refusal",
+      stop_details: { type: "refusal", category: "cyber", fallback_credit_token: null },
+      usage: { input_tokens: 10, output_tokens: 0 },
+    };
+    const answered = {
+      content: [{ type: "text", text: '{"answer":"yes"}' }],
+      model: "claude-sonnet-5",
+      stop_reason: "end_turn",
+      usage: { input_tokens: 10, output_tokens: 5 },
+    };
+    const queue: unknown[] = [refused, answered];
+    const create = vi.fn(
+      () => ({ withResponse: async () => ({ data: queue.shift(), request_id: null }) }) as never,
+    );
+    const anthropicRefusalFallback = vi.fn(() => ({
+      modelId: "claude-sonnet-5",
+      pricing: { inputUsdPerMillionTokens: 3, outputUsdPerMillionTokens: 15 },
+    }));
+
+    const adapter = await createProviderAdapter(
+      { retry: { maxRetries: 0 } },
+      author,
+      true,
+      async () => "synthetic-claude-key",
+      { anthropic: () => ({ messages: { create } }), anthropicRefusalFallback },
+    );
+    const response = await adapter.execute({
+      ...request,
+      model: author,
+      dataPolicy: { ...request.dataPolicy, allowedCompanies: ["anthropic"] },
+    });
+
+    expect(anthropicRefusalFallback).toHaveBeenCalledWith(author);
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(response).toMatchObject({
+      modelId: "claude-sonnet-5",
+      refusalFallback: { fromModel: "claude-sonnet-5-5", credit: false },
+    });
+  });
+});

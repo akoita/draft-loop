@@ -892,8 +892,32 @@ Run details then names each declined call: its step and round, the model that de
 the model that answered and the refusal's category. The fallback's answer is the call's
 result, so the run needs nothing from the person.
 
-Planned (#3260): the server setting that turns it on, with its kill switch and cost cap.
-Until then no deployment uses it.
+A server turns it on with `DRAFT_LOOP_CLAUDE_REFUSAL_FALLBACK=<model>` on the worker
+([local server stack](../operations/local-server-stack.md)). The worker refuses to start
+unless the model is a Claude Haiku or Sonnet model with known rates that an author may fall
+back to:
+
+| Author | Fallback | Fallback rates per million tokens |
+| --- | --- | --- |
+| `claude-sonnet-5-5` | `claude-sonnet-5` | $2 input, $10 output, $0.20 cache read |
+
+No profile offers the fallback model, so no run can choose it. Its rates sit apart from
+the model profile catalog, in `packages/application/src/unprofiled-model-pricing.ts`.
+
+A call on any other author keeps failing a declined step. The fallback runs only on the
+direct Claude route: the self-hosted `direct` routes, or the hosted route's opt-in Claude
+API fallback. Claude on Vertex AI stays without it until a live check shows Vertex accepts
+the fallback credit.
+
+| Control | Effect |
+| --- | --- |
+| Run budget and spend pool | Both calls count in the run's cost, so the run's budget bounds the retry |
+| `{"refusalFallback":"off"}` in the model call switch | Stops the retry within a minute; other calls go on |
+| `{"modelCalls":"paused"}` in the model call switch | Pauses model calls and stops the retry |
+
+The worker reads the same switch secret as the API, `DRAFT_LOOP_MODEL_CALLS_SECRET`. A
+secret it cannot read keeps the fallback on and logs a warning, as the API keeps calls
+running.
 
 ## Deterministic quality warnings
 

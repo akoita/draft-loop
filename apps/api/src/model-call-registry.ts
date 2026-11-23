@@ -52,11 +52,13 @@ export const modelCallPaths: ReadonlyArray<ModelCallPath> = [
     whilePaused: "refused",
     limit: "The plan's runs per day and credits (entitlement-gate.ts).",
     costCap:
-      "The run's budget, at most the deployment's ceiling per run, reserved from the spend pool (entitlement-gate.ts, run-job-handler.ts).",
-    killSwitch: "An operator plan override with runsPerDay 0 for one organisation.",
+      "The run's budget, at most the deployment's ceiling per run, reserved from the spend pool (entitlement-gate.ts, run-job-handler.ts). Claude's refusal fallback retries a declined call once, and both calls count in the run's cost at their own rates (claude-refusal-fallback.ts).",
+    killSwitch:
+      'An operator plan override with runsPerDay 0 for one organisation. The model call switch\'s "refusalFallback": "off" stops only the refusal fallback, read by the worker within a minute.',
     reaches: [
       "apps/api/src/application-routes.ts",
       "apps/api/src/review-routes.ts",
+      "apps/worker/src/claude-refusal-fallback.ts",
       "apps/worker/src/run-job-handler.ts",
     ],
   },

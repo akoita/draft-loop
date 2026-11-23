@@ -134,6 +134,7 @@ import { type ApiAuthOptions, registerRequestAuthentication } from "./request-au
 import { registerRequestTrace, requestIdFrom } from "./request-trace.js";
 import { registerResearchBriefRoutes } from "./research-brief-routes.js";
 import type { ResearchRuns } from "./research-runs.js";
+import { registerResponseCompression } from "./response-compression.js";
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerReviewStateRoutes } from "./review-state-routes.js";
 import { registerRunRequirementEvidenceRoutes } from "./run-requirement-evidence-routes.js";
@@ -384,6 +385,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
 
   const auth: ApiAuthOptions = options.auth ?? { mode: "owner" };
   await app.register(helmet, { contentSecurityPolicy: contentSecurityPolicy(auth) });
+  await registerResponseCompression(app);
   registerPublicSite(app, options.publicSite ?? { indexing: false });
   // The live career interview streams audio both ways over one WebSocket per conversation.
   if (options.liveSpeech !== undefined) {

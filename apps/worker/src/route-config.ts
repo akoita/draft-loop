@@ -1,6 +1,7 @@
 import { isAbsolute } from "node:path";
 import type { LocalApplicationDriverOptions } from "@draft-loop/application";
 import {
+  claudeRefusalFallbackFor,
   createAnthropicApiClient,
   createFileCredentialResolver,
   createOpenAiClient,
@@ -88,13 +89,22 @@ export function readModelRoutes(env: NodeJS.ProcessEnv): WorkerModelRoutes | und
 /** The direct routes' wiring: keys from files, the Claude API and the chosen OpenAI endpoint. */
 export function directProviderOptions(
   config: DirectRoutesConfig,
-  dependencies: Pick<ModelRouteDependencies, "anthropicApiClient" | "openAiClient"> = {},
+  dependencies: Pick<
+    ModelRouteDependencies,
+    "anthropicApiClient" | "openAiClient" | "refusalFallback"
+  > = {},
 ): Pick<LocalApplicationDriverOptions, "resolveCredential" | "providerClientFactories"> {
+  const { refusalFallback } = dependencies;
   return {
     resolveCredential: createFileCredentialResolver({ directory: config.secretsDirectory }),
     providerClientFactories: {
       // No `anthropicRoute`: the application's API-key route runs, with its prompt cache.
       anthropic: dependencies.anthropicApiClient ?? ((apiKey) => createAnthropicApiClient(apiKey)),
+      ...(refusalFallback === undefined
+        ? {}
+        : {
+            anthropicRefusalFallback: (model) => claudeRefusalFallbackFor(refusalFallback, model),
+          }),
       openai:
         dependencies.openAiClient ??
         ((apiKey: string) => createOpenAiClient(apiKey, config.openAiEndpoint)),

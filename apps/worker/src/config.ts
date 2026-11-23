@@ -8,6 +8,10 @@ import {
 import { parseRuntimeRoleMembers, readPoolSize } from "@draft-loop/storage-postgres";
 
 import { type BlobBackendConfig, readBlobBackend } from "./blob-backend.js";
+import {
+  type ClaudeRefusalFallbackConfig,
+  readClaudeRefusalFallback,
+} from "./claude-refusal-fallback.js";
 import { WorkerConfigError } from "./config-error.js";
 import { type CriticFallbackConfig, readCriticFallback } from "./critic-fallback-config.js";
 import { readLocalModelEndpoint } from "./local-models-config.js";
@@ -48,6 +52,8 @@ export interface WorkerConfig {
   readonly localModelEndpoint?: string;
   /** The critic a run switches to after a provider error it cannot wait out (#3131). */
   readonly criticFallback?: CriticFallbackConfig;
+  /** The model a refused Claude call retries on once, on a direct Claude route (#3275). */
+  readonly claudeRefusalFallback?: ClaudeRefusalFallbackConfig;
   /** Touched once the worker is claiming jobs, for a container health check. */
   readonly readyFile?: string;
   /**
@@ -151,6 +157,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
   const modelRoutes = readModelRoutes(env);
   const localModelEndpoint = readLocalModelEndpoint(env);
   const criticFallback = readCriticFallback(env);
+  const claudeRefusalFallback = readClaudeRefusalFallback(env, modelRoutes);
   return {
     databaseUrl: required(env, "DRAFT_LOOP_DATABASE_URL"),
     databaseSchema: schemaName(env, "DRAFT_LOOP_DATABASE_SCHEMA", "draft_loop"),
@@ -163,6 +170,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     ...(modelRoutes === undefined ? {} : { modelRoutes }),
     ...(localModelEndpoint === undefined ? {} : { localModelEndpoint }),
     ...(criticFallback === undefined ? {} : { criticFallback }),
+    ...(claudeRefusalFallback === undefined ? {} : { claudeRefusalFallback }),
     ...(readyFile === undefined ? {} : { readyFile }),
     mode: workerMode(env),
     ...workerPoolSizes(env),

@@ -24,10 +24,34 @@ type Artifact = Pick<DraftArtifact, "sections" | "claims">;
 const roleSeparator = " | ";
 /** `**Name**` that is not a label such as `**Contact**:` or `**Honesty constraints:**`. */
 const boldTitlePattern = /\*\*([^*\n:]{2,60})\*\*(?!\s*:)/gu;
-const headingPattern = /^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/gmu;
-const headingSegmentSeparator = /\s+(?:·|\||—|–|-)\s+/u;
+/** A Markdown heading's marker; the rest of the line is read without a regular expression. */
+const headingMarker = /^ {0,3}#{1,6}[ \t]/u;
+/** Separators match on whitespace-collapsed text, so no pattern repeats over long runs of spaces. */
+const headingSegmentSeparator = / (?:·|\||—|–|-) /u;
 const projectWord = /\bprojects?\b/iu;
-const projectLineSeparator = /\s+(?:\||—|–|-|·)\s+|:\s|,\s/u;
+const projectLineSeparator = / (?:\||—|–|-|·) |: |, /u;
+
+/** Collapse each run of whitespace into one space, in linear time. */
+function collapsedSpaces(value: string): string {
+  return value
+    .split(/\s/u)
+    .filter((part) => part !== "")
+    .join(" ");
+}
+
+/** The text of each Markdown heading line, without its marker or closing hashes. */
+function headingTexts(excerpt: string): string[] {
+  const texts: string[] = [];
+  for (const line of excerpt.split("\n")) {
+    const marker = headingMarker.exec(line);
+    if (marker === null) continue;
+    let text = line.slice(marker[0].length).trim();
+    while (text.endsWith("#")) text = text.slice(0, -1);
+    text = collapsedSpaces(text);
+    if (text !== "") texts.push(text);
+  }
+  return texts;
+}
 const datePattern =
   /\b(?:\d{4}|present|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/iu;
 
@@ -59,8 +83,8 @@ function projectTitles(artifact: Artifact): Set<string> {
   );
   for (const excerpt of excerpts) {
     for (const match of excerpt.matchAll(boldTitlePattern)) add(match[1]);
-    for (const match of excerpt.matchAll(headingPattern)) {
-      const segments = (match[1] ?? "").split(headingSegmentSeparator);
+    for (const heading of headingTexts(excerpt)) {
+      const segments = heading.split(headingSegmentSeparator);
       if (!segments.some((segment) => projectWord.test(segment))) continue;
       for (const segment of segments) {
         if (!projectWord.test(segment) && !datePattern.test(segment)) add(segment);
@@ -71,7 +95,7 @@ function projectTitles(artifact: Artifact): Set<string> {
     if (section.kind !== "projects") continue;
     for (const block of section.blocks) {
       if (block.type === "bullet") continue;
-      add(block.text.split(projectLineSeparator)[0]);
+      add(collapsedSpaces(block.text).split(projectLineSeparator)[0]);
     }
   }
   return titles;
