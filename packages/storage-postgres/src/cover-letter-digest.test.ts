@@ -47,6 +47,32 @@ describe.runIf(connectionString !== undefined)("cover letter help for the digest
           { based_on: "amd_full000002", critic_findings: [] },
           "2026-11-16T12:00:00.000Z",
         ],
+        // app-4: an annotated draft alone is a reference, not a full draft or a letter (#3281).
+        [
+          "org-a",
+          "amd_annot00001",
+          "app-4",
+          "cover-letter",
+          { drafted_for: "annotated-draft" },
+          "2026-11-16T10:00:00.000Z",
+        ],
+        // app-5: an annotated draft, then the candidate's rewrite beside it.
+        [
+          "org-a",
+          "amd_annot00002",
+          "app-5",
+          "cover-letter",
+          { drafted_for: "annotated-draft" },
+          "2026-11-16T10:00:00.000Z",
+        ],
+        [
+          "org-a",
+          "amd_mine000005",
+          "app-5",
+          "cover-letter",
+          { ...edited, based_on: "amd_annot00002", written_by: "candidate" },
+          "2026-11-16T11:00:00.000Z",
+        ],
         // Another day and another organisation stay out.
         ["org-a", "amd_older00001", "app-3", "cover-letter", edited, "2026-11-15T23:00:00.000Z"],
         ["org-b", "amd_kitb000001", "app-9", "cover-letter-kit", {}, "2026-11-16T09:00:00.000Z"],
@@ -62,8 +88,8 @@ describe.runIf(connectionString !== undefined)("cover letter help for the digest
       await expect(digests.coverLetterUseBetween("org-a", from, to)).resolves.toEqual({
         kits: 1,
         fullDrafts: 2,
-        letters: 2,
-        editedLetters: 1,
+        letters: 3,
+        editedLetters: 2,
       });
       await expect(digests.coverLetterUseBetween("org-b", from, to)).resolves.toEqual({
         kits: 1,
