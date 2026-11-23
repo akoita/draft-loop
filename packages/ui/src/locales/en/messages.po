@@ -944,6 +944,10 @@ msgstr "{who} stopped while drafting · round {round}"
 msgid "{who} stopped while revising · round {round}"
 msgstr "{who} stopped while revising · round {round}"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "{words, plural, one {# word} other {# words}}"
+msgstr "{words, plural, one {# word} other {# words}}"
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "/1M input · $"
 msgstr "/1M input · $"
@@ -996,6 +1000,10 @@ msgstr "A CV, a profile export or notes about your work."
 msgid "A draft is being written. Wait for it to finish or stop it, then delete your account."
 msgstr "A draft is being written. Wait for it to finish or stop it, then delete your account."
 
+#: packages/ui/src/cover-letter-help.tsx
+msgid "A draft with a note on each paragraph, to rewrite in your words."
+msgstr "A draft with a note on each paragraph, to rewrite in your words."
+
 #: packages/ui/src/profile-fact-suggestions-model.ts
 msgid "A fact you have not confirmed yet"
 msgstr "A fact you have not confirmed yet"
@@ -1019,6 +1027,14 @@ msgstr "A heading path has at most 12 headings."
 #: packages/ui/src/career-interview-model.ts
 msgid "A job you applied for asks for \"{title}\", and your record does not show it yet."
 msgstr "A job you applied for asks for \"{title}\", and your record does not show it yet."
+
+#: packages/ui/src/cover-letter-kit-model.ts
+msgid "A letter holds at most {maximumOwnLetterParagraphs} paragraphs. Join some of them."
+msgstr "A letter holds at most {maximumOwnLetterParagraphs} paragraphs. Join some of them."
+
+#: packages/ui/src/cover-letter-help.tsx
+msgid "A letter written by AI. It can be spotted and count against you."
+msgstr "A letter written by AI. It can be spotted and count against you."
 
 #: packages/ui/src/finding-title.ts
 msgid "A line covering this requirement was removed: "
@@ -1056,6 +1072,10 @@ msgstr "A newer screening result replaced this one. Reload to see the current st
 #: apps/web/src/http-bridge.ts
 msgid "A one-run writing policy cannot be used on the hosted service yet."
 msgstr "A one-run writing policy cannot be used on the hosted service yet."
+
+#: packages/ui/src/cover-letter-kit-model.ts
+msgid "A paragraph holds at most {maximumOwnLetterParagraphCharacters} characters. Split the long one."
+msgstr "A paragraph holds at most {maximumOwnLetterParagraphCharacters} characters. Split the long one."
 
 #: apps/web/src/interview-guide.tsx
 msgid "A pay range is given only from a dated source research finds; otherwise the guide says what to check."
@@ -1101,6 +1121,7 @@ msgid "About the company"
 msgstr "About the company"
 
 #: apps/web/src/research-brief.tsx
+#: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "About the employer"
 msgstr "About the employer"
 
@@ -1487,6 +1508,10 @@ msgstr "and"
 msgid "and its completed Round"
 msgstr "and its completed Round"
 
+#: packages/ui/src/cover-letter-help.tsx
+msgid "Annotated draft"
+msgstr "Annotated draft"
+
 #: packages/ui/src/review.tsx
 msgid "Another review action is already running."
 msgstr "Another review action is already running."
@@ -1506,6 +1531,11 @@ msgstr "Answer now"
 #: packages/ui/src/help-ask.tsx
 msgid "Answer:"
 msgstr "Answer:"
+
+#. placeholder {0}: formatList(numbers.map(String))
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Answers requirement {0}"
+msgstr "Answers requirement {0}"
 
 #: apps/web/src/consent-model.ts
 #: packages/ui/src/app.tsx
@@ -2462,6 +2492,10 @@ msgstr "Collecting inputs"
 msgid "Combined scenario estimate"
 msgstr "Combined scenario estimate"
 
+#: packages/ui/src/cover-letter-help.tsx
+msgid "Coming soon"
+msgstr "Coming soon"
+
 #: packages/ui/src/review.tsx
 msgid "commands"
 msgstr "commands"
@@ -3220,10 +3254,12 @@ msgid "Download or delete this candidate's data"
 msgstr "Download or delete this candidate's data"
 
 #: apps/web/src/application-material.tsx
+#: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Download PDF"
 msgstr "Download PDF"
 
 #: apps/web/src/application-material.tsx
+#: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Download Word"
 msgstr "Download Word"
 
@@ -3782,6 +3818,10 @@ msgstr "facts"
 msgid "Facts by category"
 msgstr "Facts by category"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Facts from your career record"
+msgstr "Facts from your career record"
+
 #: packages/ui/src/career-signposts.tsx
 msgid "Facts Redakloop finds in these documents are reviewed and edited in Career profile."
 msgstr "Facts Redakloop finds in these documents are reviewed and edited in Career profile."
@@ -4035,6 +4075,7 @@ msgstr "From the job text"
 msgid "From the workspace's job file."
 msgstr "From the workspace's job file."
 
+#: packages/ui/src/cover-letter-help.tsx
 #: packages/ui/src/review.tsx
 msgid "Full draft"
 msgstr "Full draft"
@@ -4407,6 +4448,10 @@ msgstr "How it works"
 #: packages/ui/src/display-preference.tsx
 msgid "How much each screen shows at once. The change applies right away."
 msgstr "How much each screen shows at once. The change applies right away."
+
+#: packages/ui/src/cover-letter-help.tsx
+msgid "How much help do you want?"
+msgstr "How much help do you want?"
 
 #: apps/web/src/private-sections.tsx
 msgid "How the heading matches"
@@ -4908,6 +4953,10 @@ msgstr "Lead developer"
 #: packages/ui/src/career-interview-model.ts
 msgid "Leadership"
 msgstr "Leadership"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Leave a blank line between paragraphs. Each save keeps a new version."
+msgstr "Leave a blank line between paragraphs. Each save keeps a new version."
 
 #: apps/web/src/feedback.tsx
 msgid "Leave out passwords and other people's details."
@@ -6140,6 +6189,10 @@ msgstr "not registered for {roleName}"
 msgid "not required"
 msgstr "not required"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Not saved yet"
+msgstr "Not saved yet"
+
 #: apps/web/src/screening-model.ts
 msgid "Not screened"
 msgstr "Not screened"
@@ -6183,6 +6236,12 @@ msgstr "Notes for the guide"
 #: packages/ui/src/work-journal-intake.tsx
 msgid "Notes from agents"
 msgstr "Notes from agents"
+
+#. placeholder {0}: kit.model
+#. placeholder {1}: formatDate(kit.createdAt) ?? kit.createdAt
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Notes to write from, not sentences to copy. Prepared by {0} on {1}."
+msgstr "Notes to write from, not sentences to copy. Prepared by {0} on {1}."
 
 #: apps/web/src/operator.tsx
 msgid "Nothing here."
@@ -6624,6 +6683,10 @@ msgstr "Page {page} of {pageCount}"
 msgid "Page target"
 msgstr "Page target"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Paragraph by paragraph"
+msgstr "Paragraph by paragraph"
+
 #: packages/ui/src/cover-letter-check-panel.tsx
 msgid "Paragraphs open the same way"
 msgstr "Paragraphs open the same way"
@@ -6761,6 +6824,10 @@ msgstr "Permission to store this material"
 msgid "Phone"
 msgstr "Phone"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Phrases to avoid"
+msgstr "Phrases to avoid"
+
 #: packages/ui/src/getting-started.tsx
 msgid "Pick a template and save the file."
 msgstr "Pick a template and save the file."
@@ -6841,6 +6908,18 @@ msgstr "Premium"
 #: apps/web/src/application-material.tsx
 msgid "Prepare"
 msgstr "Prepare"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Prepare a new kit"
+msgstr "Prepare a new kit"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Prepare my writing kit"
+msgstr "Prepare my writing kit"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Preparing…"
+msgstr "Preparing…"
 
 #: packages/ui/src/run-details.tsx
 msgid "present"
@@ -7020,6 +7099,11 @@ msgstr "Public standard uncached text API list rates in USD"
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Public uncached API list rates"
 msgstr "Public uncached API list rates"
+
+#. placeholder {0}: formatDate(fact.publishedOn) ?? fact.publishedOn
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Published {0}"
+msgstr "Published {0}"
 
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Quality for real CVs has not been validated for these presets, and account availability is not checked. OpenAI Codex user-session routes cannot use these profiles. Redakloop never switches your sign-in automatically."
@@ -7275,6 +7359,10 @@ msgstr "Recent errors"
 #: apps/web/src/interview-guide-model.ts
 msgid "recent news"
 msgstr "recent news"
+
+#: packages/ui/src/cover-letter-help.tsx
+msgid "Recommended"
+msgstr "Recommended"
 
 #: apps/web/src/feedback.tsx
 #: apps/web/src/operator.tsx
@@ -7684,6 +7772,10 @@ msgstr "Requirements not answered yet"
 #: packages/ui/src/review.tsx
 msgid "Requirements reviewed (version"
 msgstr "Requirements reviewed (version"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Requirements to answer"
+msgstr "Requirements to answer"
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Requirements were not extracted"
@@ -8368,6 +8460,10 @@ msgstr "Save link"
 msgid "Save models"
 msgstr "Save models"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Save my letter"
+msgstr "Save my letter"
+
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Save new version"
 msgstr "Save new version"
@@ -8407,6 +8503,11 @@ msgstr "Save your issue decisions before marking the draft reviewed."
 #: packages/ui/src/profile-status.ts
 msgid "Save your issue decisions, then mark the profile reviewed."
 msgstr "Save your issue decisions, then mark the profile reviewed."
+
+#. placeholder {0}: formatDateTime(savedLetter.createdAt) ?? savedLetter.createdAt
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Saved {0}"
+msgstr "Saved {0}"
 
 #: apps/web/src/operator-funnel.tsx
 msgid "Saved a Prepare item"
@@ -8465,6 +8566,7 @@ msgid "saving…"
 msgstr "saving…"
 
 #: packages/ui/src/career-interview-panel.tsx
+#: packages/ui/src/cover-letter-kit-screen.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/work-journal-panel.tsx
 #: packages/ui/src/writing-policy-editor.tsx
@@ -8923,6 +9025,10 @@ msgstr "Something else"
 msgid "Something is broken"
 msgstr "Something is broken"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Something went wrong."
+msgstr "Something went wrong."
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Something you are proud of"
 msgstr "Something you are proud of"
@@ -9363,6 +9469,7 @@ msgid "Tell us about your career"
 msgstr "Tell us about your career"
 
 #: apps/web/src/application-material.tsx
+#: packages/ui/src/cover-letter-kit-screen.tsx
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Template"
@@ -9432,6 +9539,10 @@ msgstr "The"
 #: apps/web/src/api-client.ts
 msgid "The {name} path parameter is missing."
 msgstr "The {name} path parameter is missing."
+
+#: packages/ui/src/cover-letter-help.tsx
+msgid "The annotated draft is not ready yet. Use the writing kit for now: it gives the same facts and notes, and you write the letter."
+msgstr "The annotated draft is not ready yet. Use the writing kit for now: it gives the same facts and notes, and you write the letter."
 
 #. placeholder {0}: response.status
 #: apps/web/src/api-client.ts
@@ -9747,6 +9858,10 @@ msgstr "The employer can be at most {maximumRequirementTextLength} characters."
 msgid "The evidence kind could not be saved."
 msgstr "The evidence kind could not be saved."
 
+#: packages/ui/src/cover-letter-help.tsx
+msgid "The facts and notes to write from. You write the letter."
+msgstr "The facts and notes to write from. You write the letter."
+
 #: packages/ui/src/career-flow.tsx
 msgid "The facts Redakloop extracts from your documents, each with its exact quote. You review them once; every application reuses them."
 msgstr "The facts Redakloop extracts from your documents, each with its exact quote. You review them once; every application reuses them."
@@ -9923,6 +10038,18 @@ msgstr "The job post was quarantined by injection screening. Release or replace 
 #: packages/ui/src/review.tsx
 msgid "The job this draft is written for, under the Job tab. A different job needs a new application."
 msgstr "The job this draft is written for, under the Job tab. A different job needs a new application."
+
+#: apps/web/src/cover-letter-kit-bridge.ts
+msgid "The job's brief lists no requirement yet, so there is nothing for a kit to answer. Extract the requirements first."
+msgstr "The job's brief lists no requirement yet, so there is nothing for a kit to answer. Extract the requirements first."
+
+#: apps/web/src/cover-letter-kit-bridge.ts
+msgid "The kit broke its own rules twice, so it was refused. Try again."
+msgstr "The kit broke its own rules twice, so it was refused. Try again."
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "The kit picks the job's three main requirements and the facts from your career record that prove them. It adds ways to open, a four-paragraph outline, dated facts about the employer and phrases to avoid. It holds notes, not sentences: you write the letter."
+msgstr "The kit picks the job's three main requirements and the facts from your career record that prove them. It adds ways to open, a four-paragraph outline, dated facts about the employer and phrases to avoid. It holds notes, not sentences: you write the letter."
 
 #. placeholder {0}: material.sourceId
 #. placeholder {1}: material.knowledgeBaseId
@@ -10620,6 +10747,10 @@ msgstr "This is the first artifact version."
 msgid "This job posting looks {label}."
 msgstr "This job posting looks {label}."
 
+#: apps/web/src/cover-letter-kit-bridge.ts
+msgid "This kit would pass the server's cost cap for one request."
+msgstr "This kit would pass the server's cost cap for one request."
+
 #: apps/web/src/cover-letter-risk-model.ts
 msgid "This letter is still the AI draft. Sent as it is, it can be spotted and can count against you. Download it anyway?"
 msgstr "This letter is still the AI draft. Sent as it is, it can be spotted and can count against you. Download it anyway?"
@@ -10759,6 +10890,14 @@ msgstr "This server has no model set up for the career interview. Ask whoever ru
 #: apps/web/src/whisper-speech.ts
 msgid "This server has no speech model installed, so voice input is off."
 msgstr "This server has no speech model installed, so voice input is off."
+
+#: apps/web/src/cover-letter-kit-bridge.ts
+msgid "This server keeps no drafts, so it cannot keep a kit beside your letter."
+msgstr "This server keeps no drafts, so it cannot keep a kit beside your letter."
+
+#: apps/web/src/cover-letter-kit-bridge.ts
+msgid "This server keeps no drafts, so it cannot keep your letter."
+msgstr "This server keeps no drafts, so it cannot keep your letter."
 
 #: apps/web/src/http-bridge.ts
 msgid "This service runs Anthropic, OpenAI and its own local models only."
@@ -11023,6 +11162,10 @@ msgstr "Unlisted source"
 msgid "unnamed source"
 msgstr "unnamed source"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Unsaved changes"
+msgstr "Unsaved changes"
+
 #: apps/web/src/application-material-model.ts
 msgid "Unsaved draft"
 msgstr "Unsaved draft"
@@ -11153,6 +11296,10 @@ msgstr "Use the reviewed requirements (brief v{0})"
 msgid "Use the reviewed requirements instead"
 msgstr "Use the reviewed requirements instead"
 
+#: packages/ui/src/cover-letter-help.tsx
+msgid "Use the writing kit"
+msgstr "Use the writing kit"
+
 #: packages/ui/src/knowledge.tsx
 msgid "Use this knowledge base"
 msgstr "Use this knowledge base"
@@ -11185,6 +11332,10 @@ msgstr "Used one workspace per job? Choose the folder of that workspace, not an 
 #: apps/web/src/landing.tsx
 msgid "User guide"
 msgstr "User guide"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Uses:"
+msgstr "Uses:"
 
 #. placeholder {0}: selection.version
 #. placeholder {1}: countedNouns.requirement(selection.requirementCount)
@@ -11387,6 +11538,10 @@ msgstr "Warnings"
 #: packages/ui/src/review.tsx
 msgid "was opened after the configured maximum of"
 msgstr "was opened after the configured maximum of"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Ways to open"
+msgstr "Ways to open"
 
 #: apps/web/src/beta-sign-up-model.ts
 msgid "We found no invite for the email address you signed in with. Enter the code from your invite email, or sign out and sign in with the address the invite was sent to."
@@ -11693,6 +11848,14 @@ msgstr "Write your answer in a few words, up to 4,000 characters."
 msgid "Write your answer. Enter sends, Shift+Enter starts a new line."
 msgstr "Write your answer. Enter sends, Shift+Enter starts a new line."
 
+#: packages/ui/src/cover-letter-kit-model.ts
+msgid "Write your letter first."
+msgstr "Write your letter first."
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Write your letter here, in your own words."
+msgstr "Write your letter here, in your own words."
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "writer"
 msgstr "writer"
@@ -11725,6 +11888,10 @@ msgstr "writing"
 #: apps/web/src/application-material.tsx
 msgid "Writing check"
 msgstr "Writing check"
+
+#: packages/ui/src/cover-letter-help.tsx
+msgid "Writing kit"
+msgstr "Writing kit"
 
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-comparison-facts.ts
@@ -12009,6 +12176,10 @@ msgstr "Your invite is ready. Sign in with the email address the invite was sent
 msgid "Your knowledge base is created when you add your first evidence above."
 msgstr "Your knowledge base is created when you add your first evidence above."
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Your letter"
+msgstr "Your letter"
+
 #: apps/web/src/interview-guide.tsx
 msgid "Your never-say list stays on the server: it is listed back in the guide, and any sentence close to it is left out."
 msgstr "Your never-say list stays on the server: it is listed back in the guide, and any sentence close to it is left out."
@@ -12126,6 +12297,10 @@ msgstr "Your work history"
 #: apps/web/src/workspace-model.ts
 msgid "Your workspace"
 msgstr "Your workspace"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Your writing kit"
+msgstr "Your writing kit"
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Your writing model splits the job page into requirements you review."

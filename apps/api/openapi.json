@@ -1655,6 +1655,13 @@
             "type": "string",
             "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
           },
+          "written_by": {
+            "description": "`candidate` for a cover letter the candidate wrote beside a writing kit; no model wrote any of it.",
+            "type": "string",
+            "enum": [
+              "candidate"
+            ]
+          },
           "model": {
             "type": "object",
             "properties": {
@@ -12632,6 +12639,13 @@
             "description": "The saved draft this version was edited from; absent for a drafted version.",
             "type": "string",
             "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          },
+          "written_by": {
+            "description": "`candidate` for a cover letter the candidate wrote beside a writing kit; no model wrote any of it.",
+            "type": "string",
+            "enum": [
+              "candidate"
+            ]
           },
           "model": {
             "type": "object",
@@ -33178,7 +33192,7 @@
     "/v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/versions": {
       "post": {
         "summary": "Save the candidate's edit of a draft as a new version",
-        "description": "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. 400 when the item count differs from the draft's, or not_editable for a writing kit; 404 when the application has no such draft.",
+        "description": "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. Based on a writing kit, or on a letter the candidate wrote, it saves the candidate's own cover letter instead: one item per paragraph, up to ten, with `written_by: candidate` and no citations. 400 when the item count differs from the draft's; 404 when the application has no such draft.",
         "requestBody": {
           "required": true,
           "content": {

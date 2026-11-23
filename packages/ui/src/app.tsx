@@ -2450,7 +2450,12 @@ export function App({
         ? {}
         : {
             headerNotice: applicationNameNudge(application),
-            afterReview: <HostApplicationPanel applicationId={application.applicationId} />,
+            afterReview: (
+              <HostApplicationPanel
+                applicationId={application.applicationId}
+                coverLetterKit={activePort.coverLetterKit}
+              />
+            ),
             startApplicationId: application.applicationId,
             applicationName: application.name,
             ...(activePort.setApplicationModels === undefined ||
