@@ -2,7 +2,10 @@ import type { ModelSelection } from "@draft-loop/domain";
 import type { DataExposurePolicy, JsonObject } from "@draft-loop/providers";
 
 import type { ApplicationMaterialModelExecutor } from "./application-material-model.js";
-import { applicationMaterialEconomyModelId } from "./application-material-model.js";
+import {
+  applicationMaterialEconomyModelId,
+  applicationMaterialMaxOutputTokens,
+} from "./application-material-model.js";
 import type {
   CoverLetterKitAnswer,
   CoverLetterKitPort,
@@ -18,8 +21,12 @@ import { withDocumentLanguage } from "./document-language-instruction.js";
 
 export const coverLetterKitModelId = applicationMaterialEconomyModelId;
 export const coverLetterKitPromptVersion = "cover-letter-kit-v1";
-/** Room for a full kit: ids and fourteen-word notes, in a language that spends more tokens. */
-export const coverLetterKitMaxOutputTokens = 2_048;
+/**
+ * Room for a full kit: ids and fourteen-word notes, in a language that spends more tokens. A live
+ * check on Haiku hit 2,048 on every attempt (502 material_model_failed), so the kit takes the same
+ * budget as the other material calls; the US$0.10 cap still bounds what one kit may spend.
+ */
+export const coverLetterKitMaxOutputTokens = applicationMaterialMaxOutputTokens;
 /** The most one kit may spend across its attempts, in US dollars. */
 export const coverLetterKitMaxCostUsd = 0.1;
 
