@@ -197,6 +197,22 @@ PR only when the user explicitly asks and all required checks pass. A green
 local gate is a precondition for opening the PR, not a substitute for review or
 for the checks that run on it.
 
+Open a pull request with Claude Code's `/ship` command by default. Run it once
+the change is committed on its branch and the local gate passes. `/ship`
+pushes the branch, opens the PR, reviews it, and works on review feedback,
+failing checks and conflicts. Three rules still apply on top of it:
+
+- **PR body:** fill in the PR template, and keep any attribution lines your
+  session requires at the top. Edit the body after `/ship` opens the PR if
+  they are missing.
+- **Merge:** `/ship` does not merge. Merge under the merge rule above.
+- **Long runs:** full test suites and long builds still run as the PR's
+  GitHub checks, not locally.
+
+When `/ship` is unavailable, for example in an agent without it or on a plan
+that does not offer it, push the branch and open the PR yourself under the
+same rules.
+
 Resolve conflicts on the branch rather than on `main`, and say in the PR body
 which side of any conflict was taken and why.
 
