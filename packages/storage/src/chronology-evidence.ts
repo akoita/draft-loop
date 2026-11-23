@@ -27,11 +27,46 @@ export function readEvidenceSource(database: Reader, id: string): EvidenceSource
       };
 }
 
-/** A Markdown heading that dates a role or period, such as `## Analyst, 2021 to present`. */
+const yearAt = (text: string, index: number): boolean =>
+  /^(?:19|20)\d{2}$/u.test(text.slice(index, index + 4));
+const isWordCharacter = (character: string | undefined): boolean =>
+  character !== undefined && /^[\p{L}\p{N}_]$/u.test(character);
+
+/**
+ * A Markdown heading that dates a role or period, such as `## Analyst, 2021 to present`: a year,
+ * then `to` or a dash, then a year or present, current or now. One pass over the first line, so
+ * its time stays linear in the heading's length.
+ */
 export function isDatedChronologyHeading(text: string): boolean {
-  return /^\s*#{1,6}\s+[^\n]*(?:19|20)\d{2}[^\n]*(?:\bto\b|[–—-])[^\n]*(?:(?:19|20)\d{2}|present|current|now)\b/iu.test(
-    text,
-  );
+  const trimmed = text.trimStart();
+  const newline = trimmed.indexOf("\n");
+  const line = (newline === -1 ? trimmed : trimmed.slice(0, newline)).toLowerCase();
+  let marker = 0;
+  while (marker < line.length && line[marker] === "#") marker += 1;
+  if (marker < 1 || marker > 6 || !/^\s$/u.test(line[marker] ?? "")) return false;
+  let stage = 0;
+  for (let index = marker + 1; index < line.length; index += 1) {
+    if (stage === 0 && yearAt(line, index)) {
+      stage = 1;
+      index += 3;
+    } else if (stage === 1) {
+      const dash = line[index] === "-" || line[index] === "–" || line[index] === "—";
+      const to =
+        line.startsWith("to", index) &&
+        !isWordCharacter(line[index - 1]) &&
+        !isWordCharacter(line[index + 2]);
+      if (dash || to) {
+        stage = 2;
+        if (to) index += 1;
+      }
+    } else if (stage === 2) {
+      for (const end of ["present", "current", "now"]) {
+        if (line.startsWith(end, index) && !isWordCharacter(line[index + end.length])) return true;
+      }
+      if (yearAt(line, index) && !isWordCharacter(line[index + 4])) return true;
+    }
+  }
+  return false;
 }
 
 /** A chunk that is one top-level heading line and nothing else, such as `# Amara Okafor`. */
