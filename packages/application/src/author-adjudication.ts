@@ -14,6 +14,10 @@ import { relevanceWeightedRoomInstructions } from "./author-relevance-prompts.js
 import type { AuthorRevision } from "./author-revision-memory.js";
 import { structuredRoleInstructions } from "./author-structure-prompts.js";
 import { automaticRoundAndVoiceInstructions } from "./author-voice-prompts.js";
+import {
+  namedHeaderStatementInstructions,
+  plainSummaryInstructions,
+} from "./header-and-summary-prompts.js";
 import { roleNeutralAuthorProse, roleNeutralSectionInstructions } from "./role-neutral-prompts.js";
 
 /** The per-generation output-token cap a prompt version states and sends. */
@@ -296,6 +300,16 @@ const authorPromptTemplateVersions = Object.freeze({
     true,
     true,
   ),
+  // v22 fills the name from a top heading, leaves out a missing contact field and keeps project names out of the summary (#3296, #3160).
+  "cli-author-v22": authorPromptTemplate(
+    `${structuredFieldInstructions}${compositionalTerminologyInstructions}${roleNeutralJobTailoredCvInstructions}${requirementCoverageInstructions}${candidateDirectionInstructions}${applicationPlanAuthorInstructions}${structuredRoleInstructions}${pageTargetLengthInstructions}${singleStatementInstructions}${namedHeaderStatementInstructions(coherentStatementInstructions)}${fullDraftInstructions}${relevanceWeightedRoomInstructions}${automaticRoundAndVoiceInstructions}${projectCardInstructions}${roleNeutralSectionInstructions}${plainSummaryInstructions}`,
+    32_768,
+    true,
+    true,
+    true,
+    true,
+    true,
+  ),
 } as const satisfies Readonly<Record<string, AuthorPromptTemplate>>);
 
 /**
@@ -305,7 +319,7 @@ const authorPromptTemplateVersions = Object.freeze({
  * author version to `createAuthorAdjudicationPrompt`, never this value.
  */
 export function promptTemplateVersion(role: "author" | "critic"): string {
-  return role === "author" ? "cli-author-v21" : "cli-critic-v12";
+  return role === "author" ? "cli-author-v22" : "cli-critic-v12";
 }
 
 /** Whether the recorded author version states, and so can honour, the candidate's directions. */
@@ -403,7 +417,8 @@ export function createAuthorAdjudicationPrompt(
     authorPromptTemplateVersion === "cli-author-v18" ||
     authorPromptTemplateVersion === "cli-author-v19" ||
     authorPromptTemplateVersion === "cli-author-v20" ||
-    authorPromptTemplateVersion === "cli-author-v21";
+    authorPromptTemplateVersion === "cli-author-v21" ||
+    authorPromptTemplateVersion === "cli-author-v22";
   const usesV5FactualityRules =
     usesV6SystemPrompt || authorPromptTemplateVersion === "cli-author-v5";
   const systemPrompt = usesV6SystemPrompt

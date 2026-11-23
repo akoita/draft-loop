@@ -17,6 +17,7 @@ import { checkDocumentLanguage, wrongLanguageMessage } from "./document-language
 import { findRepeatedFacts } from "./repeated-fact.js";
 import { findRepeatedPhrase } from "./repeated-phrase.js";
 import { isRequirementCoveredByBlock } from "./requirement-coverage.js";
+import { findSummaryProjectNames } from "./summary-project-names.js";
 
 export { alternativeRequirementBranches } from "./alternative-coverage.js";
 export type {
@@ -638,6 +639,10 @@ export function validateDraftArtifact(
     (optionsOrGapIds as DeterministicValidationOptions).approvalGate === true;
   // Context-line caveats, phrase-list summaries and Core areas that repeat Experience (#2908).
   for (const issue of findCvWritingIssues(artifact)) {
+    addIssue(issues, { ...issue, category: "quality", severity: "warning" });
+  }
+  // Internal project names in the summary or Core areas (#3160).
+  for (const issue of findSummaryProjectNames(artifact)) {
     addIssue(issues, { ...issue, category: "quality", severity: "warning" });
   }
 

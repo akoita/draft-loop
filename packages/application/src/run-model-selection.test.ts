@@ -13,8 +13,8 @@ describe("new run prompt versions", () => {
 
   it("starts on the previous version when an evaluation pin names it", () => {
     expect(
-      newRunPromptVersion("author", { DRAFT_LOOP_EVAL_AUTHOR_PROMPT_VERSION: "cli-author-v20" }),
-    ).toBe("cli-author-v20");
+      newRunPromptVersion("author", { DRAFT_LOOP_EVAL_AUTHOR_PROMPT_VERSION: "cli-author-v21" }),
+    ).toBe("cli-author-v21");
     expect(
       newRunPromptVersion("critic", { DRAFT_LOOP_EVAL_CRITIC_PROMPT_VERSION: "cli-critic-v11" }),
     ).toBe("cli-critic-v11");

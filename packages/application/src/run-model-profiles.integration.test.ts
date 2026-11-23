@@ -103,7 +103,7 @@ it("persists exact profile snapshots before execution and resumes without regist
     expect(context.modelConfiguration.author).toMatchObject({
       company: "anthropic",
       modelId: author.modelId,
-      promptTemplateVersion: "cli-author-v21",
+      promptTemplateVersion: "cli-author-v22",
       profile: author,
     });
     expect(context.modelConfiguration.critic).toMatchObject({
