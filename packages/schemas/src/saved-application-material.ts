@@ -139,6 +139,12 @@ export const savedApplicationMaterialSchema = z
     research_brief_id: shortText.optional(),
     /** The saved draft this version was edited from (#2480); absent for a drafted version. */
     based_on: savedApplicationMaterialIdSchema.optional(),
+    /**
+     * `candidate` for a cover letter the candidate wrote in their own words beside a writing kit
+     * (#3279): no model wrote any of it, and `based_on` names the kit or their earlier letter.
+     * Absent for a letter a model drafted.
+     */
+    written_by: z.enum(["candidate"]).optional(),
     model: z.strictObject({ provider: shortText, model: shortText }),
     /**
      * The critic's findings this version revised (#2525): each sentence of the version it is based
@@ -200,6 +206,13 @@ export const savedApplicationMaterialSchema = z
         code: "custom",
         path: ["items"],
         message: kit ? "a writing kit holds no items" : "holds at least one item",
+      });
+    }
+    if (material.written_by !== undefined && material.kind !== "cover-letter") {
+      context.addIssue({
+        code: "custom",
+        path: ["written_by"],
+        message: "only a cover letter is written by the candidate",
       });
     }
     if (guide !== (material.interview_details !== undefined)) {

@@ -938,6 +938,10 @@ msgstr "{who} s’est arrêté pendant la rédaction · tour {round}"
 msgid "{who} stopped while revising · round {round}"
 msgstr "{who} s’est arrêté pendant la révision · tour {round}"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "{words, plural, one {# word} other {# words}}"
+msgstr "{words, plural, one {# mot} other {# mots}}"
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "/1M input · $"
 msgstr "/1M en entrée · $"
@@ -990,6 +994,10 @@ msgstr "Un CV, un export de profil ou des notes sur votre travail."
 msgid "A draft is being written. Wait for it to finish or stop it, then delete your account."
 msgstr "Une version est en cours de rédaction. Attendez qu’elle se termine ou arrêtez-la, puis supprimez votre compte."
 
+#: packages/ui/src/cover-letter-help.tsx
+msgid "A draft with a note on each paragraph, to rewrite in your words."
+msgstr "Un brouillon avec une note sur chaque paragraphe, à réécrire avec vos mots."
+
 #: packages/ui/src/profile-fact-suggestions-model.ts
 msgid "A fact you have not confirmed yet"
 msgstr "Un fait que vous n’avez pas encore confirmé"
@@ -1013,6 +1021,14 @@ msgstr "Un chemin de titres compte au plus 12 titres."
 #: packages/ui/src/career-interview-model.ts
 msgid "A job you applied for asks for \"{title}\", and your record does not show it yet."
 msgstr "Une offre à laquelle vous avez postulé demande « {title} », et votre dossier ne le montre pas encore."
+
+#: packages/ui/src/cover-letter-kit-model.ts
+msgid "A letter holds at most {maximumOwnLetterParagraphs} paragraphs. Join some of them."
+msgstr "Une lettre compte au plus {maximumOwnLetterParagraphs} paragraphes. Regroupez-en certains."
+
+#: packages/ui/src/cover-letter-help.tsx
+msgid "A letter written by AI. It can be spotted and count against you."
+msgstr "Une lettre écrite par l'IA. Elle peut être repérée et vous desservir."
 
 #: packages/ui/src/finding-title.ts
 msgid "A line covering this requirement was removed: "
@@ -1050,6 +1066,10 @@ msgstr "Un résultat de filtrage plus récent a remplacé celui-ci. Rechargez po
 #: apps/web/src/http-bridge.ts
 msgid "A one-run writing policy cannot be used on the hosted service yet."
 msgstr "Une politique de rédaction pour une seule exécution n’est pas encore disponible sur le service hébergé."
+
+#: packages/ui/src/cover-letter-kit-model.ts
+msgid "A paragraph holds at most {maximumOwnLetterParagraphCharacters} characters. Split the long one."
+msgstr "Un paragraphe compte au plus {maximumOwnLetterParagraphCharacters} caractères. Coupez le plus long."
 
 #: apps/web/src/interview-guide.tsx
 msgid "A pay range is given only from a dated source research finds; otherwise the guide says what to check."
@@ -1095,6 +1115,7 @@ msgid "About the company"
 msgstr "Sur l'entreprise"
 
 #: apps/web/src/research-brief.tsx
+#: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "About the employer"
 msgstr "Sur l'employeur"
 
@@ -1481,6 +1502,10 @@ msgstr "et"
 msgid "and its completed Round"
 msgstr "et son tour terminé"
 
+#: packages/ui/src/cover-letter-help.tsx
+msgid "Annotated draft"
+msgstr "Brouillon annoté"
+
 #: packages/ui/src/review.tsx
 msgid "Another review action is already running."
 msgstr "Une autre action de relecture est déjà en cours."
@@ -1500,6 +1525,11 @@ msgstr "Répondre maintenant"
 #: packages/ui/src/help-ask.tsx
 msgid "Answer:"
 msgstr "Réponse :"
+
+#. placeholder {0}: formatList(numbers.map(String))
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Answers requirement {0}"
+msgstr "Répond à l'exigence {0}"
 
 #: apps/web/src/consent-model.ts
 #: packages/ui/src/app.tsx
@@ -2456,6 +2486,10 @@ msgstr "Collecte des entrées"
 msgid "Combined scenario estimate"
 msgstr "Estimation combinée du scénario"
 
+#: packages/ui/src/cover-letter-help.tsx
+msgid "Coming soon"
+msgstr "Bientôt disponible"
+
 #: packages/ui/src/review.tsx
 msgid "commands"
 msgstr "commandes"
@@ -3214,10 +3248,12 @@ msgid "Download or delete this candidate's data"
 msgstr "Télécharger ou supprimer les données de ce candidat"
 
 #: apps/web/src/application-material.tsx
+#: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Download PDF"
 msgstr "Télécharger en PDF"
 
 #: apps/web/src/application-material.tsx
+#: packages/ui/src/cover-letter-kit-screen.tsx
 msgid "Download Word"
 msgstr "Télécharger en Word"
 
@@ -3776,6 +3812,10 @@ msgstr "faits"
 msgid "Facts by category"
 msgstr "Faits par catégorie"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Facts from your career record"
+msgstr "Faits de votre dossier de carrière"
+
 #: packages/ui/src/career-signposts.tsx
 msgid "Facts Redakloop finds in these documents are reviewed and edited in Career profile."
 msgstr "Les faits que Redakloop trouve dans ces documents sont relus et modifiés dans Profil professionnel."
@@ -4029,6 +4069,7 @@ msgstr "D’après le texte de l’offre"
 msgid "From the workspace's job file."
 msgstr "Depuis le fichier de l’offre de l’espace de travail."
 
+#: packages/ui/src/cover-letter-help.tsx
 #: packages/ui/src/review.tsx
 msgid "Full draft"
 msgstr "Ébauche complète"
@@ -4401,6 +4442,10 @@ msgstr "Comment ça marche"
 #: packages/ui/src/display-preference.tsx
 msgid "How much each screen shows at once. The change applies right away."
 msgstr "Ce que chaque écran montre d’un coup. Le changement s’applique tout de suite."
+
+#: packages/ui/src/cover-letter-help.tsx
+msgid "How much help do you want?"
+msgstr "Quelle aide voulez-vous ?"
 
 #: apps/web/src/private-sections.tsx
 msgid "How the heading matches"
@@ -4902,6 +4947,10 @@ msgstr "Développeur principal ou développeuse principale"
 #: packages/ui/src/career-interview-model.ts
 msgid "Leadership"
 msgstr "Leadership"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Leave a blank line between paragraphs. Each save keeps a new version."
+msgstr "Laissez une ligne vide entre les paragraphes. Chaque enregistrement garde une nouvelle version."
 
 #: apps/web/src/feedback.tsx
 msgid "Leave out passwords and other people's details."
@@ -6134,6 +6183,10 @@ msgstr "non enregistré pour {roleName}"
 msgid "not required"
 msgstr "non requise"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Not saved yet"
+msgstr "Pas encore enregistrée"
+
 #: apps/web/src/screening-model.ts
 msgid "Not screened"
 msgstr "Non filtré"
@@ -6177,6 +6230,12 @@ msgstr "Notes pour le guide"
 #: packages/ui/src/work-journal-intake.tsx
 msgid "Notes from agents"
 msgstr "Notes des agents"
+
+#. placeholder {0}: kit.model
+#. placeholder {1}: formatDate(kit.createdAt) ?? kit.createdAt
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Notes to write from, not sentences to copy. Prepared by {0} on {1}."
+msgstr "Des notes pour écrire, pas des phrases à copier. Préparé par {0} le {1}."
 
 #: apps/web/src/operator.tsx
 msgid "Nothing here."
@@ -6618,6 +6677,10 @@ msgstr "Page {page} sur {pageCount}"
 msgid "Page target"
 msgstr "Nombre de pages visé"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Paragraph by paragraph"
+msgstr "Paragraphe par paragraphe"
+
 #: packages/ui/src/cover-letter-check-panel.tsx
 msgid "Paragraphs open the same way"
 msgstr "Des paragraphes commencent de la même façon"
@@ -6755,6 +6818,10 @@ msgstr "Autorisation de stocker ces éléments"
 msgid "Phone"
 msgstr "Téléphone"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Phrases to avoid"
+msgstr "Formules à éviter"
+
 #: packages/ui/src/getting-started.tsx
 msgid "Pick a template and save the file."
 msgstr "Choisissez un modèle et enregistrez le fichier."
@@ -6835,6 +6902,18 @@ msgstr "Premium"
 #: apps/web/src/application-material.tsx
 msgid "Prepare"
 msgstr "Préparer"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Prepare a new kit"
+msgstr "Préparer un nouveau kit"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Prepare my writing kit"
+msgstr "Préparer mon kit d'écriture"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Preparing…"
+msgstr "Préparation…"
 
 #: packages/ui/src/run-details.tsx
 msgid "present"
@@ -7014,6 +7093,11 @@ msgstr "Tarifs publics standard de l’API texte sans cache, en USD"
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Public uncached API list rates"
 msgstr "Tarifs publics de l’API sans cache"
+
+#. placeholder {0}: formatDate(fact.publishedOn) ?? fact.publishedOn
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Published {0}"
+msgstr "Publié le {0}"
 
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Quality for real CVs has not been validated for these presets, and account availability is not checked. OpenAI Codex user-session routes cannot use these profiles. Redakloop never switches your sign-in automatically."
@@ -7269,6 +7353,10 @@ msgstr "Erreurs récentes"
 #: apps/web/src/interview-guide-model.ts
 msgid "recent news"
 msgstr "l’actualité récente"
+
+#: packages/ui/src/cover-letter-help.tsx
+msgid "Recommended"
+msgstr "Recommandé"
 
 #: apps/web/src/feedback.tsx
 #: apps/web/src/operator.tsx
@@ -7678,6 +7766,10 @@ msgstr "Exigences sans réponse pour l'instant"
 #: packages/ui/src/review.tsx
 msgid "Requirements reviewed (version"
 msgstr "Exigences relues (version"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Requirements to answer"
+msgstr "Exigences auxquelles répondre"
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Requirements were not extracted"
@@ -8362,6 +8454,10 @@ msgstr "Enregistrer le lien"
 msgid "Save models"
 msgstr "Enregistrer les modèles"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Save my letter"
+msgstr "Enregistrer ma lettre"
+
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Save new version"
 msgstr "Nouvelle version"
@@ -8401,6 +8497,11 @@ msgstr "Enregistrez vos décisions sur les problèmes avant de marquer le brouil
 #: packages/ui/src/profile-status.ts
 msgid "Save your issue decisions, then mark the profile reviewed."
 msgstr "Enregistrez vos décisions sur les problèmes, puis marquez le profil comme relu."
+
+#. placeholder {0}: formatDateTime(savedLetter.createdAt) ?? savedLetter.createdAt
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Saved {0}"
+msgstr "Enregistrée le {0}"
 
 #: apps/web/src/operator-funnel.tsx
 msgid "Saved a Prepare item"
@@ -8459,6 +8560,7 @@ msgid "saving…"
 msgstr "enregistrement…"
 
 #: packages/ui/src/career-interview-panel.tsx
+#: packages/ui/src/cover-letter-kit-screen.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/work-journal-panel.tsx
 #: packages/ui/src/writing-policy-editor.tsx
@@ -8917,6 +9019,10 @@ msgstr "Autre chose"
 msgid "Something is broken"
 msgstr "Quelque chose ne marche pas"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Something went wrong."
+msgstr "Une erreur s'est produite."
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Something you are proud of"
 msgstr "Une réalisation dont vous êtes fier"
@@ -9357,6 +9463,7 @@ msgid "Tell us about your career"
 msgstr "Parlez-nous de votre parcours"
 
 #: apps/web/src/application-material.tsx
+#: packages/ui/src/cover-letter-kit-screen.tsx
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Template"
@@ -9426,6 +9533,10 @@ msgstr "Le"
 #: apps/web/src/api-client.ts
 msgid "The {name} path parameter is missing."
 msgstr "Le paramètre de chemin {name} est manquant."
+
+#: packages/ui/src/cover-letter-help.tsx
+msgid "The annotated draft is not ready yet. Use the writing kit for now: it gives the same facts and notes, and you write the letter."
+msgstr "Le brouillon annoté n'est pas encore prêt. Utilisez le kit d'écriture pour l'instant : il donne les mêmes faits et notes, et vous écrivez la lettre."
 
 #. placeholder {0}: response.status
 #: apps/web/src/api-client.ts
@@ -9741,6 +9852,10 @@ msgstr "L’employeur compte au plus {maximumRequirementTextLength} caractères.
 msgid "The evidence kind could not be saved."
 msgstr "Le type d’élément n’a pas pu être enregistré."
 
+#: packages/ui/src/cover-letter-help.tsx
+msgid "The facts and notes to write from. You write the letter."
+msgstr "Les faits et les notes pour écrire. Vous écrivez la lettre."
+
 #: packages/ui/src/career-flow.tsx
 msgid "The facts Redakloop extracts from your documents, each with its exact quote. You review them once; every application reuses them."
 msgstr "Les faits que Redakloop extrait de vos documents, chacun avec sa citation exacte. Vous les relisez une fois ; chaque candidature les réutilise."
@@ -9917,6 +10032,18 @@ msgstr "L’offre a été mise en quarantaine par le filtrage des injections. Li
 #: packages/ui/src/review.tsx
 msgid "The job this draft is written for, under the Job tab. A different job needs a new application."
 msgstr "L’offre pour laquelle cette ébauche est rédigée, sous l’onglet Offre. Une autre offre demande une nouvelle candidature."
+
+#: apps/web/src/cover-letter-kit-bridge.ts
+msgid "The job's brief lists no requirement yet, so there is nothing for a kit to answer. Extract the requirements first."
+msgstr "La fiche du poste ne liste encore aucune exigence : un kit n'a rien à quoi répondre. Extrayez d'abord les exigences."
+
+#: apps/web/src/cover-letter-kit-bridge.ts
+msgid "The kit broke its own rules twice, so it was refused. Try again."
+msgstr "Le kit a enfreint ses propres règles deux fois, il a donc été refusé. Réessayez."
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "The kit picks the job's three main requirements and the facts from your career record that prove them. It adds ways to open, a four-paragraph outline, dated facts about the employer and phrases to avoid. It holds notes, not sentences: you write the letter."
+msgstr "Le kit choisit les trois principales exigences du poste et les faits de votre dossier de carrière qui les prouvent. Il ajoute des façons d'ouvrir, un plan en quatre paragraphes, des faits datés sur l'employeur et des formules à éviter. Il contient des notes, pas des phrases : vous écrivez la lettre."
 
 #. placeholder {0}: material.sourceId
 #. placeholder {1}: material.knowledgeBaseId
@@ -10614,6 +10741,10 @@ msgstr "C’est la première version du document."
 msgid "This job posting looks {label}."
 msgstr "Cette annonce semble {label}."
 
+#: apps/web/src/cover-letter-kit-bridge.ts
+msgid "This kit would pass the server's cost cap for one request."
+msgstr "Ce kit dépasserait le plafond de coût du serveur pour une requête."
+
 #: apps/web/src/cover-letter-risk-model.ts
 msgid "This letter is still the AI draft. Sent as it is, it can be spotted and can count against you. Download it anyway?"
 msgstr "Cette lettre est encore le brouillon de l’IA. Envoyée telle quelle, elle peut être repérée et vous desservir. La télécharger quand même ?"
@@ -10753,6 +10884,14 @@ msgstr "Ce serveur n’a pas de modèle configuré pour l’entretien de parcour
 #: apps/web/src/whisper-speech.ts
 msgid "This server has no speech model installed, so voice input is off."
 msgstr "Ce serveur n’a pas de modèle vocal installé, la saisie vocale est donc désactivée."
+
+#: apps/web/src/cover-letter-kit-bridge.ts
+msgid "This server keeps no drafts, so it cannot keep a kit beside your letter."
+msgstr "Ce serveur ne garde aucun brouillon : il ne peut pas garder un kit à côté de votre lettre."
+
+#: apps/web/src/cover-letter-kit-bridge.ts
+msgid "This server keeps no drafts, so it cannot keep your letter."
+msgstr "Ce serveur ne garde aucun brouillon : il ne peut pas garder votre lettre."
 
 #: apps/web/src/http-bridge.ts
 msgid "This service runs Anthropic, OpenAI and its own local models only."
@@ -11017,6 +11156,10 @@ msgstr "Source non listée"
 msgid "unnamed source"
 msgstr "source sans nom"
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Unsaved changes"
+msgstr "Modifications non enregistrées"
+
 #: apps/web/src/application-material-model.ts
 msgid "Unsaved draft"
 msgstr "Brouillon non enregistré"
@@ -11147,6 +11290,10 @@ msgstr "Utiliser les exigences relues (brief v{0})"
 msgid "Use the reviewed requirements instead"
 msgstr "Utiliser plutôt les exigences relues"
 
+#: packages/ui/src/cover-letter-help.tsx
+msgid "Use the writing kit"
+msgstr "Utiliser le kit d'écriture"
+
 #: packages/ui/src/knowledge.tsx
 msgid "Use this knowledge base"
 msgstr "Utiliser cette base de connaissances"
@@ -11179,6 +11326,10 @@ msgstr "Vous utilisiez un espace de travail par offre ? Choisissez le dossier de
 #: apps/web/src/landing.tsx
 msgid "User guide"
 msgstr "Guide d’utilisation"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Uses:"
+msgstr "S'appuie sur :"
 
 #. placeholder {0}: selection.version
 #. placeholder {1}: countedNouns.requirement(selection.requirementCount)
@@ -11381,6 +11532,10 @@ msgstr "Avertissements"
 #: packages/ui/src/review.tsx
 msgid "was opened after the configured maximum of"
 msgstr "a été ouvert après le maximum configuré de"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Ways to open"
+msgstr "Façons d'ouvrir"
 
 #: apps/web/src/beta-sign-up-model.ts
 msgid "We found no invite for the email address you signed in with. Enter the code from your invite email, or sign out and sign in with the address the invite was sent to."
@@ -11687,6 +11842,14 @@ msgstr "Écrivez votre réponse en quelques mots, jusqu’à 4 000 caractères."
 msgid "Write your answer. Enter sends, Shift+Enter starts a new line."
 msgstr "Écrivez votre réponse. Entrée envoie, Maj+Entrée crée une nouvelle ligne."
 
+#: packages/ui/src/cover-letter-kit-model.ts
+msgid "Write your letter first."
+msgstr "Écrivez d'abord votre lettre."
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Write your letter here, in your own words."
+msgstr "Écrivez votre lettre ici, avec vos propres mots."
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "writer"
 msgstr "rédacteur"
@@ -11719,6 +11882,10 @@ msgstr "rédaction"
 #: apps/web/src/application-material.tsx
 msgid "Writing check"
 msgstr "Vérification de l'écriture"
+
+#: packages/ui/src/cover-letter-help.tsx
+msgid "Writing kit"
+msgstr "Kit d'écriture"
 
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-comparison-facts.ts
@@ -12003,6 +12170,10 @@ msgstr "Votre invitation est prête. Connectez-vous avec l'adresse email à laqu
 msgid "Your knowledge base is created when you add your first evidence above."
 msgstr "Votre base de connaissances est créée quand vous ajoutez votre premier élément ci-dessus."
 
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Your letter"
+msgstr "Votre lettre"
+
 #: apps/web/src/interview-guide.tsx
 msgid "Your never-say list stays on the server: it is listed back in the guide, and any sentence close to it is left out."
 msgstr "Votre liste « à ne jamais dire » reste sur le serveur : le guide la reprend, et toute phrase qui s’en approche est écartée."
@@ -12120,6 +12291,10 @@ msgstr "Votre parcours professionnel"
 #: apps/web/src/workspace-model.ts
 msgid "Your workspace"
 msgstr "Votre espace de travail"
+
+#: packages/ui/src/cover-letter-kit-screen.tsx
+msgid "Your writing kit"
+msgstr "Votre kit d'écriture"
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Your writing model splits the job page into requirements you review."

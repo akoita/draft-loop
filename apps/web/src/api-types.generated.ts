@@ -181,6 +181,7 @@ export interface ApiSchemas {
     })[];
     readonly research_brief_id?: string;
     readonly based_on?: string;
+    readonly written_by?: "candidate";
     readonly model: {
       readonly provider: string;
       readonly model: string;

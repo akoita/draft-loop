@@ -53,6 +53,7 @@ import {
   applicationMaterialGuidanceSchema,
   interviewGuideSections,
   maximumSavedApplicationMaterialItemCharacters,
+  maximumSavedApplicationMaterialItems,
   maximumSavedInterviewGuideItems,
   type SavedApplicationMaterial,
   savedApplicationMaterialIdSchema,
@@ -76,6 +77,7 @@ import { consentRecordId } from "./consent-routes.js";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { MaterialReviews } from "./material-reviews.js";
+import { isOwnLetterBase, ownCoverLetterVersion } from "./own-cover-letter.js";
 
 /** What drafting application material needs from a deployment (#2216). */
 export interface ApplicationMaterialParts {
@@ -260,6 +262,12 @@ export const draftView = z
     based_on: savedApplicationMaterialIdSchema
       .optional()
       .describe("The saved draft this version was edited from; absent for a drafted version."),
+    written_by: z
+      .enum(["candidate"])
+      .optional()
+      .describe(
+        "`candidate` for a cover letter the candidate wrote beside a writing kit; no model wrote any of it.",
+      ),
     model: z.object({ provider: z.string(), model: z.string() }),
     critic_findings: z
       .array(z.object({ paragraph: z.number().int(), sentence: z.string(), reason: z.string() }))
@@ -382,7 +390,8 @@ export function viewOf(draft: SavedApplicationMaterial): z.infer<typeof draftVie
   return withTells({
     ...view,
     items: view.items.map((item) => {
-      if (item.edited !== true) return item;
+      // The candidate's own letter cites nothing, so its numbers are theirs to check (#3279).
+      if (item.edited !== true || view.written_by === "candidate") return item;
       const numbers = unsupportedNumbers(item.text, sources);
       return numbers.length === 0 ? item : { ...item, unsupported_numbers: numbers };
     }),
@@ -869,7 +878,7 @@ export function registerApplicationMaterialRoutes(
       schema: {
         summary: "Save the candidate's edit of a draft as a new version",
         description:
-          "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. 400 when the item count differs from the draft's, or not_editable for a writing kit; 404 when the application has no such draft.",
+          "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. Based on a writing kit, or on a letter the candidate wrote, it saves the candidate's own cover letter instead: one item per paragraph, up to ten, with `written_by: candidate` and no citations. 400 when the item count differs from the draft's; 404 when the application has no such draft.",
         params: draftParams,
         body: editBody,
         response: { 200: draftView, 400: apiErrorSchema, 404: apiErrorSchema },
@@ -882,10 +891,27 @@ export function registerApplicationMaterialRoutes(
         return reply.code(404).send(apiError("not_found", "There is no such saved draft."));
       }
       const texts = request.body.items.map((item) => item.text);
-      if (base.kind === "cover-letter-kit") {
-        return reply
-          .code(400)
-          .send(apiError("not_editable", "A writing kit has no text to edit; prepare a new one."));
+      if (isOwnLetterBase(base)) {
+        if (texts.length > maximumSavedApplicationMaterialItems) {
+          return reply
+            .code(400)
+            .send(
+              apiError(
+                "item_count_mismatch",
+                `A letter holds at most ${maximumSavedApplicationMaterialItems} paragraphs.`,
+              ),
+            );
+        }
+        const letter = ownCoverLetterVersion(base, texts, {
+          id: newMaterialId(),
+          createdAt: now().toISOString(),
+        });
+        await drafts.insert(letter);
+        request.log.info(
+          { workspaceId, applicationId, materialId: letter.id, basedOn: base.id },
+          "own cover letter saved",
+        );
+        return reply.send(viewOf(letter));
       }
       if (texts.length !== base.items.length) {
         return reply

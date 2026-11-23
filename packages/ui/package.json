@@ -15,6 +15,14 @@
       "types": "./src/host-panels.tsx",
       "import": "./src/host-panels.tsx"
     },
+    "./cover-letter-help": {
+      "types": "./src/cover-letter-help.tsx",
+      "import": "./src/cover-letter-help.tsx"
+    },
+    "./cover-letter-kit-screen": {
+      "types": "./src/cover-letter-kit-screen.tsx",
+      "import": "./src/cover-letter-kit-screen.tsx"
+    },
     "./help-panel": {
       "types": "./src/help-panel.tsx",
       "import": "./src/help-panel.tsx"
