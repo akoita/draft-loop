@@ -27,7 +27,24 @@ export function readEvidenceSource(database: Reader, id: string): EvidenceSource
       };
 }
 
-/** Read only dated Markdown headings from immutable, explicitly pinned sources. */
+/** A Markdown heading that dates a role or period, such as `## Analyst, 2021 to present`. */
+export function isDatedChronologyHeading(text: string): boolean {
+  return /^\s*#{1,6}\s+[^\n]*(?:19|20)\d{2}[^\n]*(?:\bto\b|[–—-])[^\n]*(?:(?:19|20)\d{2}|present|current|now)\b/iu.test(
+    text,
+  );
+}
+
+/** A chunk that is one top-level heading line and nothing else, such as `# Amara Okafor`. */
+function isTopLevelHeadingLine(text: string): boolean {
+  const trimmed = text.trim();
+  return trimmed.startsWith("# ") && !trimmed.includes("\n");
+}
+
+/**
+ * Read dated Markdown headings from immutable, explicitly pinned sources, plus each source's
+ * opening `#` heading when it stands alone: a profile usually names its candidate there (#3296),
+ * and the caller keeps it only when it names a person.
+ */
 export function readApprovedChronology(
   database: Reader,
   workspaceId: string,
@@ -48,12 +65,18 @@ export function readApprovedChronology(
       )
       .all(workspaceId, source.id);
     if (rows.length > 100) throw new Error("Chronology heading scan bound exceeded.");
+    const first = database
+      .prepare(
+        "SELECT min(ordinal) AS ordinal FROM evidence_chunks WHERE workspace_id = ? AND source_id = ?",
+      )
+      .get(workspaceId, source.id);
+    const firstOrdinal =
+      first?.ordinal === null || first?.ordinal === undefined ? -1 : Number(first.ordinal);
     for (const row of rows) {
       const text = String(row.text);
       if (
-        !/^\s*#{1,6}\s+[^\n]*(?:19|20)\d{2}[^\n]*(?:\bto\b|[–—-])[^\n]*(?:(?:19|20)\d{2}|present|current|now)\b/iu.test(
-          text,
-        )
+        !isDatedChronologyHeading(text) &&
+        !(Number(row.ordinal) === firstOrdinal && isTopLevelHeadingLine(text))
       )
         continue;
       hits.push({

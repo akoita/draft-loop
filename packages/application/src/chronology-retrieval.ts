@@ -1,5 +1,8 @@
 import type { ContextSnapshot, RetrievalPort, ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { EvidenceChronologyStoragePort } from "@draft-loop/storage";
+import { isDatedChronologyHeading } from "@draft-loop/storage/chronology-evidence";
+
+import { candidateNameFromHeading } from "./candidate-name-evidence.js";
 import {
   matchesRequiredSectionEvidence,
   requiredSectionQuery,
@@ -17,10 +20,17 @@ export function createChronologyRetrieval(
       const limit = options.limit ?? 20;
       if (!Number.isInteger(limit) || limit < 1 || limit > 20)
         throw new Error("Provider evidence limit must be from 1 to 20.");
-      const headings = await storage.readApprovedChronology(
-        options.workspaceId,
-        context.evidenceManifest,
-      );
+      // Dated role headings, and one source's opening heading when it names the candidate, so the
+      // author can write the name instead of `[Your name]` (#3296); other opening headings drop.
+      let nameReserved = false;
+      const headings = (
+        await storage.readApprovedChronology(options.workspaceId, context.evidenceManifest)
+      ).filter((chunk) => {
+        if (isDatedChronologyHeading(chunk.text)) return true;
+        if (nameReserved || candidateNameFromHeading(chunk.text) === undefined) return false;
+        nameReserved = true;
+        return true;
+      });
       if (headings.length > limit)
         throw new Error("Chronology cannot fit the provider evidence limit.");
       const ranked = await storage.queryEvidence(query, { ...options, limit });
