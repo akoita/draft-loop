@@ -27,7 +27,59 @@ export function readEvidenceSource(database: Reader, id: string): EvidenceSource
       };
 }
 
-/** Read only dated Markdown headings from immutable, explicitly pinned sources. */
+const yearAt = (text: string, index: number): boolean =>
+  /^(?:19|20)\d{2}$/u.test(text.slice(index, index + 4));
+const isWordCharacter = (character: string | undefined): boolean =>
+  character !== undefined && /^[\p{L}\p{N}_]$/u.test(character);
+
+/**
+ * A Markdown heading that dates a role or period, such as `## Analyst, 2021 to present`: a year,
+ * then `to` or a dash, then a year or present, current or now. One pass over the first line, so
+ * its time stays linear in the heading's length.
+ */
+export function isDatedChronologyHeading(text: string): boolean {
+  const trimmed = text.trimStart();
+  const newline = trimmed.indexOf("\n");
+  const line = (newline === -1 ? trimmed : trimmed.slice(0, newline)).toLowerCase();
+  let marker = 0;
+  while (marker < line.length && line[marker] === "#") marker += 1;
+  if (marker < 1 || marker > 6 || !/^\s$/u.test(line[marker] ?? "")) return false;
+  let stage = 0;
+  for (let index = marker + 1; index < line.length; index += 1) {
+    if (stage === 0 && yearAt(line, index)) {
+      stage = 1;
+      index += 3;
+    } else if (stage === 1) {
+      const dash = line[index] === "-" || line[index] === "–" || line[index] === "—";
+      const to =
+        line.startsWith("to", index) &&
+        !isWordCharacter(line[index - 1]) &&
+        !isWordCharacter(line[index + 2]);
+      if (dash || to) {
+        stage = 2;
+        if (to) index += 1;
+      }
+    } else if (stage === 2) {
+      for (const end of ["present", "current", "now"]) {
+        if (line.startsWith(end, index) && !isWordCharacter(line[index + end.length])) return true;
+      }
+      if (yearAt(line, index) && !isWordCharacter(line[index + 4])) return true;
+    }
+  }
+  return false;
+}
+
+/** A chunk that is one top-level heading line and nothing else, such as `# Amara Okafor`. */
+function isTopLevelHeadingLine(text: string): boolean {
+  const trimmed = text.trim();
+  return trimmed.startsWith("# ") && !trimmed.includes("\n");
+}
+
+/**
+ * Read dated Markdown headings from immutable, explicitly pinned sources, plus each source's
+ * opening `#` heading when it stands alone: a profile usually names its candidate there (#3296),
+ * and the caller keeps it only when it names a person.
+ */
 export function readApprovedChronology(
   database: Reader,
   workspaceId: string,
@@ -48,12 +100,18 @@ export function readApprovedChronology(
       )
       .all(workspaceId, source.id);
     if (rows.length > 100) throw new Error("Chronology heading scan bound exceeded.");
+    const first = database
+      .prepare(
+        "SELECT min(ordinal) AS ordinal FROM evidence_chunks WHERE workspace_id = ? AND source_id = ?",
+      )
+      .get(workspaceId, source.id);
+    const firstOrdinal =
+      first?.ordinal === null || first?.ordinal === undefined ? -1 : Number(first.ordinal);
     for (const row of rows) {
       const text = String(row.text);
       if (
-        !/^\s*#{1,6}\s+[^\n]*(?:19|20)\d{2}[^\n]*(?:\bto\b|[–—-])[^\n]*(?:(?:19|20)\d{2}|present|current|now)\b/iu.test(
-          text,
-        )
+        !isDatedChronologyHeading(text) &&
+        !(Number(row.ordinal) === firstOrdinal && isTopLevelHeadingLine(text))
       )
         continue;
       hits.push({

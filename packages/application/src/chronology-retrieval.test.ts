@@ -147,3 +147,67 @@ it("retains dated headings from pinned sources, bounds results, and rejects sour
     await rm(root, { recursive: true, force: true });
   }
 });
+
+it("reserves the opening heading that names the candidate, not one that names a document (#3296)", async () => {
+  const root = await mkdtemp(join(tmpdir(), "chronology-name-"));
+  const storage = openSqliteStorage(join(root, "history.sqlite"));
+  const createdAt = "2026-01-01T00:00:00.000Z";
+  try {
+    await storage.saveWorkspace({
+      id: "workspace",
+      state: "collecting",
+      createdAt,
+      updatedAt: createdAt,
+    });
+    // An invented profile and an invented CV: only the profile's heading names a person.
+    const sources: Record<string, readonly string[]> = {
+      profile: [
+        "# Amara Okafor",
+        "**Contact**: `amara@profile.test` · Leeds",
+        "## Ward nurse - March 2019 to present",
+        "Led a ward handover checklist adopted across three wards.",
+        "# Not the opening heading",
+      ],
+      cv: ["# Curriculum vitae", "Night shifts on a surgical ward."],
+    };
+    for (const [id, texts] of Object.entries(sources)) {
+      await storage.saveEvidenceSource({
+        id,
+        workspaceId: "workspace",
+        path: `/${id}.md`,
+        mediaType: "text/markdown",
+        checksum: id,
+        createdAt,
+      });
+      for (const [ordinal, text] of texts.entries()) {
+        await storage.saveEvidenceChunk({
+          id: `${id}-${ordinal}`,
+          sourceId: id,
+          workspaceId: "workspace",
+          ordinal,
+          lineStart: ordinal + 1,
+          lineEnd: ordinal + 1,
+          checksum: `${id}-${ordinal}`,
+          text,
+          createdAt,
+        });
+      }
+    }
+    const context = {
+      evidenceManifest: [
+        { id: "profile", checksum: "profile" },
+        { id: "cv", checksum: "cv" },
+      ],
+    } as unknown as ContextSnapshot;
+    const result = await createChronologyRetrieval(storage, context).queryEvidence(
+      "handover checklist",
+      { workspaceId: "workspace", limit: 3 },
+    );
+    expect(result.map((hit) => hit.id).slice(0, 2)).toEqual(["profile-0", "profile-2"]);
+    expect(result.map((hit) => hit.id)).not.toContain("cv-0");
+    expect(result.map((hit) => hit.id)).not.toContain("profile-4");
+  } finally {
+    await storage.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
