@@ -882,9 +882,12 @@ A server turns it on with `DRAFT_LOOP_CLAUDE_REFUSAL_FALLBACK=<model>` on the wo
 unless the model is a Claude Haiku or Sonnet model with known rates that an author may fall
 back to:
 
-| Author | Fallback |
-| --- | --- |
-| `claude-sonnet-5-5` | `claude-sonnet-5` |
+| Author | Fallback | Fallback rates per million tokens |
+| --- | --- | --- |
+| `claude-sonnet-5-5` | `claude-sonnet-5` | $2 input, $10 output, $0.20 cache read |
+
+No profile offers the fallback model, so no run can choose it. Its rates sit apart from
+the model profile catalog, in `packages/application/src/unprofiled-model-pricing.ts`.
 
 A call on any other author keeps failing a declined step. The fallback runs only on the
 direct Claude route: the self-hosted `direct` routes, or the hosted route's opt-in Claude

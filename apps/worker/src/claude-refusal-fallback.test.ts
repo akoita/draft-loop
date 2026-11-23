@@ -71,6 +71,19 @@ describe("DRAFT_LOOP_CLAUDE_REFUSAL_FALLBACK", () => {
     expect(catalogClaudePricing("claude-unknown-1")).toBeUndefined();
   });
 
+  it("accepts claude-sonnet-5 at its listed rates on a direct route", () => {
+    expect(readClaudeRefusalFallback(env("claude-sonnet-5"), direct)).toEqual({
+      modelId: "claude-sonnet-5",
+      pricing: {
+        inputUsdPerMillionTokens: 2,
+        outputUsdPerMillionTokens: 10,
+        cachedInputUsdPerMillionTokens: 0.2,
+        cacheWriteInputUsdPerMillionTokens: 2.5,
+        maxInputTokens: 1000000,
+      },
+    });
+  });
+
   it("refuses the setting where no direct Claude route would use it", () => {
     for (const routes of [undefined, readModelRoutes(vertexEnv)]) {
       expect(() => readClaudeRefusalFallback(env("claude-sonnet-5"), routes, knownRates)).toThrow(

@@ -1,4 +1,4 @@
-import { catalogModelPricing } from "@draft-loop/application";
+import { catalogModelPricing, unprofiledModelPricing } from "@draft-loop/application";
 import {
   type ClaudeRefusalFallbackSetting,
   checkClaudeRefusalFallbackModel,
@@ -18,14 +18,17 @@ export interface ClaudeRefusalFallbackConfig {
 
 const name = "DRAFT_LOOP_CLAUDE_REFUSAL_FALLBACK";
 
-/** The catalog's API rates for a Claude model, or undefined when the catalog names none. */
+/**
+ * A Claude model's API rates: from its catalog profile, or from the rates kept for models no
+ * profile offers, such as the fallback `claude-sonnet-5`. Undefined when neither names it.
+ */
 export const catalogClaudePricing = (modelId: string): ModelPricing | undefined =>
   catalogModelPricing({
     company: "anthropic",
     modelId,
     role: "author",
     promptTemplateVersion: "refusal-fallback",
-  });
+  }) ?? unprofiledModelPricing("anthropic", modelId);
 
 /**
  * Reads `DRAFT_LOOP_CLAUDE_REFUSAL_FALLBACK`. Unset or empty leaves it off. It is refused at
