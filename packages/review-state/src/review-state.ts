@@ -271,7 +271,25 @@ function previousArtifact(snapshot: RunSnapshot, current: ReviewArtifact): Revie
     .filter((artifact): artifact is NonNullable<RunSnapshot["artifact"]> => artifact !== null)
     .filter((artifact) => artifact.version < current.version)
     .sort((left, right) => right.version - left.version);
-  return candidates[0] === undefined ? null : reviewArtifact(candidates[0], noDecisions);
+  return candidates[0] === undefined
+    ? null
+    : comparedVersion(reviewArtifact(candidates[0], noDecisions));
+}
+
+/**
+ * The previous version as the comparison reads it: its sections and their text. Its claims and
+ * their evidence excerpts stay behind (#3258); the screens read them only on the current draft,
+ * and each excerpt repeats up to a whole source chunk.
+ */
+export function comparedVersion(artifact: ReviewArtifact): ReviewArtifact {
+  return {
+    ...artifact,
+    sections: artifact.sections.map((section) => ({
+      ...section,
+      blocks: section.blocks.map((block) => ({ ...block, claimIds: [] })),
+    })),
+    claims: [],
+  };
 }
 
 function findingId(snapshot: RunSnapshot, index: number, code: string): string {
