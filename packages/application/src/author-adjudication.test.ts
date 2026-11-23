@@ -12,6 +12,7 @@ import {
   promptTemplateVersion,
 } from "./author-adjudication.js";
 import { fullDraftBudgetWording, fullDraftInstructions } from "./author-completeness-prompts.js";
+import { coherentStatementInstructions } from "./author-fact-prompts.js";
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
 import { projectCardInstructions } from "./author-project-card-prompts.js";
 import { relevanceWeightedRoomInstructions } from "./author-relevance-prompts.js";
@@ -21,6 +22,11 @@ import {
   criticReadsCompactEvidenceTable,
   criticReportsFindingTargets,
 } from "./critic-adjudication.js";
+import {
+  namedHeaderRule,
+  namedHeaderStatementInstructions,
+  plainSummaryInstructions,
+} from "./header-and-summary-prompts.js";
 import { roleNeutralSectionInstructions } from "./role-neutral-prompts.js";
 
 const authorVersion = promptTemplateVersion("author");
@@ -300,7 +306,7 @@ const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
   it("records v18 for new author runs and v11 for the critic", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v21");
+    expect(promptTemplateVersion("author")).toBe("cli-author-v22");
     expect(promptTemplateVersion("critic")).toBe("cli-critic-v12");
   });
 
@@ -763,5 +769,36 @@ describe("author prompt cli-author-v21 and critic cli-critic-v12 (#3090)", () =>
     expect(v11).toContain("no listed software employment does not mean");
     expect(criticReportsFindingTargets("cli-critic-v12")).toBe(true);
     expect(criticReadsCompactEvidenceTable("cli-critic-v12")).toBe(true);
+  });
+});
+
+describe("author prompt cli-author-v22 (#3296, #3160)", () => {
+  const v16HeaderRule = "shows the visible placeholders [Your name], [Email], [Phone] and [City]";
+
+  it("fills the name from a top heading, omits one missing contact field and keeps project names out of the summary", () => {
+    const v21 = createAuthorAdjudicationPrompt("cli-author-v21", undefined).systemPrompt;
+    const v22 = createAuthorAdjudicationPrompt("cli-author-v22", undefined).systemPrompt;
+    expect(v22).toContain(namedHeaderRule);
+    expect(v22).toContain("leave that field out; never write a placeholder such as [Phone]");
+    expect(v22).toContain('"# Candidate profile: Jane Doe"');
+    expect(v22).toContain("code editorial-project-name");
+    expect(v22).not.toContain(v16HeaderRule);
+    expect(v22.endsWith(plainSummaryInstructions)).toBe(true);
+    expect(v22.replace(plainSummaryInstructions, "")).toBe(
+      v21.replace(
+        coherentStatementInstructions,
+        namedHeaderStatementInstructions(coherentStatementInstructions),
+      ),
+    );
+  });
+
+  it("keeps v21 unchanged for the runs that recorded it", () => {
+    const v21 = createAuthorAdjudicationPrompt("cli-author-v21", undefined).systemPrompt;
+    expect(v21).toContain(v16HeaderRule);
+    expect(v21).not.toContain(namedHeaderRule);
+    expect(v21).not.toContain(plainSummaryInstructions);
+    expect(() => namedHeaderStatementInstructions("no header rule here")).toThrow(
+      /v16 header rule/u,
+    );
   });
 });

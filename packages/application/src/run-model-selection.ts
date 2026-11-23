@@ -13,7 +13,7 @@ import type { WorkspaceConfig } from "./local.js";
 export const promptVersionPins = Object.freeze({
   author: {
     variable: "DRAFT_LOOP_EVAL_AUTHOR_PROMPT_VERSION",
-    allowed: ["cli-author-v20", "cli-author-v21"],
+    allowed: ["cli-author-v21", "cli-author-v22"],
   },
   critic: {
     variable: "DRAFT_LOOP_EVAL_CRITIC_PROMPT_VERSION",

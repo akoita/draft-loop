@@ -313,6 +313,12 @@ claims.
   field in explicit candidate contact context; policy mentions and unavailable
   values do not qualify. The chunk keeps its exact text, identity and
   provenance.
+- **Name heading.** When the contact record's source opens with a top-level
+  heading that names a person, such as `# Jane Doe` or
+  `# Candidate profile: Jane Doe`, that heading chunk is reserved beside the
+  record, so the author can cite the name (#3296). A heading that names a
+  document, such as `# Curriculum vitae`, is not. The name is best effort: it
+  never displaces required evidence.
 
 ## What the author writes
 
@@ -321,7 +327,7 @@ summary, experience, projects, skills, education, certifications and languages.
 It includes each section that retrieved evidence supports, and its section and
 entry order is kept through the artifact and every exporter.
 
-New runs use author template `cli-author-v21`. A resumed run keeps the exact
+New runs use author template `cli-author-v22`. A resumed run keeps the exact
 prompt and output ceiling it started with.
 
 ### Writing for the job
@@ -349,6 +355,10 @@ context, never candidate facts. The author:
   licences** section and voluntary work in a **Volunteering** section, takes
   its examples from several fields, and keeps acronyms as the evidence writes
   them (`cli-author-v21`, #3090);
+- names only employers, known companies, technologies and qualifications in
+  the summary and Core areas, describes the candidate's own projects there in
+  plain words, and names a project only in Experience or Projects
+  (`cli-author-v22`, #3160);
 - lists the skills and certifications the job asks for first.
 
 A writing policy's section order or emphasis overrides this guidance.
@@ -417,12 +427,17 @@ avoid redundancy, never to drop supported accomplishments to save tokens.
 When an export names no template, a one-page run is drawn with Compact and any
 other with Modern, so the layout matches the length the author wrote to.
 
-### Placeholder header
+### Header and placeholders
 
-When the evidence holds no name or contact details, the header shows
-`[Your name]`, `[Email]`, `[Phone]` and `[City]` as missing-data notices with no
-claims. Claim coverage accepts them only in a header section, and no value is
-ever invented. See `missing-cv-header` under
+The header copies the name and contact details the cited evidence states. From
+`cli-author-v22` (#3296), a top-level heading that names a person is the
+candidate's name, and a contact field the evidence lacks is left out when
+other details exist.
+
+Placeholders appear only when nothing exists to fill them: `[Your name]` when
+the evidence holds no name, and `[Email]`, `[Phone]` and `[City]` when it holds
+no contact details at all. They are missing-data notices with no claims. Claim
+coverage accepts them only in a header section, and no value is ever invented. See `missing-cv-header` under
 [quality warnings](#deterministic-quality-warnings).
 
 ### Inputs on a revision
@@ -892,6 +907,7 @@ unless the table says so.
 | `editorial-fragment` | A bullet opens with a lowercase letter (except a known name such as `iOS` or `npm`), ends on a dangling connector, or joins two statements of three or more words with a semicolon |
 | `editorial-negative-aside` | A role's context line, the paragraph under its header, adds a status caveat such as "staging", "prototype" or "not in production" (#2908) |
 | `editorial-fragment` (summary) | A summary paragraph is three or more short phrases joined by semicolons instead of sentences (#2908) |
+| `editorial-project-name` | The summary or Core areas names a project or product that the cited evidence gives only as a project title (a bold name, a `project` heading or a Projects line), and the draft never gives as an employer, skill or qualification; one warning per block (#3160) |
 | `duplicate-content` (Core areas) | A Core areas line shares at least 70% of its content word pairs with an Experience or Projects bullet (#2908) |
 | `dense-bullet-series` | More than 4 bullets in a row, a section of 4 or more one-line bullets, or adjacent bullets where either has under about 30 words; one warning per run of bullets, asking to expand an item or move it into the context paragraph, never to join facts with semicolons (#1874) |
 | `repeated-fact` | The same fact is in more than one section: the shorter of two claims has at least four content words and the longer holds at least 80% of them, after dropping function words and endings (#1859) |

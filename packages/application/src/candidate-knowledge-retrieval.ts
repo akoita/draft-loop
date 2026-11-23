@@ -40,6 +40,7 @@ import {
   type CandidateKnowledgeSensitivityExclusions,
   createCandidateKnowledgeSensitivityExclusions,
 } from "./candidate-knowledge-sensitivity-exclusion.js";
+import { selectCandidateNameEvidence } from "./candidate-name-evidence.js";
 import {
   candidatePriorityEvidenceChunkLimit,
   candidatePriorityEvidenceQuery,
@@ -422,6 +423,14 @@ export function candidateKnowledgeRuntimeRetrieval(
         candidateContactEvidenceQueryLimit,
       );
       const candidateContactHit = selectCandidateContactEvidence(contactRawResult);
+      // The source's top heading naming the candidate rides with the contact record (#3296).
+      const candidateNameHit =
+        candidateContactHit === undefined
+          ? undefined
+          : selectCandidateNameEvidence(
+              candidateContactHit,
+              await loadPinnedSourceChunks([candidateContactHit]),
+            );
       const chronologyRawResults: CandidateKnowledgeRetrievalResult[] = [];
       if (requiresExperienceChronology(config.requiredSections)) {
         for (const chronologyQuery of candidateKnowledgeChronologyQueries) {
@@ -611,6 +620,8 @@ export function candidateKnowledgeRuntimeRetrieval(
         candidateContactHit === undefined
           ? []
           : [toScoredEvidenceChunk(candidateContactHit, config.id)];
+      const nameChunks =
+        candidateNameHit === undefined ? [] : [toScoredEvidenceChunk(candidateNameHit, config.id)];
       const chronologyChunks = providerChronologyHits.map((hit) =>
         toScoredEvidenceChunk(hit, config.id),
       );
@@ -619,6 +630,8 @@ export function candidateKnowledgeRuntimeRetrieval(
           ...contactChunks,
           ...chronologyChunks,
           ...priorityPrefix.map((hit) => toScoredEvidenceChunk(hit, config.id)),
+          // After the required reservations, so the name never displaces them (#3296).
+          ...nameChunks,
         ];
         const activeSupplements =
           priorityPrefix.length === 0
@@ -684,6 +697,8 @@ export function candidateKnowledgeRuntimeRetrieval(
         key,
         new Set([
           ...contactChunks.map(({ id }) => id),
+          // The name is best effort: reserved only when it fit beside the required evidence.
+          ...nameChunks.map(({ id }) => id).filter((id) => selectedIds.has(id)),
           ...chronologyChunks.map(({ id }) => id),
           ...selectedPriorityHits.map(({ chunkId }) => chunkId),
         ]),
@@ -691,6 +706,7 @@ export function candidateKnowledgeRuntimeRetrieval(
       const rawHitsById = new Map<string, CandidateKnowledgeLexicalHit>(
         [
           contactRawResult,
+          { hits: candidateNameHit === undefined ? [] : [candidateNameHit] },
           ...chronologyRawResults,
           { hits: providerChronologyHits },
           { hits: requestedProjectOverflowHits },

@@ -16,6 +16,7 @@ import {
 } from "./author-fact-prompts.js";
 import { pageTargetLengthInstructions } from "./author-length-prompts.js";
 import { createCriticAdjudicationPrompt } from "./critic-adjudication.js";
+import { namedHeaderStatementInstructions } from "./header-and-summary-prompts.js";
 import { createLocalApplicationDriver } from "./local.js";
 import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
 
@@ -67,7 +68,7 @@ it.each([
   { recorded: "cli-author-v15", structuredGuidance: true, budget: 32_768, patchFirst: true },
   { recorded: "cli-author-v16", structuredGuidance: true, budget: 32_768, patchFirst: true },
 ])(
-  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v21",
+  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v22",
   async ({ recorded, structuredGuidance, budget, patchFirst }) => {
     const resumedCalls = patchFirst === true ? 3 : 2;
     const root = await mkdtemp(join(tmpdir(), "author-prompt-version-"));
@@ -239,11 +240,11 @@ it.each([
       const fresh = await driver.start({ root, allowProviderData: true }, io);
       expect(fresh.state, JSON.stringify(fresh.lastError)).toBe("awaiting-approval");
       const current = await contextModels(root, fresh.contextSnapshotId);
-      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v21");
+      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v22");
       expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v12");
       expect(systemPrompts).toHaveLength(resumedCalls + 1);
       expect(systemPrompts[resumedCalls]).toBe(
-        `${createAuthorAdjudicationPrompt("cli-author-v21", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+        `${createAuthorAdjudicationPrompt("cli-author-v22", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
       expect(systemPrompts[resumedCalls]).toContain(
         "Bullet markers should be several lines apart; never stack short bullets.",
@@ -252,7 +253,10 @@ it.each([
       expect(systemPrompts[resumedCalls]).toContain("never a fragment copied from a source");
       expect(systemPrompts[resumedCalls]).toContain(pageTargetLengthInstructions);
       expect(systemPrompts[resumedCalls]).toContain(singleStatementInstructions);
-      expect(systemPrompts[resumedCalls]).toContain(coherentStatementInstructions);
+      // v22 keeps v16's statement rules with its own header rule (#3296).
+      expect(systemPrompts[resumedCalls]).toContain(
+        namedHeaderStatementInstructions(coherentStatementInstructions),
+      );
       expect(systemPrompts[resumedCalls]).toContain(fullDraftInstructions);
       // A resumed earlier run keeps its exact prompt, without the v17 full-draft guidance.
       expect(systemPrompts[0]).not.toContain(fullDraftInstructions);
