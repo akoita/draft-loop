@@ -197,8 +197,8 @@ PR only when the user explicitly asks and all required checks pass. A green
 local gate is a precondition for opening the PR, not a substitute for review or
 for the checks that run on it.
 
-Open a pull request with Claude Code's `/ship` command by default. Run it once
-the change is committed on its branch and the local gate passes. `/ship`
+In Claude Code, open a pull request with its `/ship` command by default. Run
+it once the change is committed on its branch and the local gate passes. `/ship`
 pushes the branch, opens the PR, reviews it, and works on review feedback,
 failing checks and conflicts. Three rules still apply on top of it:
 
@@ -209,9 +209,9 @@ failing checks and conflicts. Three rules still apply on top of it:
 - **Long runs:** full test suites and long builds still run as the PR's
   GitHub checks, not locally.
 
-When `/ship` is unavailable, for example in an agent without it or on a plan
-that does not offer it, push the branch and open the PR yourself under the
-same rules.
+Codex and other agents without `/ship` push the branch and open the PR
+themselves under the same rules. So does Claude Code when its plan does not
+offer `/ship`.
 
 Resolve conflicts on the branch rather than on `main`, and say in the PR body
 which side of any conflict was taken and why.
