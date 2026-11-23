@@ -280,6 +280,16 @@ msgstr "{0, plural, one {L’approbation est possible avec # avertissement non b
 msgid "{0, plural, one {Approving makes v{version} with your # edit; the critic has not reviewed it.} other {Approving makes v{version} with your # edits; the critic has not reviewed them.}}"
 msgstr "{0, plural, one {Approuver crée la v{version} avec votre # modification ; le relecteur ne l’a pas relue.} other {Approuver crée la v{version} avec vos # modifications ; le relecteur ne les a pas relues.}}"
 
+#. placeholder {0}: requirements.total
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "{0, plural, one {From the job's top requirement.} other {From the job's top # requirements.}}"
+msgstr "{0, plural, one {D'après la principale exigence de l'offre.} other {D'après les # principales exigences de l'offre.}}"
+
+#. placeholder {0}: requirements.total
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "{0, plural, one {From your writing kit's # requirement.} other {From your writing kit's # requirements.}}"
+msgstr "{0, plural, one {D'après la # exigence de votre kit d'écriture.} other {D'après les # exigences de votre kit d'écriture.}}"
+
 #. placeholder {0}: state.setup.selectedEvidenceChunkCount
 #: packages/ui/src/review.tsx
 msgid "{0, plural, one {No lexical match; using # bounded fallback excerpt from career evidence} other {No lexical match; using # bounded fallback excerpts from career evidence}}"
@@ -1008,6 +1018,10 @@ msgstr "Une offre à laquelle vous avez postulé demande « {title} », et votre
 msgid "A line covering this requirement was removed: "
 msgstr "Une ligne couvrant cette exigence a été supprimée : "
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "A list of three"
+msgstr "Une liste de trois"
+
 #. placeholder {0}: tell.match ?? ""
 #: apps/web/src/application-material-model.ts
 msgid "A list of three (\"{0}\") reads as a formula: keep the one that matters."
@@ -1636,6 +1650,10 @@ msgstr "Ont approuvé un brouillon"
 msgid "Approved after {0}"
 msgstr "Approuvé après {0}"
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Approved fact that proves it:"
+msgstr "Fait approuvé qui le prouve :"
+
 #: packages/ui/src/review-footer.tsx
 msgid "Approved past the final CV checks with a recorded reason · ready to export"
 msgstr "Approuvé malgré les vérifications finales du CV, avec une raison enregistrée · prêt à exporter"
@@ -2139,6 +2157,10 @@ msgstr "caractères. Expliquez pourquoi le texte est sûr ; ne collez pas le tex
 msgid "ChatGPT session"
 msgstr "Session ChatGPT"
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Check my letter"
+msgstr "Vérifier ma lettre"
+
 #: packages/ui/src/profile.tsx
 msgid "Check that the selected career evidence includes the facts you need, then retry. Retrying sends your selected career evidence again and may use provider credits."
 msgstr "Vérifiez que les éléments de parcours choisis contiennent les faits nécessaires, puis réessayez. Réessayer renvoie ces éléments et peut consommer des crédits du fournisseur."
@@ -2189,6 +2211,7 @@ msgstr "Vérification que les filiations du rédacteur et du relecteur diffèren
 msgid "Checking your documents…"
 msgstr "Vérification de vos documents…"
 
+#: packages/ui/src/cover-letter-check-panel.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "Checking…"
 msgstr "Vérification…"
@@ -2328,6 +2351,10 @@ msgstr "Filiations déclarées : rédacteur {0} ; relecteur {1}"
 msgid "Claims and career evidence"
 msgstr "Affirmations et éléments de parcours"
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Claims your approved facts do not support"
+msgstr "Affirmations que vos faits approuvés ne soutiennent pas"
+
 #: packages/ui/src/export-template.ts
 msgid "Classic"
 msgstr "Classique"
@@ -2406,6 +2433,10 @@ msgstr "Fermer, c’est corrigé"
 #: apps/web/src/operator-model.ts
 msgid "Closed"
 msgstr "Fermées"
+
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Closest approved fact:"
+msgstr "Fait approuvé le plus proche :"
 
 #: packages/ui/src/project-card-facts.tsx
 #: packages/ui/src/source-evidence-kind-contract.ts
@@ -2606,6 +2637,10 @@ msgstr "Conversation avec l'assistant"
 #: packages/ui/src/agent-setup.tsx
 msgid "Copied"
 msgstr "Copié"
+
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Copied from the job ad"
+msgstr "Copié de l'offre d'emploi"
 
 #: packages/ui/src/agent-setup.tsx
 msgid "Copy"
@@ -3518,6 +3553,10 @@ msgstr "Coût estimé au tarif public de l’API"
 #: packages/ui/src/home.tsx
 msgid "Every application is archived. Start a new application, or restore one below."
 msgstr "Toutes les candidatures sont archivées. Commencez-en une nouvelle, ou restaurez-en une ci-dessous."
+
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Every claim matches an approved fact."
+msgstr "Chaque affirmation correspond à un fait approuvé."
 
 #: packages/ui/src/profile-status.ts
 msgid "Every fact was removed from this draft. Restore at least one before saving."
@@ -4621,6 +4660,10 @@ msgstr "Problèmes par gravité et état"
 msgid "It is empty."
 msgstr "Il est vide."
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "It joins facts from different roles."
+msgstr "Elle réunit des faits de postes différents."
+
 #. placeholder {0}: index + 1
 #: apps/web/src/application-material.tsx
 #: apps/web/src/interview-guide.tsx
@@ -4894,6 +4937,10 @@ msgstr "Longueur"
 msgid "Length in minutes"
 msgstr "Durée en minutes"
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Length: {words} words; aim for 250 to 350"
+msgstr "Longueur : {words} mots ; visez 250 à 350"
+
 #: packages/ui/src/agent-setup.tsx
 msgid "Let Claude Code, Codex or another agent work with Redakloop for you. Approvals, review decisions and settings always stay with you here."
 msgstr "Laissez Claude Code, Codex ou un autre agent travailler avec Redakloop pour vous. Les approbations, les décisions de relecture et les réglages restent toujours entre vos mains, ici."
@@ -5084,6 +5131,10 @@ msgstr "Gérer les éléments de parcours"
 #: apps/web/src/interview-guide-model.ts
 msgid "Managing people"
 msgstr "Encadrer une équipe"
+
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Many dashes"
+msgstr "Beaucoup de tirets"
 
 #: packages/ui/src/review.tsx
 msgid "Mark every word that changed since the previous version"
@@ -5631,6 +5682,18 @@ msgstr "Aucune candidature ne correspond à cette recherche ou à ce filtre."
 msgid "No applications yet. Start a new application for the job you are applying for. It uses your career profile and evidence."
 msgstr "Aucune candidature pour l’instant. Commencez-en une pour le poste visé. Elle utilise votre profil et vos éléments de parcours."
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "No approved fact is close."
+msgstr "Aucun fait approuvé n'en est proche."
+
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "No approved fact says this."
+msgstr "Aucun fait approuvé ne le dit."
+
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "No approved fact states {numbers}."
+msgstr "Aucun fait approuvé n'indique {numbers}."
+
 #: packages/ui/src/review.tsx
 msgid "No blocking findings need action."
 msgstr "Aucun constat bloquant n’attend d’action."
@@ -5799,6 +5862,10 @@ msgstr "Aucune déclaration de filiation n’a été enregistrée. Soit aucune e
 msgid "No linked claim for this finding."
 msgstr "Aucune affirmation liée à ce constat."
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "No machine-sounding wording found."
+msgstr "Aucune formulation d'allure automatique trouvée."
+
 #: packages/ui/src/speech-button.tsx
 msgid "No microphone was found on this device."
 msgstr "Aucun microphone n’a été trouvé sur cet appareil."
@@ -5862,6 +5929,10 @@ msgstr "Aucune exigence n’a été trouvée dans ce texte d’offre"
 #: packages/ui/src/home-model.ts
 msgid "No requirements yet"
 msgstr "Pas encore d’exigences"
+
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "No research finding or job requirement says this."
+msgstr "Aucun résultat de recherche ni aucune exigence de l'offre ne le dit."
 
 #: packages/ui/src/new-application-model.ts
 msgid "No reviewed career profile yet. Generate and review one once, and every application reuses it."
@@ -6547,6 +6618,10 @@ msgstr "Page {page} sur {pageCount}"
 msgid "Page target"
 msgstr "Nombre de pages visé"
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Paragraphs open the same way"
+msgstr "Des paragraphes commencent de la même façon"
+
 #: packages/ui/src/profile-status-view.tsx
 msgid "Parent"
 msgstr "Parent"
@@ -6749,6 +6824,10 @@ msgstr "Doublon possible"
 msgid "Practical points to settle"
 msgstr "Points pratiques à régler"
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Praise with no fact behind it"
+msgstr "Un éloge sans fait pour l'appuyer"
+
 #: packages/ui/src/start-confirmation.tsx
 msgid "Premium"
 msgstr "Premium"
@@ -6780,6 +6859,10 @@ msgstr "Préréglages"
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions."
 msgstr "Les préréglages ne sont pas validés pour de vrais CV et ne fonctionnent pas avec les sessions utilisateur OpenAI Codex."
+
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Pressing Check my letter sends this text once to Anthropic's model to compare its claims with your approved facts. Nothing is rewritten, and Redakloop does not keep the letter."
+msgstr "Vérifier ma lettre envoie ce texte une fois au modèle d'Anthropic pour comparer ses affirmations à vos faits approuvés. Rien n'est réécrit, et Redakloop ne conserve pas la lettre."
 
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
@@ -7587,6 +7670,10 @@ msgstr "Exigences couvertes (évaluées)"
 #: packages/ui/src/start-requirements.tsx
 msgid "Requirements for this run"
 msgstr "Exigences pour cette exécution"
+
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Requirements not answered yet"
+msgstr "Exigences sans réponse pour l'instant"
 
 #: packages/ui/src/review.tsx
 msgid "Requirements reviewed (version"
@@ -9021,6 +9108,10 @@ msgstr "l’étape où elle s’est arrêtée."
 msgid "Steps"
 msgstr "Étapes"
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Stock phrase"
+msgstr "Formule toute faite"
+
 #. placeholder {0}: tell.match ?? ""
 #: apps/web/src/application-material-model.ts
 msgid "Stock phrase \"{0}\": say it in your own words."
@@ -9481,6 +9572,14 @@ msgstr "Le profil professionnel n’a pas pu être établi."
 msgid "The career profile could not be derived. Try again."
 msgstr "Le profil professionnel n’a pas pu être établi. Réessayez."
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "The check did not finish. Your letter is unchanged; try again."
+msgstr "La vérification n'a pas abouti. Votre lettre est inchangée ; réessayez."
+
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "The claim check is paused for a short while. The other checks ran."
+msgstr "La vérification des affirmations est suspendue pour un court moment. Les autres vérifications ont été faites."
+
 #: apps/web/src/interview-guide-model.ts
 msgid "the company"
 msgstr "l’entreprise"
@@ -9799,6 +9898,10 @@ msgstr "L’offre d’emploi ne contient aucun terme de poste exploitable"
 msgid "The job description is longer than shown here."
 msgstr "L’offre d’emploi est plus longue que ce qui est affiché ici."
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "The job lists no requirements to check against."
+msgstr "L'offre ne liste aucune exigence à vérifier."
+
 #: packages/ui/src/start-checklist-model.ts
 msgid "The job page was approved when you created this application. Extract its requirements, then review them."
 msgstr "La page de l’offre a été approuvée à la création de cette candidature. Extrayez ses exigences, puis relisez-les."
@@ -9839,10 +9942,18 @@ msgstr "La dernière relecture s’est arrêtée avant que vous approuviez un CV
 msgid "The last run on this application used {0} → {1}."
 msgstr "La dernière exécution de cette candidature a utilisé {0} → {1}."
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "The letter answers every requirement."
+msgstr "La lettre répond à chaque exigence."
+
 #. placeholder {0}: tell.match ?? ""
 #: apps/web/src/application-material-model.ts
 msgid "The letter has {0} words: aim for 250 to 350."
 msgstr "La lettre compte {0} mots : visez 250 à 350."
+
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "The letter is longer than {maximum} characters; shorten it to check it."
+msgstr "La lettre dépasse {maximum} caractères ; raccourcissez-la pour la vérifier."
 
 #: packages/ui/src/career-interview-live.tsx
 msgid "The live conversation ended."
@@ -10619,6 +10730,10 @@ msgstr "Ce résultat de filtrage est introuvable pour ce dossier. Rechargez la p
 msgid "This sends the conversation above to the people who run Redakloop, who will read it and get back to you. It is kept for 90 days."
 msgstr "La conversation ci-dessus sera envoyée à l’équipe de Redakloop, qui la lira et reviendra vers vous. Elle est conservée 90 jours."
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "This server cannot check claims. The other checks ran."
+msgstr "Ce serveur ne peut pas vérifier les affirmations. Les autres vérifications ont été faites."
+
 #: packages/ui/src/work-journal-model.ts
 msgid "This server cannot turn notes into career evidence yet."
 msgstr "Ce serveur ne peut pas encore transformer des notes en éléments de parcours."
@@ -10719,6 +10834,10 @@ msgstr "Titre"
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Title (optional)"
 msgstr "Titre (facultatif)"
+
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "To check claims, allow sending career material to Anthropic in your consent settings. The other checks ran."
+msgstr "Pour vérifier les affirmations, autorisez l'envoi de vos éléments de carrière à Anthropic dans vos consentements. Les autres vérifications ont été faites."
 
 #. placeholder {0}: formatDate(row.token.expires_at) ?? ""
 #: packages/ui/src/connected-agents.tsx
@@ -11464,6 +11583,10 @@ msgstr "Retiré"
 msgid "Withdrawn on {when}."
 msgstr "Retiré le {when}."
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Wording that reads as machine-made"
+msgstr "Formulations qui semblent écrites par une machine"
+
 #: packages/ui/src/agent-setup-model.ts
 #: packages/ui/src/source-evidence-kind-contract.ts
 #: packages/ui/src/work-journal-panel.tsx
@@ -11753,6 +11876,10 @@ msgstr "Votre entretien de parcours"
 #: packages/ui/src/profile-status-view.tsx
 msgid "Your career profile"
 msgstr "Votre profil professionnel"
+
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "Your career profile has no approved facts to check claims against yet."
+msgstr "Votre profil de carrière n'a pas encore de faits approuvés pour vérifier les affirmations."
 
 #: apps/web/src/application-material-model.ts
 msgid "Your career profile has no fact a draft could cite yet. Build or review the profile first."

@@ -1,3 +1,8 @@
+import {
+  type CoverLetterCheck,
+  coverLetterCheckSchema,
+  maximumCoverLetterCheckCharacters,
+} from "@draft-loop/schemas/cover-letter-check";
 import { type CoverLetterKit, coverLetterKitSchema } from "@draft-loop/schemas/cover-letter-kit";
 import { applicationMaterialGuidanceSchema } from "@draft-loop/schemas/saved-application-material";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -10,7 +15,8 @@ import { WorkJournalApiError, type WorkspaceApiCall } from "./client.js";
  * application, written by Redakloop from the candidate's career facts on the default model. Each
  * draft reserves its cost cap against the agent token's monthly spend cap (`runs:start`). The
  * candidate reviews, edits and keeps the draft in Redakloop. `get_cover_letter_kit` (#3278) returns
- * the material for the candidate to write the letter themselves, within the same cap.
+ * the material for the candidate to write the letter themselves, within the same cap, and
+ * `check_cover_letter` (#3280) checks the letter they wrote, without rewriting or storing it.
  */
 
 export type MaterialKind = "cover-letter" | "interview-questions";
@@ -46,6 +52,12 @@ export interface MaterialApi {
     guidance?: MaterialGuidance,
   ): Promise<AgentDraft>;
   coverLetterKit(applicationId: string): Promise<AgentCoverLetterKit>;
+  checkCoverLetter(applicationId: string, text: string): Promise<AgentCoverLetterCheck>;
+}
+
+export interface AgentCoverLetterCheck extends CoverLetterCheck {
+  readonly application_id: string;
+  readonly next_step: string;
 }
 
 interface DraftBody {
@@ -110,6 +122,19 @@ export function createMaterialApi(call: WorkspaceApiCall): MaterialApi {
           "Help the candidate write the letter in their own words from this kit; do not write it for them. Each fact cites the career record, each employer fact the research brief.",
       };
     },
+    checkCoverLetter: async (applicationId, text) => {
+      const body = (await call(`/applications/${pathId(applicationId)}/cover-letter-check`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text }),
+      }).catch(capFinal)) as CoverLetterCheck;
+      return {
+        application_id: applicationId,
+        ...body,
+        next_step:
+          "Show the candidate each finding and let them revise the letter in their own words; do not rewrite it for them. Redakloop did not keep the letter.",
+      };
+    },
   };
 }
 
@@ -121,6 +146,8 @@ export const draftCoverLetterDescription = `Draft a cover letter for one job app
 export const draftInterviewPrepDescription = `Draft interview questions for one job application, each with a talking point from the candidate's career facts, on Redakloop's default model, and save them in Redakloop. Pass the candidate's own wishes as guidance. ${spendLine}`;
 
 export const getCoverLetterKitDescription = `Prepare a writing kit for one job application's cover letter, so the candidate writes the letter in their own words: the three requirements to answer, each with one or two approved career facts and their source; two or three opening angles and a four-paragraph outline as notes; up to two dated facts about the employer from the research brief; and phrases to avoid. It never writes a sentence of the letter, and Redakloop saves the kit with the application. It spends a little money on Redakloop's economy model: prepare one only when the candidate asked. It reserves one draft's cost cap against this token's monthly cap and is refused past it. Needs the runs:start scope.`;
+
+export const checkCoverLetterDescription = `Check a cover letter the candidate wrote for one job application, without rewriting it: claims their approved career record does not support, each with the closest approved fact; the writing kit's requirements (else the job's top three) the letter does not answer yet; and wording that reads as machine-made, such as phrases copied from the job ad, empty superlatives and stock phrases. Pass the letter as text, at most ${maximumCoverLetterCheckCharacters} characters, only when the candidate asked for a check: it goes to Redakloop's economy model for the claim check and is not stored. While model calls are paused the claim check is skipped and the rest still returns. It reserves one draft's cost cap against this token's monthly cap and is refused past it. Needs the runs:start scope.`;
 
 type Failure = (error: unknown) => {
   isError: boolean;
@@ -172,6 +199,29 @@ export function registerMaterialTools(server: McpServer, api: MaterialApi, failu
     async ({ application_id }) => {
       try {
         return answer({ ...(await api.coverLetterKit(application_id)) });
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+  server.registerTool(
+    "check_cover_letter",
+    {
+      title: "Check a cover letter",
+      description: checkCoverLetterDescription,
+      inputSchema: z.object({
+        application_id: z.string().min(1).max(192),
+        text: z.string().min(1).max(maximumCoverLetterCheckCharacters),
+      }),
+      outputSchema: coverLetterCheckSchema.extend({
+        application_id: z.string(),
+        next_step: z.string(),
+      }),
+      annotations,
+    },
+    async ({ application_id, text }) => {
+      try {
+        return answer({ ...(await api.checkCoverLetter(application_id, text)) });
       } catch (error) {
         return failure(error);
       }

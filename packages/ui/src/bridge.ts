@@ -109,6 +109,12 @@ import {
   workspaceEvidenceMigrationKeys,
   workspaceEvidenceMigrationResultKeys,
 } from "./career-evidence-contract.js";
+import {
+  type CoverLetterCheckInput,
+  type CoverLetterCheckResult,
+  normalizeCoverLetterCheckResult,
+  validateCoverLetterCheckInput,
+} from "./cover-letter-check-contract.js";
 import { normalizeReviewCoverage } from "./coverage-contract.js";
 import { normalizeEarlierRun } from "./earlier-run.js";
 import { exportTemplates } from "./export-template.js";
@@ -256,6 +262,11 @@ export type {
   ApplicationJobOrigin,
   ApplicationJobResult,
 } from "./application-job-contract.js";
+export type {
+  CoverLetterCheckInput,
+  CoverLetterCheckResult,
+  CoverLetterCheckView,
+} from "./cover-letter-check-contract.js";
 export type {
   FactSuggestionAcceptInput,
   FactSuggestionAcceptItem,
@@ -2577,6 +2588,7 @@ export interface BridgeCommandInputMap {
   "application.set-language": ApplicationSetLanguageInput;
   "application.choose-run": ApplicationChooseRunInput;
   "application.move": ApplicationMoveInput;
+  "application.check-cover-letter": CoverLetterCheckInput;
   "application-folder.list": ApplicationFolderListInput;
   "application-folder.create": ApplicationFolderCreateInput;
   "application-folder.rename": ApplicationFolderRenameInput;
@@ -2672,6 +2684,7 @@ export interface BridgeCommandOutputMap {
   "application.set-language": ApplicationRecordResult;
   "application.choose-run": ApplicationRecordResult;
   "application.move": ApplicationRecordResult;
+  "application.check-cover-letter": CoverLetterCheckResult;
   "application-folder.list": ApplicationFolderListResult;
   "application-folder.create": ApplicationFolderRecordResult;
   "application-folder.rename": ApplicationFolderRecordResult;
@@ -4746,6 +4759,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "application.move",
         input: validateApplicationMoveInput(command.input) ?? invalidInput(),
       };
+    case "application.check-cover-letter":
+      return {
+        type: "application.check-cover-letter",
+        input: validateCoverLetterCheckInput(command.input) ?? invalidInput(),
+      };
     case "application-folder.list":
       return {
         type: "application-folder.list",
@@ -6818,6 +6836,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "application.choose-run":
     case "application.move":
       return normalizeApplicationRecord(value);
+    case "application.check-cover-letter":
+      return normalizeCoverLetterCheckResult(value) ?? invalidInput();
     case "application-folder.list":
       return normalizeApplicationFolderListResult(value) ?? invalidInput();
     case "application-folder.create":

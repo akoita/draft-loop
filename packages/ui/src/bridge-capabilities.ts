@@ -17,6 +17,7 @@ export const bridgeCapabilities = [
   "application.set-language",
   "application.choose-run",
   "application.move",
+  "application.check-cover-letter",
   "application-folder.list",
   "application-folder.create",
   "application-folder.rename",

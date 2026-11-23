@@ -59,9 +59,10 @@ The operator pauses all registered calls without a deploy:
 
 The API reads the hosted secret within a minute. Store `{}` to resume. While
 paused, refused routes answer 503 `model_calls_paused` with `retry-after`, and
-a new job brief is saved without reading the job ad. Jobs already queued
-still finish. A secret that cannot be read keeps calls running and logs a
-warning.
+a new job brief is saved without reading the job ad. Check my letter returns
+its wording and requirement findings without the claim check, and the gate
+does not count it. Jobs already queued still finish. A secret that cannot be
+read keeps calls running and logs a warning.
 
 To stop only Claude's refusal fallback, store `{"refusalFallback":"off"}`. The
 worker reads the same secret within a minute, and a paused switch also stops

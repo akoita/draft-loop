@@ -2,6 +2,8 @@ import { prepareCallsPerCreditedApplication } from "@draft-loop/schemas/entitlem
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
 import type { TenantEntitlementsFor } from "./entitlement-gate.js";
+import { modelCallPathOf } from "./model-call-registry.js";
+import type { ModelCallSwitch } from "./model-call-switch.js";
 
 const applicationRoute = "/v1/workspaces/:workspaceId/applications/:applicationId";
 
@@ -28,6 +30,7 @@ const meteredRoutes: ReadonlyArray<{
   { method: "POST", url: `${applicationRoute}/material`, prepare: true },
   { method: "POST", url: `${applicationRoute}/interview-guide`, prepare: true },
   { method: "POST", url: `${applicationRoute}/cover-letter-kit`, prepare: true },
+  { method: "POST", url: `${applicationRoute}/cover-letter-check` },
   { method: "POST", url: `${applicationRoute}/research`, prepare: true },
   { method: "POST", url: "/v1/workspaces/:workspaceId/profiles/:profileId/derivation" },
 ];
@@ -55,6 +58,11 @@ function secondsToNextUtcDay(now: Date): number {
 export interface ModelCallGateOptions {
   readonly entitlementsFor: TenantEntitlementsFor;
   readonly now?: () => Date;
+  /**
+   * The global model call switch. While it is paused, a route that skips its model part (such
+   * as Check my letter, #3280) makes no model call, so it is not counted.
+   */
+  readonly paused?: ModelCallSwitch;
 }
 
 /**
@@ -76,6 +84,13 @@ export function registerModelCallGate(app: FastifyInstance, options: ModelCallGa
     if (caller?.kind !== "member") return;
     const route = meteredRoute(request);
     if (route === undefined) return;
+    if (
+      options.paused !== undefined &&
+      modelCallPathOf(request)?.whilePaused === "skipped" &&
+      (await options.paused())
+    ) {
+      return;
+    }
     const tenant = options.entitlementsFor(caller.tenantId);
     const entitlements = await tenant.entitlements();
     if (entitlements === undefined) {
