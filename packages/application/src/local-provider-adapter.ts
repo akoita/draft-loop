@@ -3,6 +3,7 @@ import {
   AnthropicAdapter,
   AnthropicClaudeUserSessionAdapter,
   type AnthropicClient,
+  type AnthropicRefusalFallback,
   createDeepInfraGLMAdapter,
   createDeepInfraGLMClient,
   createGoogleGeminiAdapter,
@@ -57,6 +58,13 @@ export interface ProviderClientFactories {
   readonly anthropic?: (apiKey: string) => AnthropicClient;
   /** Replaces the API-key route for Anthropic models; the desktop and the CLI leave it unset. */
   readonly anthropicRoute?: AnthropicRouteFactory;
+  /**
+   * Not a factory: the deployment's Claude refusal fallback for one call on the API-key route
+   * (#3275), or undefined when that call's model has none. The desktop and the CLI leave it unset.
+   */
+  readonly anthropicRefusalFallback?: (
+    model: ModelSelection,
+  ) => AnthropicRefusalFallback | undefined;
   readonly openai?: (apiKey: string) => OpenAIClient;
   readonly deepinfra?: (apiKey: string) => DeepInfraGLMClient;
   readonly google?: (apiKey: string) => GoogleGeminiClient;
@@ -252,10 +260,12 @@ export async function createProviderAdapter(
       );
     }
     const client = providerClientFactories?.anthropic?.(apiKey) ?? createAnthropicSdkClient(apiKey);
+    const refusalFallback = providerClientFactories?.anthropicRefusalFallback?.(model);
     return new AnthropicAdapter<JsonObject, JsonObject>(client, {
       configuredModel: model,
       ...(config.retry === undefined ? {} : { retry: config.retry }),
       ...pricingOption,
+      ...(refusalFallback === undefined ? {} : { refusalFallback }),
     });
   }
   if (providerAuthModeConfiguration.openai === "user-session") {

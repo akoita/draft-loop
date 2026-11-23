@@ -10,6 +10,10 @@ import {
 } from "@draft-loop/providers";
 import OpenAI from "openai";
 
+import {
+  type ClaudeRefusalFallbackSetting,
+  claudeRefusalFallbackFor,
+} from "./claude-refusal-fallback.js";
 import { createRoutedAdapter, type RouteAdapter } from "./routed-adapter.js";
 import type { CredentialResolver } from "./secret-credentials.js";
 import {
@@ -70,6 +74,11 @@ export interface HostedAnthropicRouteOptions {
   readonly resolveCredential: CredentialResolver;
   /** A scripted direct-API client, for tests. */
   readonly anthropicApiClient?: (apiKey: string) => AnthropicClient;
+  /**
+   * Claude's refusal fallback (#3275), for the direct Claude API fallback route only: Vertex AI
+   * stays without it until a live check shows it accepts the fallback credit.
+   */
+  readonly refusalFallback?: ClaudeRefusalFallbackSetting;
 }
 
 interface RouteInput {
@@ -86,6 +95,11 @@ export interface DirectAnthropicRouteOptions {
   readonly resolveCredential: CredentialResolver;
   /** A scripted direct-API client, for tests. */
   readonly anthropicApiClient?: (apiKey: string) => AnthropicClient;
+  /**
+   * Claude's refusal fallback (#3275): a refused call on a model whose allowed fallback this is
+   * retries once on it. Unset, a refusal fails the step.
+   */
+  readonly refusalFallback?: ClaudeRefusalFallbackSetting;
 }
 
 /**
@@ -97,27 +111,34 @@ export function createDirectAnthropicRoute(
   options: DirectAnthropicRouteOptions,
 ): AnthropicRouteBuilder {
   const apiClient = options.anthropicApiClient ?? createAnthropicApiClient;
-  return (input) => ({
-    provider: "anthropic",
-    route: "anthropic-api",
-    execute: async (request) => {
-      const apiKey = await options.resolveCredential("anthropic");
-      if (apiKey === undefined || apiKey.trim() === "") {
-        throw new ProviderAdapterError(
-          "anthropic",
-          "authentication",
-          "The Claude API key is not configured.",
-          { retryable: false, route: "anthropic-api" },
-        );
-      }
-      return createAnthropicAdapter<JsonObject, JsonObject>(apiClient(apiKey), {
-        configuredModel: input.configuredModel,
-        ...(input.pricing === undefined ? {} : { pricing: input.pricing }),
-        ...(input.retry === undefined ? {} : { retry: input.retry }),
-        route: "anthropic-api",
-      }).execute(request);
-    },
-  });
+  return (input) => {
+    const refusalFallback = claudeRefusalFallbackFor(
+      options.refusalFallback,
+      input.configuredModel,
+    );
+    return {
+      provider: "anthropic",
+      route: "anthropic-api",
+      execute: async (request) => {
+        const apiKey = await options.resolveCredential("anthropic");
+        if (apiKey === undefined || apiKey.trim() === "") {
+          throw new ProviderAdapterError(
+            "anthropic",
+            "authentication",
+            "The Claude API key is not configured.",
+            { retryable: false, route: "anthropic-api" },
+          );
+        }
+        return createAnthropicAdapter<JsonObject, JsonObject>(apiClient(apiKey), {
+          configuredModel: input.configuredModel,
+          ...(input.pricing === undefined ? {} : { pricing: input.pricing }),
+          ...(input.retry === undefined ? {} : { retry: input.retry }),
+          ...(refusalFallback === undefined ? {} : { refusalFallback }),
+          route: "anthropic-api",
+        }).execute(request);
+      },
+    };
+  };
 }
 
 /**
@@ -135,6 +156,7 @@ export function createHostedAnthropicRoute(
     ...(options.anthropicApiClient === undefined
       ? {}
       : { anthropicApiClient: options.anthropicApiClient }),
+    ...(options.refusalFallback === undefined ? {} : { refusalFallback: options.refusalFallback }),
   });
   return (input) => {
     const adapterOptions = {

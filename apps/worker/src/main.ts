@@ -14,6 +14,7 @@ import {
 
 import { runBetaRetention } from "./beta-retention-wiring.js";
 import { openTenantBlobs } from "./blob-backend.js";
+import { claudeRefusalFallbackSetting } from "./claude-refusal-fallback.js";
 import { readWorkerConfig } from "./config.js";
 import { embeddingModelReadiness } from "./embedding-model.js";
 import { failedCallLines } from "./failed-call-logging.js";
@@ -79,7 +80,21 @@ const blobs = openTenantBlobs(config.blobs);
 // Claude on Vertex AI and OpenAI's EU endpoint with keys from Secret Manager, the self-hosted
 // direct routes with keys from files, or none on the dev stack; local models go to the
 // deployment's own endpoint.
-const routed = withLocalModels(routeProviderOptions(config.modelRoutes), config.localModelEndpoint);
+// Claude's refusal fallback (#3275) reads the API's model call switch before each retry.
+const refusalFallback = claudeRefusalFallbackSetting(config.claudeRefusalFallback, process.env, {
+  onReadError: (error) =>
+    console.warn(logLine("WARNING", "model call switch unreadable", { err: errorFields(error) })),
+});
+if (refusalFallback !== undefined) {
+  console.info(logLine("INFO", "claude refusal fallback", { model: refusalFallback.modelId }));
+}
+const routed = withLocalModels(
+  routeProviderOptions(
+    config.modelRoutes,
+    refusalFallback === undefined ? {} : { refusalFallback },
+  ),
+  config.localModelEndpoint,
+);
 // Each brief extraction and profile derivation call logs its model, tokens and cost (#2806).
 const local = {
   ...routed,

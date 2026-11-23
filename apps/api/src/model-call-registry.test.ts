@@ -15,6 +15,8 @@ const scanned = ["apps/api/src", "apps/worker/src"];
  */
 const nonCallingGatewayNames = new Set([
   "assertLocationPriceFactor",
+  "checkClaudeRefusalFallbackModel",
+  "ClaudeRefusalFallbackSetting",
   "claudeSearchTokenPricing",
   "contentScreeningModelId",
   "createFileCredentialResolver",
@@ -29,8 +31,14 @@ const nonCallingGatewayNames = new Set([
   "HostedAnthropicRouteOptions",
   "HostedContentScreenerOptions",
   "isVertexClaudeModel",
+  "ModelCallSwitchConfigError",
+  "ModelCallSwitchReader",
   "ModelScreeningUsage",
   "OpenAiEndpoint",
+  "parseModelCallSwitchState",
+  "readModelCallSwitchReader",
+  "SecretModelCallSwitchOptions",
+  "secretModelCallSwitchReader",
   "SecretVersionReader",
   "vertexClaudeLocation",
   "vertexEuLocation",

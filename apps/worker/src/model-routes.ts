@@ -1,6 +1,7 @@
 import type { LocalApplicationDriverOptions } from "@draft-loop/application";
 import {
   assertLocationPriceFactor,
+  type ClaudeRefusalFallbackSetting,
   type CredentialResolver,
   createHostedAnthropicRoute,
   createOpenAiClient,
@@ -100,6 +101,8 @@ export interface ModelRouteDependencies {
   readonly vertex?: Pick<HostedAnthropicRouteOptions["vertex"], "auth" | "fetch">;
   readonly anthropicApiClient?: HostedAnthropicRouteOptions["anthropicApiClient"];
   readonly openAiClient?: (apiKey: string) => ReturnType<typeof createOpenAiClient>;
+  /** Claude's refusal fallback with its switch (#3275), for the direct Claude route only. */
+  readonly refusalFallback?: ClaudeRefusalFallbackSetting;
 }
 
 /**
@@ -131,6 +134,9 @@ export function workerProviderOptions(
     ...(dependencies.anthropicApiClient === undefined
       ? {}
       : { anthropicApiClient: dependencies.anthropicApiClient }),
+    ...(dependencies.refusalFallback === undefined
+      ? {}
+      : { refusalFallback: dependencies.refusalFallback }),
   });
   return {
     resolveCredential,
