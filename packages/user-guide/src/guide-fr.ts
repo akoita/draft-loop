@@ -88,10 +88,19 @@ export const frenchHelpGuide: HelpGuide = {
       title: "Préparer la candidature",
       paragraphs: [
         "Dans une candidature, ouvrez Préparer pour rédiger une lettre de motivation ou un guide de préparation à l’entretien à partir des mêmes éléments. Cette partie est repliée par défaut.",
-        "Écrivez votre lettre de motivation vous-même. Les recruteurs et les outils de détection de l’IA, comme Pangram, repèrent souvent une lettre entièrement écrite par une IA, et cela peut vous desservir. Servez-vous du brouillon comme matière : les faits choisis, leurs sources et la structure, puis réécrivez-le avec vos propres mots. Une lettre encore marquée brouillon IA vous redemande votre accord avant le téléchargement.",
+        "Écrivez votre lettre de motivation vous-même. Les recruteurs et les outils de détection de l’IA, comme Pangram, repèrent souvent une lettre entièrement écrite par une IA, et cela peut vous desservir.",
+        "L’onglet Lettre de motivation vous demande quelle aide vous voulez. Le kit d’écriture, choisi par défaut, montre les principales exigences du poste avec les faits qui les prouvent, des façons d’ouvrir, un plan par paragraphe et des formules à éviter. Écrivez votre lettre à côté, enregistrez-la et téléchargez-la en Word ou en PDF.",
+        "Le brouillon complet fait écrire la lettre par l’IA, une fois le risque accepté pour la candidature. Servez-vous-en comme matière et réécrivez-le avec vos propres mots. Une lettre encore marquée brouillon IA vous redemande votre accord avant le téléchargement.",
         "Chaque candidature payée comprend 20 brouillons, guides et recherches dans Préparer.",
       ],
-      keywords: ["lettre de motivation", "lettre", "entretien", "questions", "préparation"],
+      keywords: [
+        "lettre de motivation",
+        "lettre",
+        "kit d’écriture",
+        "entretien",
+        "questions",
+        "préparation",
+      ],
       screenshot: {
         alt: "Le panneau Préparer d’une candidature, avec Lettre de motivation et Guide de préparation d’entretien.",
       },

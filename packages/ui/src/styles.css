@@ -11856,6 +11856,335 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   outline-offset: 1px;
 }
 
+/* The Cover letter tab's "How much help" choice (#3279): three cards, as many per row as fit. */
+.cover-letter-help {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.cover-letter-help > legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.cover-letter-help-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+  gap: var(--space-2);
+}
+
+.cover-letter-help-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  gap: 2px var(--space-2);
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.cover-letter-help-option > :not(input) {
+  grid-column: 2;
+}
+
+.cover-letter-help-option:hover {
+  border-color: var(--border-strong);
+}
+
+.cover-letter-help-option:has(input:checked) {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 1px var(--teal);
+  background: var(--teal-wash);
+}
+
+.cover-letter-help-option:has(input:focus-visible) {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.cover-letter-help-option > input[type="radio"] {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  margin: 0;
+  accent-color: var(--teal);
+}
+
+.cover-letter-help-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.cover-letter-help-line {
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+.cover-letter-help-badge {
+  border-radius: var(--radius-pill);
+  padding: 0 6px;
+  background: var(--teal-wash);
+  color: var(--teal);
+  font-size: 0.6875rem;
+  font-weight: 650;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.cover-letter-help-badge-soon {
+  background: var(--surface-3);
+  color: var(--text-3);
+}
+
+.cover-letter-help-soon {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 76ch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+}
+
+.cover-letter-help-soon p {
+  margin: 0;
+}
+
+/* The kit beside the person's letter; the columns stack, kit first, when the panel is narrow. */
+.cover-letter-kit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
+  align-items: start;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.cover-letter-kit-empty {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  max-width: 76ch;
+}
+
+.cover-letter-kit h3,
+.cover-letter-kit h4,
+.cover-letter-kit p {
+  margin: 0;
+}
+
+.cover-letter-kit h3 {
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.cover-letter-kit-material {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+}
+
+.cover-letter-kit-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.cover-letter-kit-material h4 {
+  margin-top: var(--space-2);
+  color: var(--text-4);
+  font-size: var(--text-micro);
+  font-weight: 650;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.cover-letter-kit-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.cover-letter-kit-list ul {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+  color: var(--text-2);
+}
+
+.cover-letter-kit-requirement {
+  font-weight: 600;
+}
+
+.cover-letter-kit-uses {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.cover-letter-kit-avoid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cover-letter-kit-avoid li {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-2);
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  text-decoration: line-through;
+  text-decoration-color: var(--text-4);
+}
+
+.cover-letter-kit-editor {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.cover-letter-kit-text {
+  width: 100%;
+  min-height: 24rem;
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.cover-letter-kit-note,
+.cover-letter-kit-status {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.cover-letter-kit-status {
+  font-variant-numeric: tabular-nums;
+}
+
+.cover-letter-kit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.cover-letter-kit-template {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.cover-letter-kit-template select {
+  width: auto;
+}
+
+.cover-letter-kit [role="alert"] {
+  color: var(--red);
+}
+
+/* The "Check my letter" panel (#3280) under the editor; hidden on a host without it. */
+.cover-letter-kit-check:empty {
+  display: none;
+}
+
+/* Check my letter (#3280): findings under the candidate's own letter. */
+.cover-letter-check {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.cover-letter-check h3,
+.cover-letter-check h4 {
+  margin: 0;
+}
+
+.cover-letter-check h4 {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-size: var(--text-sm);
+}
+
+.cover-letter-check-consent,
+.cover-letter-check-note {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.cover-letter-check-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.cover-letter-check-groups {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.cover-letter-check-group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.cover-letter-check-group ul {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.cover-letter-check-group li {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.cover-letter-check-count {
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.cover-letter-check-why {
+  color: var(--amber);
+}
+
+.cover-letter-check-fact {
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
 /* Phones: every control a finger taps gets at least 44px of hit area (#2948). Buttons, selects
    and disclosure summaries grow; text-like actions keep their look and gain the area through
    vertical padding that a matching negative margin takes back out of the layout. Links inside a
@@ -11930,72 +12259,4 @@ body:has(.workspace-activity) .review-column > .claims-panel {
     flex-wrap: wrap;
     max-width: 100%;
   }
-}
-
-/* Check my letter (#3280): findings under the candidate's own letter. */
-.cover-letter-check {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.cover-letter-check h3,
-.cover-letter-check h4 {
-  margin: 0;
-}
-
-.cover-letter-check h4 {
-  display: flex;
-  gap: var(--space-2);
-  align-items: baseline;
-  font-size: var(--text-sm);
-}
-
-.cover-letter-check-consent,
-.cover-letter-check-note {
-  margin: 0;
-  color: var(--text-3);
-  font-size: var(--text-sm);
-}
-
-.cover-letter-check-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  align-items: center;
-}
-
-.cover-letter-check-groups {
-  display: grid;
-  gap: var(--space-4);
-}
-
-.cover-letter-check-group {
-  display: grid;
-  gap: var(--space-2);
-}
-
-.cover-letter-check-group ul {
-  display: grid;
-  gap: var(--space-3);
-  margin: 0;
-  padding-left: var(--space-5);
-}
-
-.cover-letter-check-group li {
-  display: grid;
-  gap: var(--space-1);
-}
-
-.cover-letter-check-count {
-  color: var(--text-3);
-  font-variant-numeric: tabular-nums;
-}
-
-.cover-letter-check-why {
-  color: var(--amber);
-}
-
-.cover-letter-check-fact {
-  color: var(--text-2);
-  font-size: var(--text-sm);
 }

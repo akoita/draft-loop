@@ -242,14 +242,42 @@ describe("cover letter writing kit route", () => {
     });
     expect(document.statusCode).toBe(409);
     expect(document.json().error.code).toBe("not_a_document");
-    const edit = await app.inject({
+    // The candidate's own letter is saved beside the kit (#3279): theirs, uncited, free.
+    const own = await app.inject({
       method: "POST",
       url: `${base}/material/${body.id}/versions`,
       headers: { authorization },
-      payload: { items: [{ text: "My own letter." }] },
+      payload: {
+        items: [{ text: "Fictional opening, 12 reports." }, { text: "Fictional close." }],
+      },
     });
-    expect(edit.statusCode).toBe(400);
-    expect(edit.json().error.code).toBe("not_editable");
+    expect(own.statusCode).toBe(200);
+    const letter = own.json();
+    expect(letter).toMatchObject({
+      kind: "cover-letter",
+      written_by: "candidate",
+      based_on: body.id,
+      cost_usd: 0,
+    });
+    expect(letter.items.map((item: { text: string }) => item.text)).toEqual([
+      "Fictional opening, 12 reports.",
+      "Fictional close.",
+    ]);
+    expect(letter.items[0].unsupported_numbers).toBeUndefined();
+    expect(letter.items[0].citations).toEqual([]);
+    const rewritten = await app.inject({
+      method: "POST",
+      url: `${base}/material/${letter.id}/versions`,
+      headers: { authorization },
+      payload: { items: [{ text: "One fictional paragraph." }] },
+    });
+    expect(rewritten.json()).toMatchObject({ written_by: "candidate", based_on: letter.id });
+    const letterDocument = await app.inject({
+      method: "GET",
+      url: `${base}/material/${letter.id}/document?format=docx`,
+      headers: { authorization },
+    });
+    expect(letterDocument.statusCode).toBe(200);
   });
 
   it("refuses a kit citing an unknown fact id twice and saves nothing", async () => {

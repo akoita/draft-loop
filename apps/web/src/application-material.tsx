@@ -1,3 +1,11 @@
+import { CoverLetterCheckPanel } from "@draft-loop/ui/cover-letter-check-panel";
+import { AnnotatedDraftComingSoon, CoverLetterHelpChoice } from "@draft-loop/ui/cover-letter-help";
+import type { CoverLetterKitCapabilities } from "@draft-loop/ui/cover-letter-kit-capabilities";
+import {
+  type CoverLetterHelp,
+  defaultCoverLetterHelp,
+} from "@draft-loop/ui/cover-letter-kit-model";
+import { CoverLetterKitScreen } from "@draft-loop/ui/cover-letter-kit-screen";
 import { useShowEverything } from "@draft-loop/ui/display-preference";
 import {
   defaultExportTemplate,
@@ -7,7 +15,7 @@ import {
 } from "@draft-loop/ui/export-template";
 import { openApplicationPanelEvent } from "@draft-loop/ui/host-panels";
 import { t } from "@lingui/core/macro";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
 import {
@@ -31,6 +39,7 @@ import {
   careerProfileSourceNotice,
   recordGapsNotice,
 } from "./application-material-model.js";
+import { webCoverLetterCheck } from "./cover-letter-check-bridge.js";
 import {
   CoverLetterModelLabel,
   CoverLetterRiskChoice,
@@ -122,6 +131,13 @@ export interface ApplicationMaterialViewProps {
   /** False until the candidate accepts, for this application, the risk of a full AI letter (#3277). */
   readonly letterRiskAccepted?: boolean;
   readonly onAcceptLetterRisk?: () => void;
+  /**
+   * How much help the Cover letter tab gives (#3279). With `kitScreen` the tab asks, and shows the
+   * kit screen, the annotated draft's notice or the full draft below; without it, the full draft.
+   */
+  readonly help?: CoverLetterHelp;
+  readonly onHelp?: (help: CoverLetterHelp) => void;
+  readonly kitScreen?: ReactNode;
 }
 
 const kinds = (): readonly ApplicationMaterialPanelKind[] => ["cover-letter", "interview-guide"];
@@ -130,6 +146,8 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
   const { kind, draft, problem, busy, versions, guidance } = props;
   const [askingRisk, setAskingRisk] = useState(false);
   const mustAcceptRisk = kind === "cover-letter" && props.letterRiskAccepted === false;
+  const asksHelp = kind === "cover-letter" && props.kitScreen !== undefined;
+  const help = props.help ?? defaultCoverLetterHelp;
   const change = (field: keyof ApplicationMaterialGuidance, value: string) => {
     const { [field]: _dropped, ...rest } = guidance;
     props.onGuidance(value === "" ? rest : { ...rest, [field]: value });
@@ -186,386 +204,409 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
         </fieldset>
         <p className="application-material-lead">{t`A cover letter or an interview preparation guide for this application, when you need them. Your CV does not depend on them.`}</p>
         {kind === "cover-letter" ? <CoverLetterRiskNotice /> : null}
-        {props.research}
-        {draft === undefined && kind === "cover-letter" ? (
-          <p className="application-material-note">{applicationMaterialDisclosure()}</p>
-        ) : null}
-        {kind === "interview-guide" ? props.guideForm : null}
-        <details className="application-material-guidance">
-          <summary>
-            {kind === "cover-letter" ? t`Guide this draft (optional)` : t`Model (optional)`}
-          </summary>
-          {kind === "cover-letter" ? (
-            <>
-              <label>
-                {t`What to stress`}
-                <textarea
-                  className="input"
-                  rows={2}
-                  maxLength={400}
-                  disabled={busy}
-                  value={guidance.emphasis ?? ""}
-                  placeholder={t`For example: my move into team leadership`}
-                  onChange={(event) => change("emphasis", event.currentTarget.value)}
-                />
-              </label>
-              <div className="application-material-guidance-row">
-                <label>
-                  {t`Tone`}
-                  <select
-                    className="input"
-                    disabled={busy}
-                    value={guidance.tone ?? ""}
-                    onChange={(event) => change("tone", event.currentTarget.value)}
-                  >
-                    <option value="">{t`Default`}</option>
-                    {Object.entries(applicationMaterialToneLabels()).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  {t`Length`}
-                  <select
-                    className="input"
-                    disabled={busy}
-                    value={guidance.length ?? ""}
-                    onChange={(event) => change("length", event.currentTarget.value)}
-                  >
-                    <option value="">{t`Default`}</option>
-                    {Object.entries(applicationMaterialLengthLabels()).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {kind === "cover-letter" ? (
-                  <label>
-                    {t`Address it to`}
-                    <input
-                      className="input"
-                      maxLength={120}
-                      disabled={busy}
-                      value={guidance.addressee ?? ""}
-                      placeholder={t`For example: the hiring team`}
-                      onChange={(event) => change("addressee", event.currentTarget.value)}
-                    />
-                  </label>
-                ) : null}
-              </div>
-            </>
-          ) : null}
-          {props.models.length > 1 ? (
-            <label>
-              {t`Model`}
-              <select
-                className="input"
-                disabled={busy}
-                value={props.modelId ?? props.models.find((model) => model.default)?.model_id}
-                onChange={(event) => props.onModel(event.currentTarget.value)}
-              >
-                {props.models.map((model) => (
-                  <option key={model.model_id} value={model.model_id}>
-                    {applicationMaterialModelLabel(model)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          {props.samples === undefined || kind !== "cover-letter" ? null : (
-            <fieldset className="application-material-samples" disabled={busy}>
-              <legend>{t`Your writing samples`}</legend>
-              <p className="application-material-note">{t`Paste up to three texts you wrote, such as an old letter or a long email. Drafts copy how you write, never what the samples say.`}</p>
-              {[0, 1, 2].map((index) => (
-                <textarea
-                  key={index}
-                  className="input"
-                  rows={3}
-                  maxLength={4000}
-                  aria-label={t`Writing sample ${index + 1}`}
-                  value={props.samples?.[index] ?? ""}
-                  onChange={(event) => {
-                    const next = [0, 1, 2].map((slot) =>
-                      slot === index ? event.currentTarget.value : (props.samples?.[slot] ?? ""),
-                    );
-                    props.onSamples(next);
-                  }}
-                />
-              ))}
-              <div className="application-material-actions">
-                <button
-                  type="button"
-                  className="button button-outline"
-                  onClick={props.onSaveSamples}
-                >
-                  {props.samplesSaved ? t`Samples saved` : t`Save samples`}
-                </button>
-              </div>
-            </fieldset>
-          )}
-          {kind === "cover-letter" ? (
-            <p className="application-material-note">{t`Guidance shapes the writing only. Every claim still comes from your career record.`}</p>
-          ) : null}
-        </details>
-        {mustAcceptRisk && askingRisk ? (
-          <CoverLetterRiskChoice
-            busy={busy}
-            onAccept={() => {
-              setAskingRisk(false);
-              props.onAcceptLetterRisk?.();
-              props.onDraft();
-            }}
-            onCancel={() => setAskingRisk(false)}
+        {asksHelp ? (
+          <CoverLetterHelpChoice
+            value={help}
+            disabled={busy}
+            onChange={(next) => props.onHelp?.(next)}
           />
         ) : null}
-        <div className="application-material-actions" hidden={mustAcceptRisk && askingRisk}>
-          <button
-            type="button"
-            className="button button-primary"
-            disabled={busy}
-            onClick={mustAcceptRisk ? () => setAskingRisk(true) : props.onDraft}
-          >
-            {props.guideResearching === true
-              ? t`Researching…`
-              : busy
-                ? t`Drafting…`
-                : applicationMaterialDraftLabel(kind, draft !== undefined)}
-          </button>
-        </div>
-        {props.guideResearching === true ? (
-          <p className="application-material-note" role="status">
-            {t`Researching the employer, the role and the field. The guide is drafted as soon as the research ends, usually within two minutes.`}
-          </p>
+        {props.research}
+        {asksHelp && help === "kit" ? props.kitScreen : null}
+        {asksHelp && help === "annotated" ? (
+          <AnnotatedDraftComingSoon onUseKit={() => props.onHelp?.("kit")} />
         ) : null}
-        {problem === undefined ? null : <p role="alert">{problem}</p>}
-        {props.reviewing === true ? (
-          <p className="application-material-note" role="status">
-            {t`A critic from another company is checking this letter for sentences that read as machine-written. A revised version opens here if it finds any.`}
-          </p>
-        ) : props.reviewNote === undefined ? null : (
-          <p className="application-material-note" role="status">
-            {props.reviewNote}
-          </p>
-        )}
-        {draft === undefined ? null : (
+        {asksHelp && help !== "full" ? null : (
           <>
-            {versions.length > 1 && draft.id !== undefined ? (
-              <label className="application-material-versions">
-                {t`Version`}
-                <select
-                  className="input"
-                  value={draft.id}
-                  disabled={busy}
-                  onChange={(event) => props.onSelect(event.currentTarget.value)}
-                >
-                  {versions.map((version) => (
-                    <option key={version.id} value={version.id}>
-                      {applicationMaterialVersionLabel(version)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            {draft === undefined && kind === "cover-letter" ? (
+              <p className="application-material-note">{applicationMaterialDisclosure()}</p>
             ) : null}
-            {isUneditedModelLetter(draft) && props.edits === undefined ? (
-              <CoverLetterModelLabel />
-            ) : null}
-            {draft.kind === "interview-guide" ? (
-              <InterviewGuideReader
-                draft={draft}
-                busy={busy}
-                edits={props.edits}
-                onEditText={props.onEditText}
-                onPart={
-                  draft.interview_details?.depth === "extensive" ? props.onGuidePart : undefined
-                }
-              />
-            ) : (
-              <ol className="material-items">
-                {draft.items.map((item, index) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: a draft's items have no id and never reorder.
-                  <li key={index} className="material-item">
-                    <div>
-                      {item.question === "" ? null : <h3>{item.question}</h3>}
-                      {props.edits === undefined ? (
-                        <p>{item.text}</p>
-                      ) : (
-                        <textarea
-                          className="input"
-                          rows={5}
-                          maxLength={4000}
-                          aria-label={t`Item ${index + 1}`}
-                          value={props.edits[index] ?? ""}
-                          disabled={busy}
-                          onChange={(event) => props.onEditText?.(index, event.currentTarget.value)}
-                        />
-                      )}
-                      {item.edited === true && props.edits === undefined ? (
-                        <p className="application-material-edited">{t`Edited by you`}</p>
-                      ) : null}
-                      {item.unsupported_numbers === undefined ||
-                      props.edits !== undefined ? null : (
-                        <p className="application-material-note" role="note">
-                          {t`Check these numbers: none of the sources states ${item.unsupported_numbers.join(", ")}.`}
-                        </p>
-                      )}
-                    </div>
-                    <aside aria-label={t`Sources`}>
-                      <ul>
-                        {item.citations.map((citation) => (
-                          <li key={citation.fact_id}>{citation.text}</li>
-                        ))}
-                      </ul>
-                      {item.company_citations === undefined ? null : (
-                        <>
-                          <p className="application-material-source-kind">{t`About the company`}</p>
-                          <ul>
-                            {item.company_citations.map((citation) => (
-                              <li key={citation.finding_id}>{citation.text}</li>
-                            ))}
-                          </ul>
-                        </>
-                      )}
-                    </aside>
-                  </li>
-                ))}
-              </ol>
-            )}
-            {careerProfileSourceNotice(draft.career_profile) === undefined ? null : (
-              <p className="application-material-note" role="note">
-                {careerProfileSourceNotice(draft.career_profile)}
-              </p>
-            )}
-            {draft.record_gaps === undefined || draft.record_gaps.length === 0 ? null : (
-              <p className="application-material-note" role="note">
-                {recordGapsNotice(draft.record_gaps)}
-              </p>
-            )}
-            {draft.dropped_sentences === undefined || draft.kind === "interview-guide" ? null : (
-              <section className="application-material-tells" aria-labelledby="material-dropped">
-                <h3 id="material-dropped">{t`Left out`}</h3>
-                <p>{t`No fact in your career record supports these sentences, so they are not in the letter.`}</p>
-                <ul>
-                  {draft.dropped_sentences.map((sentence) => (
-                    <li key={sentence}>
-                      <q>{sentence}</q>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            {draft.critic_findings === undefined ? null : (
-              <section className="application-material-tells" aria-labelledby="material-critic">
-                <h3 id="material-critic">{t`What the critic flagged`}</h3>
-                <p>{t`These sentences of the first draft read as machine-written; this version rewrites them.`}</p>
-                <ul>
-                  {draft.critic_findings.map((finding) => (
-                    <li key={`${finding.paragraph}:${finding.sentence}`}>
-                      <q>{finding.sentence}</q> {finding.reason}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            {draft.tells === undefined ? null : (
-              <section className="application-material-tells" aria-labelledby="material-tells">
-                <h3 id="material-tells">{t`Writing check`}</h3>
-                {draft.tells.length === 0 ? (
-                  <p>{t`No common machine-writing habit found.`}</p>
-                ) : (
-                  <ul>
-                    {draft.tells.map((tell, index) => (
-                      // biome-ignore lint/suspicious/noArrayIndexKey: tells are recomputed with the draft and never reorder.
-                      <li key={index}>
-                        {tell.sentence === undefined ? null : <q>{tell.sentence}</q>}{" "}
-                        {applicationMaterialTellReason(tell)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <p className="application-material-note">{t`A check for habits readers notice in model-written text, not an AI detector. Rewrite in your own words before you send it.`}</p>
-              </section>
-            )}
-            <p className="application-material-note">
-              {t`Drafted by`} {draft.model.model}
-              {t`. Check every sentence against its sources before you use it.`}
-            </p>
-            {props.edits === undefined ? null : (
-              <div className="application-material-actions">
-                <button
-                  type="button"
-                  className="button button-primary"
-                  disabled={busy || props.edits.some((text) => text.trim() === "")}
-                  onClick={props.onSaveEdit}
-                >{t`Save as a new version`}</button>
-                <button
-                  type="button"
-                  className="button button-outline"
-                  disabled={busy}
-                  onClick={props.onCancelEdit}
-                >{t`Cancel`}</button>
-              </div>
-            )}
-            <div className="application-material-actions">
-              {draft.id === undefined ||
-              props.edits !== undefined ||
-              props.onEdit === undefined ? null : (
-                <button
-                  type="button"
-                  className="button button-outline"
-                  disabled={busy}
-                  onClick={props.onEdit}
-                >{t`Edit`}</button>
-              )}
-              {draft.id === undefined || props.onDocument === undefined ? null : (
+            {kind === "interview-guide" ? props.guideForm : null}
+            <details className="application-material-guidance">
+              <summary>
+                {kind === "cover-letter" ? t`Guide this draft (optional)` : t`Model (optional)`}
+              </summary>
+              {kind === "cover-letter" ? (
                 <>
-                  <label className="application-material-template">
-                    {t`Template`}
+                  <label>
+                    {t`What to stress`}
+                    <textarea
+                      className="input"
+                      rows={2}
+                      maxLength={400}
+                      disabled={busy}
+                      value={guidance.emphasis ?? ""}
+                      placeholder={t`For example: my move into team leadership`}
+                      onChange={(event) => change("emphasis", event.currentTarget.value)}
+                    />
+                  </label>
+                  <div className="application-material-guidance-row">
+                    <label>
+                      {t`Tone`}
+                      <select
+                        className="input"
+                        disabled={busy}
+                        value={guidance.tone ?? ""}
+                        onChange={(event) => change("tone", event.currentTarget.value)}
+                      >
+                        <option value="">{t`Default`}</option>
+                        {Object.entries(applicationMaterialToneLabels()).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t`Length`}
+                      <select
+                        className="input"
+                        disabled={busy}
+                        value={guidance.length ?? ""}
+                        onChange={(event) => change("length", event.currentTarget.value)}
+                      >
+                        <option value="">{t`Default`}</option>
+                        {Object.entries(applicationMaterialLengthLabels()).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {kind === "cover-letter" ? (
+                      <label>
+                        {t`Address it to`}
+                        <input
+                          className="input"
+                          maxLength={120}
+                          disabled={busy}
+                          value={guidance.addressee ?? ""}
+                          placeholder={t`For example: the hiring team`}
+                          onChange={(event) => change("addressee", event.currentTarget.value)}
+                        />
+                      </label>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+              {props.models.length > 1 ? (
+                <label>
+                  {t`Model`}
+                  <select
+                    className="input"
+                    disabled={busy}
+                    value={props.modelId ?? props.models.find((model) => model.default)?.model_id}
+                    onChange={(event) => props.onModel(event.currentTarget.value)}
+                  >
+                    {props.models.map((model) => (
+                      <option key={model.model_id} value={model.model_id}>
+                        {applicationMaterialModelLabel(model)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              {props.samples === undefined || kind !== "cover-letter" ? null : (
+                <fieldset className="application-material-samples" disabled={busy}>
+                  <legend>{t`Your writing samples`}</legend>
+                  <p className="application-material-note">{t`Paste up to three texts you wrote, such as an old letter or a long email. Drafts copy how you write, never what the samples say.`}</p>
+                  {[0, 1, 2].map((index) => (
+                    <textarea
+                      key={index}
+                      className="input"
+                      rows={3}
+                      maxLength={4000}
+                      aria-label={t`Writing sample ${index + 1}`}
+                      value={props.samples?.[index] ?? ""}
+                      onChange={(event) => {
+                        const next = [0, 1, 2].map((slot) =>
+                          slot === index
+                            ? event.currentTarget.value
+                            : (props.samples?.[slot] ?? ""),
+                        );
+                        props.onSamples(next);
+                      }}
+                    />
+                  ))}
+                  <div className="application-material-actions">
+                    <button
+                      type="button"
+                      className="button button-outline"
+                      onClick={props.onSaveSamples}
+                    >
+                      {props.samplesSaved ? t`Samples saved` : t`Save samples`}
+                    </button>
+                  </div>
+                </fieldset>
+              )}
+              {kind === "cover-letter" ? (
+                <p className="application-material-note">{t`Guidance shapes the writing only. Every claim still comes from your career record.`}</p>
+              ) : null}
+            </details>
+            {mustAcceptRisk && askingRisk ? (
+              <CoverLetterRiskChoice
+                busy={busy}
+                onAccept={() => {
+                  setAskingRisk(false);
+                  props.onAcceptLetterRisk?.();
+                  props.onDraft();
+                }}
+                onCancel={() => setAskingRisk(false)}
+              />
+            ) : null}
+            <div className="application-material-actions" hidden={mustAcceptRisk && askingRisk}>
+              <button
+                type="button"
+                className="button button-primary"
+                disabled={busy}
+                onClick={mustAcceptRisk ? () => setAskingRisk(true) : props.onDraft}
+              >
+                {props.guideResearching === true
+                  ? t`Researching…`
+                  : busy
+                    ? t`Drafting…`
+                    : applicationMaterialDraftLabel(kind, draft !== undefined)}
+              </button>
+            </div>
+            {props.guideResearching === true ? (
+              <p className="application-material-note" role="status">
+                {t`Researching the employer, the role and the field. The guide is drafted as soon as the research ends, usually within two minutes.`}
+              </p>
+            ) : null}
+            {problem === undefined ? null : <p role="alert">{problem}</p>}
+            {props.reviewing === true ? (
+              <p className="application-material-note" role="status">
+                {t`A critic from another company is checking this letter for sentences that read as machine-written. A revised version opens here if it finds any.`}
+              </p>
+            ) : props.reviewNote === undefined ? null : (
+              <p className="application-material-note" role="status">
+                {props.reviewNote}
+              </p>
+            )}
+            {draft === undefined ? null : (
+              <>
+                {versions.length > 1 && draft.id !== undefined ? (
+                  <label className="application-material-versions">
+                    {t`Version`}
                     <select
                       className="input"
-                      value={props.template ?? defaultExportTemplate}
+                      value={draft.id}
                       disabled={busy}
-                      onChange={(event) =>
-                        props.onTemplate?.(event.currentTarget.value as ExportTemplate)
-                      }
+                      onChange={(event) => props.onSelect(event.currentTarget.value)}
                     >
-                      {exportTemplates.map((template) => (
-                        <option key={template} value={template}>
-                          {exportTemplateLabels()[template]}
+                      {versions.map((version) => (
+                        <option key={version.id} value={version.id}>
+                          {applicationMaterialVersionLabel(version)}
                         </option>
                       ))}
                     </select>
                   </label>
+                ) : null}
+                {isUneditedModelLetter(draft) && props.edits === undefined ? (
+                  <CoverLetterModelLabel />
+                ) : null}
+                {draft.kind === "interview-guide" ? (
+                  <InterviewGuideReader
+                    draft={draft}
+                    busy={busy}
+                    edits={props.edits}
+                    onEditText={props.onEditText}
+                    onPart={
+                      draft.interview_details?.depth === "extensive" ? props.onGuidePart : undefined
+                    }
+                  />
+                ) : (
+                  <ol className="material-items">
+                    {draft.items.map((item, index) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: a draft's items have no id and never reorder.
+                      <li key={index} className="material-item">
+                        <div>
+                          {item.question === "" ? null : <h3>{item.question}</h3>}
+                          {props.edits === undefined ? (
+                            <p>{item.text}</p>
+                          ) : (
+                            <textarea
+                              className="input"
+                              rows={5}
+                              maxLength={4000}
+                              aria-label={t`Item ${index + 1}`}
+                              value={props.edits[index] ?? ""}
+                              disabled={busy}
+                              onChange={(event) =>
+                                props.onEditText?.(index, event.currentTarget.value)
+                              }
+                            />
+                          )}
+                          {item.edited === true && props.edits === undefined ? (
+                            <p className="application-material-edited">{t`Edited by you`}</p>
+                          ) : null}
+                          {item.unsupported_numbers === undefined ||
+                          props.edits !== undefined ? null : (
+                            <p className="application-material-note" role="note">
+                              {t`Check these numbers: none of the sources states ${item.unsupported_numbers.join(", ")}.`}
+                            </p>
+                          )}
+                        </div>
+                        <aside aria-label={t`Sources`}>
+                          <ul>
+                            {item.citations.map((citation) => (
+                              <li key={citation.fact_id}>{citation.text}</li>
+                            ))}
+                          </ul>
+                          {item.company_citations === undefined ? null : (
+                            <>
+                              <p className="application-material-source-kind">{t`About the company`}</p>
+                              <ul>
+                                {item.company_citations.map((citation) => (
+                                  <li key={citation.finding_id}>{citation.text}</li>
+                                ))}
+                              </ul>
+                            </>
+                          )}
+                        </aside>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                {careerProfileSourceNotice(draft.career_profile) === undefined ? null : (
+                  <p className="application-material-note" role="note">
+                    {careerProfileSourceNotice(draft.career_profile)}
+                  </p>
+                )}
+                {draft.record_gaps === undefined || draft.record_gaps.length === 0 ? null : (
+                  <p className="application-material-note" role="note">
+                    {recordGapsNotice(draft.record_gaps)}
+                  </p>
+                )}
+                {draft.dropped_sentences === undefined ||
+                draft.kind === "interview-guide" ? null : (
+                  <section
+                    className="application-material-tells"
+                    aria-labelledby="material-dropped"
+                  >
+                    <h3 id="material-dropped">{t`Left out`}</h3>
+                    <p>{t`No fact in your career record supports these sentences, so they are not in the letter.`}</p>
+                    <ul>
+                      {draft.dropped_sentences.map((sentence) => (
+                        <li key={sentence}>
+                          <q>{sentence}</q>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+                {draft.critic_findings === undefined ? null : (
+                  <section className="application-material-tells" aria-labelledby="material-critic">
+                    <h3 id="material-critic">{t`What the critic flagged`}</h3>
+                    <p>{t`These sentences of the first draft read as machine-written; this version rewrites them.`}</p>
+                    <ul>
+                      {draft.critic_findings.map((finding) => (
+                        <li key={`${finding.paragraph}:${finding.sentence}`}>
+                          <q>{finding.sentence}</q> {finding.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+                {draft.tells === undefined ? null : (
+                  <section className="application-material-tells" aria-labelledby="material-tells">
+                    <h3 id="material-tells">{t`Writing check`}</h3>
+                    {draft.tells.length === 0 ? (
+                      <p>{t`No common machine-writing habit found.`}</p>
+                    ) : (
+                      <ul>
+                        {draft.tells.map((tell, index) => (
+                          // biome-ignore lint/suspicious/noArrayIndexKey: tells are recomputed with the draft and never reorder.
+                          <li key={index}>
+                            {tell.sentence === undefined ? null : <q>{tell.sentence}</q>}{" "}
+                            {applicationMaterialTellReason(tell)}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <p className="application-material-note">{t`A check for habits readers notice in model-written text, not an AI detector. Rewrite in your own words before you send it.`}</p>
+                  </section>
+                )}
+                <p className="application-material-note">
+                  {t`Drafted by`} {draft.model.model}
+                  {t`. Check every sentence against its sources before you use it.`}
+                </p>
+                {props.edits === undefined ? null : (
+                  <div className="application-material-actions">
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      disabled={busy || props.edits.some((text) => text.trim() === "")}
+                      onClick={props.onSaveEdit}
+                    >{t`Save as a new version`}</button>
+                    <button
+                      type="button"
+                      className="button button-outline"
+                      disabled={busy}
+                      onClick={props.onCancelEdit}
+                    >{t`Cancel`}</button>
+                  </div>
+                )}
+                <div className="application-material-actions">
+                  {draft.id === undefined ||
+                  props.edits !== undefined ||
+                  props.onEdit === undefined ? null : (
+                    <button
+                      type="button"
+                      className="button button-outline"
+                      disabled={busy}
+                      onClick={props.onEdit}
+                    >{t`Edit`}</button>
+                  )}
+                  {draft.id === undefined || props.onDocument === undefined ? null : (
+                    <>
+                      <label className="application-material-template">
+                        {t`Template`}
+                        <select
+                          className="input"
+                          value={props.template ?? defaultExportTemplate}
+                          disabled={busy}
+                          onChange={(event) =>
+                            props.onTemplate?.(event.currentTarget.value as ExportTemplate)
+                          }
+                        >
+                          {exportTemplates.map((template) => (
+                            <option key={template} value={template}>
+                              {exportTemplateLabels()[template]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        className="button button-outline"
+                        disabled={busy}
+                        onClick={() => props.onDocument?.("docx")}
+                      >{t`Download Word`}</button>
+                      <button
+                        type="button"
+                        className="button button-outline"
+                        disabled={busy}
+                        onClick={() => props.onDocument?.("pdf")}
+                      >{t`Download PDF`}</button>
+                    </>
+                  )}
                   <button
                     type="button"
                     className="button button-outline"
-                    disabled={busy}
-                    onClick={() => props.onDocument?.("docx")}
-                  >{t`Download Word`}</button>
-                  <button
-                    type="button"
-                    className="button button-outline"
-                    disabled={busy}
-                    onClick={() => props.onDocument?.("pdf")}
-                  >{t`Download PDF`}</button>
-                </>
-              )}
-              <button
-                type="button"
-                className="button button-outline"
-                onClick={props.onDownload}
-              >{t`Download Markdown`}</button>
-              {draft.id === undefined ? null : (
-                <button
-                  type="button"
-                  className="button button-outline"
-                  disabled={busy}
-                  onClick={props.onDelete}
-                >{t`Delete this version`}</button>
-              )}
-            </div>
+                    onClick={props.onDownload}
+                  >{t`Download Markdown`}</button>
+                  {draft.id === undefined ? null : (
+                    <button
+                      type="button"
+                      className="button button-outline"
+                      disabled={busy}
+                      onClick={props.onDelete}
+                    >{t`Delete this version`}</button>
+                  )}
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
@@ -576,14 +617,23 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
 export interface ApplicationMaterialSectionProps {
   readonly client: ApiClient;
   readonly applicationId: string;
+  /** The writing kit screen's commands (#3279); without them the tab offers the full draft only. */
+  readonly coverLetterKit?: CoverLetterKitCapabilities | undefined;
 }
 
 export function ApplicationMaterialSection({
   client,
   applicationId,
+  coverLetterKit,
 }: ApplicationMaterialSectionProps) {
   const workspaceId = useRecordId();
   const [kind, setKind] = useState<ApplicationMaterialPanelKind>("cover-letter");
+  const [help, setHelp] = useState<CoverLetterHelp>(defaultCoverLetterHelp);
+  // Check my letter (#3280) under the person's own letter, bound to this application.
+  const check = useMemo(
+    () => webCoverLetterCheck(client, workspaceId, applicationId),
+    [client, workspaceId, applicationId],
+  );
   const [guideForm, setGuideForm] = useState<InterviewDetailsForm>(emptyInterviewDetailsForm);
   const [guideResearch, setGuideResearch] = useState(true);
   const guides = useInterviewGuideDrafting(client, workspaceId, applicationId);
@@ -689,7 +739,7 @@ export function ApplicationMaterialSection({
         })
         .catch(() => undefined);
       if (!current || listed === undefined) return;
-      setVersions(listed.drafts);
+      setVersions(modelLetters(listed.drafts));
       setSelectedId(review.revision_id);
     };
     let timer = setTimeout(poll, reviewPollMs);
@@ -714,7 +764,7 @@ export function ApplicationMaterialSection({
     // The guide tab also lists earlier interview questions, which guides replaced (#2621).
     const loaded =
       kind === "cover-letter"
-        ? list("cover-letter")
+        ? list("cover-letter").then(modelLetters)
         : Promise.all([list("interview-guide"), list("interview-questions")]).then(
             ([guidesSaved, questions]) =>
               [...guidesSaved, ...questions].sort((left, right) =>
@@ -770,6 +820,20 @@ export function ApplicationMaterialSection({
   return (
     <ApplicationMaterialView
       kind={kind}
+      help={help}
+      onHelp={setHelp}
+      {...(coverLetterKit === undefined || collapsed
+        ? {}
+        : {
+            kitScreen: (
+              <CoverLetterKitScreen
+                workspaceId={workspaceId}
+                applicationId={applicationId}
+                capabilities={coverLetterKit}
+                checkPanel={(letter) => <CoverLetterCheckPanel text={letter.text} check={check} />}
+              />
+            ),
+          })}
       guideForm={
         <InterviewGuideForm
           form={guideForm}
@@ -989,6 +1053,11 @@ function savePrepareCollapsed(collapsed: boolean): void {
   } catch {
     // Storage may be blocked; the panel then starts folded each time.
   }
+}
+
+/** The full-draft tab's versions: the person's own letters open beside the kit instead (#3279). */
+function modelLetters(drafts: readonly ApplicationMaterialDraft[]): ApplicationMaterialDraft[] {
+  return drafts.filter((draft) => draft.written_by !== "candidate");
 }
 
 function guidanceBody(kind: ApplicationMaterialKind, guidance: ApplicationMaterialGuidance) {

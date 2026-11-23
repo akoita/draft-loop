@@ -36,8 +36,12 @@ export function webHostPanels(
         <CodingAgentsSection client={client} mode={mode} openEvidence={openEvidence} />
       </>
     ),
-    application: ({ applicationId }) => (
-      <ApplicationMaterialSection client={client} applicationId={applicationId} />
+    application: ({ applicationId, coverLetterKit }) => (
+      <ApplicationMaterialSection
+        client={client}
+        applicationId={applicationId}
+        coverLetterKit={coverLetterKit}
+      />
     ),
     // The career interview is in the evidence panels in both modes (#2735), so an empty record
     // may start there (#2734).

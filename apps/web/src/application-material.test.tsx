@@ -274,6 +274,45 @@ describe("the prepare panel", () => {
     );
     expect(html).toBe("<p>panel for app_1</p>");
   });
+
+  it("asks how much help, and shows the kit screen in place of drafting by default", () => {
+    const kitScreen = <div data-screen="kit">kit screen</div>;
+    const html = renderToStaticMarkup(<ApplicationMaterialView {...props} kitScreen={kitScreen} />);
+    expect(html).toContain("How much help do you want?");
+    expect(html).toContain('data-screen="kit"');
+    expect(html).not.toContain("Guide this draft (optional)");
+    expect(html).not.toContain('class="button button-primary"');
+
+    const annotated = renderToStaticMarkup(
+      <ApplicationMaterialView {...props} kitScreen={kitScreen} help="annotated" />,
+    );
+    expect(annotated).toContain("The annotated draft is not ready yet");
+    expect(annotated).not.toContain('data-screen="kit"');
+
+    // The full draft keeps its guidance, its Draft button and its one-time risk choice.
+    const full = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        kitScreen={kitScreen}
+        help="full"
+        letterRiskAccepted={false}
+      />,
+    );
+    expect(full).toContain("Guide this draft (optional)");
+    expect(full).toContain('class="button button-primary"');
+    expect(full).not.toContain('data-screen="kit"');
+  });
+
+  it("asks nothing where the host offers no kit, or on the interview guide tab", () => {
+    expect(renderToStaticMarkup(<ApplicationMaterialView {...props} />)).not.toContain(
+      "How much help",
+    );
+    expect(
+      renderToStaticMarkup(
+        <ApplicationMaterialView {...props} kind="interview-guide" kitScreen={<div />} />,
+      ),
+    ).not.toContain("How much help");
+  });
 });
 
 describe("the prepare panel's model", () => {

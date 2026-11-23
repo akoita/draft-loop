@@ -115,6 +115,22 @@ import {
   normalizeCoverLetterCheckResult,
   validateCoverLetterCheckInput,
 } from "./cover-letter-check-contract.js";
+import {
+  type CoverLetterKitLoadResult,
+  type CoverLetterKitPrepareResult,
+  type CoverLetterKitScopeInput,
+  normalizeCoverLetterKitLoadResult,
+  normalizeCoverLetterKitPrepareResult,
+  normalizeOwnCoverLetterDownloadResult,
+  normalizeOwnCoverLetterSaveResult,
+  type OwnCoverLetterDownloadInput,
+  type OwnCoverLetterDownloadResult,
+  type OwnCoverLetterSaveInput,
+  type OwnCoverLetterSaveResult,
+  validateCoverLetterKitScopeInput,
+  validateOwnCoverLetterDownloadInput,
+  validateOwnCoverLetterSaveInput,
+} from "./cover-letter-kit-contract.js";
 import { normalizeReviewCoverage } from "./coverage-contract.js";
 import { normalizeEarlierRun } from "./earlier-run.js";
 import { exportTemplates } from "./export-template.js";
@@ -2600,6 +2616,10 @@ export interface BridgeCommandInputMap {
   "fact-suggestions.reject": FactSuggestionRejectInput;
   "run.trace": RunTraceInput;
   "run.requirement-evidence": RunRequirementEvidenceInput;
+  "cover-letter-kit.load": CoverLetterKitScopeInput;
+  "cover-letter-kit.prepare": CoverLetterKitScopeInput;
+  "cover-letter-kit.save-letter": OwnCoverLetterSaveInput;
+  "cover-letter-kit.download-letter": OwnCoverLetterDownloadInput;
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
@@ -2696,6 +2716,10 @@ export interface BridgeCommandOutputMap {
   "fact-suggestions.reject": FactSuggestionRejectResult;
   "run.trace": RunTraceResult;
   "run.requirement-evidence": RunRequirementEvidenceResult;
+  "cover-letter-kit.load": CoverLetterKitLoadResult;
+  "cover-letter-kit.prepare": CoverLetterKitPrepareResult;
+  "cover-letter-kit.save-letter": OwnCoverLetterSaveResult;
+  "cover-letter-kit.download-letter": OwnCoverLetterDownloadResult;
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
@@ -4816,6 +4840,26 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "run.requirement-evidence",
         input: validateRunRequirementEvidenceInput(command.input) ?? invalidInput(),
       };
+    case "cover-letter-kit.load":
+      return {
+        type: "cover-letter-kit.load",
+        input: validateCoverLetterKitScopeInput(command.input) ?? invalidInput(),
+      };
+    case "cover-letter-kit.prepare":
+      return {
+        type: "cover-letter-kit.prepare",
+        input: validateCoverLetterKitScopeInput(command.input) ?? invalidInput(),
+      };
+    case "cover-letter-kit.save-letter":
+      return {
+        type: "cover-letter-kit.save-letter",
+        input: validateOwnCoverLetterSaveInput(command.input) ?? invalidInput(),
+      };
+    case "cover-letter-kit.download-letter":
+      return {
+        type: "cover-letter-kit.download-letter",
+        input: validateOwnCoverLetterDownloadInput(command.input) ?? invalidInput(),
+      };
     case "knowledge.create":
       return { type: "knowledge.create", input: validateKnowledgeStoreCreateInput(command.input) };
     case "knowledge.open":
@@ -6858,6 +6902,14 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeRunTraceResult(value) ?? invalidInput();
     case "run.requirement-evidence":
       return normalizeRunRequirementEvidenceResult(value) ?? invalidInput();
+    case "cover-letter-kit.load":
+      return normalizeCoverLetterKitLoadResult(value) ?? invalidInput();
+    case "cover-letter-kit.prepare":
+      return normalizeCoverLetterKitPrepareResult(value) ?? invalidInput();
+    case "cover-letter-kit.save-letter":
+      return normalizeOwnCoverLetterSaveResult(value) ?? invalidInput();
+    case "cover-letter-kit.download-letter":
+      return normalizeOwnCoverLetterDownloadResult(value) ?? invalidInput();
     case "application.delete":
       return normalizeApplicationDelete(value);
     case "application.import":

@@ -68,3 +68,20 @@ describe("saved interview guides", () => {
     expect(refused("interview-questions", [item({ question: "Why?", trap: "None." })])).toBe(false);
   });
 });
+
+describe("a cover letter the candidate wrote", () => {
+  it("is marked as the candidate's and only on a cover letter", () => {
+    const parse = (kind: string, extra: Record<string, unknown> = {}) =>
+      savedApplicationMaterialSchema.safeParse({
+        ...base,
+        kind,
+        items: [item({ edited: true })],
+        based_on: "amd_fixturekit01",
+        written_by: "candidate",
+        ...extra,
+      }).success;
+    expect(parse("cover-letter")).toBe(true);
+    expect(parse("interview-questions")).toBe(false);
+    expect(parse("cover-letter", { written_by: "model" })).toBe(false);
+  });
+});
