@@ -229,8 +229,10 @@ function hiddenReason(
   return { background };
 }
 
+/** The text of a fragment: tags become spaces, and no angle bracket is left to read as markup. */
 function plainText(html: string): string {
-  return decodeHtmlEntities(html.replace(/<[^>]*>/g, " "))
+  return decodeHtmlEntities(html.replace(tagPattern, " ").replace(/[<>]/gu, " "))
+    .replace(/[<>]/gu, " ")
     .replace(/\s+/gu, " ")
     .trim();
 }

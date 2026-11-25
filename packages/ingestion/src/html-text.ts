@@ -52,10 +52,10 @@ export function withoutHiddenHtml(html: string, hidden?: HiddenHtmlText[]): stri
  * Elements a reader cannot see are dropped with their text, and reported in `hidden` when given.
  */
 export function htmlFragmentToMarkdown(html: string, hidden?: HiddenHtmlText[]): string {
-  const withoutInactive = withoutHiddenHtml(
-    html.replace(/<!--[\s\S]*?-->/g, "").replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ""),
-    hidden,
-  );
+  const withoutScripts = html
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
+  const withoutInactive = withoutHiddenHtml(withoutScripts, hidden);
   const structured = withoutInactive
     .replace(/<h([1-6])\b[^>]*>/gi, (_match, level: string) => `\n\n${"#".repeat(Number(level))} `)
     .replace(/<\/h[1-6]\s*>/gi, "\n\n")
