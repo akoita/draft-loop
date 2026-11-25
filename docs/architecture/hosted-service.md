@@ -58,7 +58,7 @@ the repository's `AGENTS.md`.
 
 | App                                | Owns                                                                                                                                                                                                                                                                                                                    | Never owns                                                                              |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| API (`apps/api`)                   | Zod-typed `/v1` routes over `ApplicationService`, the committed OpenAPI document, request authentication, serving each request from its caller's tenant, membership and operator routes, idempotent run starts that queue the run, the error shape, the public pages, the support assistant and transactional email                                                                  | Domain logic, storage engines, provider calls                                           |
+| API (`apps/api`)                   | Zod-typed `/v1` routes over `ApplicationService`, the committed OpenAPI document, request authentication, serving each request from its caller's tenant, membership and operator routes, idempotent run starts that queue the run, the error shape, the public pages, the support assistant and transactional email     | Domain logic, storage engines, provider calls                                           |
 | Worker (`apps/worker`)             | Claiming queued runs and resuming each from its last saved step. Requeuing a run paused by a usage or rate limit. Extracting queued briefs and deriving queued profiles. Stopping within Cloud Run's shutdown notice.                                                                                                   | Domain logic, provider calls outside the application service, job payloads with content |
 | Page fetcher (`apps/page-fetcher`) | The only runtime that reaches public web servers: one `POST /v1/fetch` hop of an approved job page per request, through the pinned fetcher. It answers the hop's status, content type, redirect target and at most one byte past intake's limit, and logs the host only. Cloud Run's IAM check decides who may call it. | A database, secrets, candidate material, text extraction, following redirects           |
 | Web screen (`apps/web`)            | The browser screen over `/v1`, served by the API on the same origin, with a client typed from the OpenAPI document                                                                                                                                                                                                      | Domain logic, imports of `apps/api` or server packages, provider calls                  |
@@ -126,6 +126,10 @@ The landing page (`/`), `/about/`, `/guide/` (each with a `fr/` version),
   names, comma separated, such as the one before a rename. A page read there
   gets a 301 to the same path on the public URL. `/v1/` and `/.well-known/`
   stay served on every host, so agents and webhooks keep working.
+- **IndexNow.** With indexing on, `DRAFT_LOOP_INDEXNOW_KEY` (8 to 128
+  letters, digits or dashes) is served as `/<key>.txt`. The production deploy
+  then submits the sitemap's pages to IndexNow, which Bing and others read, so
+  changed pages are crawled without waiting.
 - **Previous sign-in issuers.** Members are recorded by issuer and subject.
   When the identity provider's host changes, `DRAFT_LOOP_OIDC_PREVIOUS_ISSUERS`
   lists the earlier issuers, comma separated. Sign-in then finds a member under
@@ -661,12 +665,12 @@ People manage their organisation through the API once it has a tenant directory
 
 ### Members and roles
 
-| Route                                                | What it does                                                                                                                                                         |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Route                                                | What it does                                                                                                                                                                                |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /v1/me`                                         | Who the caller is: a member's organisation, its name, id, role, email and the plan's record and seat limits, or `{ "kind": "owner" }` for the owner token, which belongs to no organisation |
-| `GET`, `PUT /v1/me/screen-language`                  | A member's saved screen language (`en`, `fr` or null), read after sign-in and saved on each change; 404 for the owner token, whose screen keeps the browser's choice |
-| `GET`, `POST /v1/organisation/members`               | Lists the organisation, or invites a person by email                                                                                                                 |
-| `PATCH`, `DELETE /v1/organisation/members/:memberId` | Changes a role, or removes a member                                                                                                                                  |
+| `GET`, `PUT /v1/me/screen-language`                  | A member's saved screen language (`en`, `fr` or null), read after sign-in and saved on each change; 404 for the owner token, whose screen keeps the browser's choice                        |
+| `GET`, `POST /v1/organisation/members`               | Lists the organisation, or invites a person by email                                                                                                                                        |
+| `PATCH`, `DELETE /v1/organisation/members/:memberId` | Changes a role, or removes a member                                                                                                                                                         |
 
 - **Who may manage.** Owners and admins manage members, and members get 403.
 - **The owner role.** Only an owner grants, takes away or removes it. The last
@@ -686,13 +690,13 @@ person with no account gets 403 `no_account` from every other route; the web
 screen then shows **Join the Redakloop beta** (`beta-sign-up.tsx`), which asks
 for the code and words each refusal.
 
-| Route                                        | Who                                | What it does                                                         |
-| -------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------- |
-| `POST /v1/operator/beta-invites`             | Operator                           | Creates a code for one email; the answer carries the plain code once |
+| Route                                        | Who                                | What it does                                                                                                                          |
+| -------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /v1/operator/beta-invites`             | Operator                           | Creates a code for one email; the answer carries the plain code once                                                                  |
 | `GET /v1/operator/beta-invites`              | Operator                           | Lists a page of invites without codes (`limit`, `offset`, `q`, `state`), each state's count, the seats used, open invites and the cap |
-| `PUT /v1/operator/beta-invites/cap`          | Operator                           | Sets the cap at runtime, with no redeploy                            |
-| `DELETE /v1/operator/beta-invites/:inviteId` | Operator                           | Revokes an open invite; 404 otherwise                                |
-| `POST /v1/sign-up`                           | A verified sign-in with no account | Redeems a code, assigns the Beta plan and makes the caller the owner |
+| `PUT /v1/operator/beta-invites/cap`          | Operator                           | Sets the cap at runtime, with no redeploy                                                                                             |
+| `DELETE /v1/operator/beta-invites/:inviteId` | Operator                           | Revokes an open invite; 404 otherwise                                                                                                 |
+| `POST /v1/sign-up`                           | A verified sign-in with no account | Redeems a code, assigns the Beta plan and makes the caller the owner                                                                  |
 
 `POST /v1/sign-up` is the one route a sign-in without a membership reaches
 (`request-auth.ts`). After five refused codes in 15 minutes, one sign-in gets
@@ -753,12 +757,12 @@ sign-in. It says what Redakloop does, that it is a test that sends material
 outside the EU, and links `/legal/privacy` and `/legal/terms` (#2462). It loads
 no analytics or third-party script, so it needs no cookie banner.
 
-| Route                                        | Who      | What it does                                                   |
-| -------------------------------------------- | -------- | -------------------------------------------------------------- |
+| Route                                        | Who      | What it does                                                                                       |
+| -------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------- |
 | `POST /v1/waitlist`                          | Anyone   | Lists an email with consent; answers 202 whether new or listed, with `confirm` when a link was due |
-| `POST /v1/waitlist/confirm`                  | Anyone   | Confirms the entry whose link token it receives; 404 when unknown or older than 48 hours |
-| `GET /v1/operator/waitlist`                  | Operator | Lists a page of confirmed entries, oldest first (`limit`, `offset`, `q`), and the `total` |
-| `POST /v1/operator/waitlist/:entryId/invite` | Operator | Creates an invite for the entry's email and deletes the entry  |
+| `POST /v1/waitlist/confirm`                  | Anyone   | Confirms the entry whose link token it receives; 404 when unknown or older than 48 hours           |
+| `GET /v1/operator/waitlist`                  | Operator | Lists a page of confirmed entries, oldest first (`limit`, `offset`, `q`), and the `total`          |
+| `POST /v1/operator/waitlist/:entryId/invite` | Operator | Creates an invite for the entry's email and deletes the entry                                      |
 
 - **Consent.** Each row records `betaWaitlistConsentVersion`, the version of
   the text beside the checkbox, and the day. Change the version with the text.
@@ -779,12 +783,12 @@ no analytics or third-party script, so it needs no cookie banner.
 The service sends a few plain emails through `@draft-loop/mail`
 (`packages/mail`), which the API and the worker share:
 
-| Sender | Email | Template |
-| ------ | ----- | -------- |
-| API    | A new beta invite: a link, `/#invite=<code>`, that opens sign-up with the code filled in | `beta_invite` |
-| API    | A waitlist sign-up's confirmation link, `/#waitlist-confirm=<token>` | `waitlist_confirm` |
-| API    | The operator's reply to a feedback note, sent on their click and naming the note's `FB-` reference (#2878) | `feedback_reply` |
-| Worker | The warning before an inactive beta account is erased (#2463) | `beta_inactivity_warning` |
+| Sender | Email                                                                                                      | Template                  |
+| ------ | ---------------------------------------------------------------------------------------------------------- | ------------------------- |
+| API    | A new beta invite: a link, `/#invite=<code>`, that opens sign-up with the code filled in                   | `beta_invite`             |
+| API    | A waitlist sign-up's confirmation link, `/#waitlist-confirm=<token>`                                       | `waitlist_confirm`        |
+| API    | The operator's reply to a feedback note, sent on their click and naming the note's `FB-` reference (#2878) | `feedback_reply`          |
+| Worker | The warning before an inactive beta account is erased (#2463)                                              | `beta_inactivity_warning` |
 
 - **Sender.** Brevo's transactional API, a French provider in the EU, as
   plain text without tracking. The port (`MailSender`) hides the provider.
