@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 
+import { readIndexNowKey, registerIndexNowKey } from "./indexnow.js";
 import { readPreviousHosts, registerPreviousHostRedirect } from "./previous-hosts.js";
 
 /**
@@ -13,6 +14,8 @@ export interface PublicSiteOptions {
   readonly indexing: boolean;
   /** Earlier host names whose page reads redirect to `origin`, such as the one before a rename. */
   readonly previousHosts?: readonly string[];
+  /** The IndexNow key served at `/<key>.txt` while indexing is on. */
+  readonly indexNowKey?: string;
 }
 
 /** The text the public pages carry where the deployment's origin belongs. */
@@ -46,8 +49,8 @@ const tokenPages: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Reads `DRAFT_LOOP_SEARCH_INDEXING` (`on` or unset), the origin of `DRAFT_LOOP_PUBLIC_URL` and
- * the comma-separated `DRAFT_LOOP_PREVIOUS_PUBLIC_HOSTS`.
+ * Reads `DRAFT_LOOP_SEARCH_INDEXING` (`on` or unset), the origin of `DRAFT_LOOP_PUBLIC_URL`,
+ * the comma-separated `DRAFT_LOOP_PREVIOUS_PUBLIC_HOSTS` and `DRAFT_LOOP_INDEXNOW_KEY`.
  * Indexing on without a valid https public address throws, so a deployment never advertises
  * pages at a wrong address.
  */
@@ -64,10 +67,12 @@ export function readPublicSite(env: NodeJS.ProcessEnv): PublicSiteOptions {
   if (previousHosts.length > 0 && origin === undefined) {
     throw new Error("DRAFT_LOOP_PREVIOUS_PUBLIC_HOSTS needs an https DRAFT_LOOP_PUBLIC_URL.");
   }
+  const indexNowKey = readIndexNowKey(env);
   return {
     indexing: flag === "on",
     ...(origin === undefined ? {} : { origin }),
     ...(previousHosts.length === 0 ? {} : { previousHosts }),
+    ...(indexNowKey === undefined ? {} : { indexNowKey }),
   };
 }
 
@@ -155,6 +160,7 @@ async function readPayload(payload: unknown): Promise<string | undefined> {
 export function registerPublicSite(app: FastifyInstance, site: PublicSiteOptions): void {
   const indexing = site.indexing && site.origin !== undefined;
   registerPreviousHostRedirect(app, site.origin, site.previousHosts ?? []);
+  registerIndexNowKey(app, indexing ? site.indexNowKey : undefined);
   app.get("/robots.txt", { schema: { hide: true } }, async (_request, reply) =>
     reply
       .header("cache-control", "public, max-age=3600")
