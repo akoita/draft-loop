@@ -177,6 +177,10 @@ label:where(:not(.shared-screens *)) {
   margin-top: 2rem;
 }
 
+.landing .landing-other-person {
+  margin-top: 2rem;
+}
+
 .landing .waitlist {
   display: flex;
   flex-direction: column;

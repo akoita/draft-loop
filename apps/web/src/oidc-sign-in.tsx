@@ -12,6 +12,7 @@ import {
   signedInClient,
   signInNotices,
 } from "./oidc-session.js";
+import { forgetMember, isReturningMember, rememberMember } from "./returning-member.js";
 import { PreferencesBar } from "./shell-actions.js";
 
 export interface OidcSignInProps {
@@ -22,6 +23,8 @@ export interface OidcSignInProps {
   readonly onSignIn: () => void;
   /** Called when the person points at or focuses the button, to wake the provider early. */
   readonly onPrepare?: () => void;
+  /** This browser opened an account before: the text greets a returning member. */
+  readonly returning?: boolean;
 }
 
 /** How long Signing in shows before the screen says the provider may be waking up. */
@@ -42,11 +45,21 @@ function useSlow(busy: boolean): boolean {
 }
 
 /** The sign-in text, the last notice and the button, without the page around them. */
-function SignInBlock({ notice, busy = false, onSignIn, onPrepare }: OidcSignInProps) {
+function SignInBlock({
+  notice,
+  busy = false,
+  onSignIn,
+  onPrepare,
+  returning = false,
+}: OidcSignInProps) {
   const slow = useSlow(busy);
   return (
     <>
-      <p>{t`Sign in with the email address your invitation was sent to.`}</p>
+      <p>
+        {returning
+          ? t`Sign in to pick up where you left off.`
+          : t`Sign in with the email address your invitation was sent to.`}
+      </p>
       {notice === undefined ? null : (
         <p className="notice" role="status">
           {notice}
@@ -84,6 +97,7 @@ export function OidcSignIn(
     return (
       <Landing
         signIn={<SignInBlock {...signIn} />}
+        returning={signIn.returning === true}
         {...(waitlistConfirmToken === undefined ? {} : { confirmToken: waitlistConfirmToken })}
       />
     );
@@ -245,7 +259,13 @@ export function OidcApp({
     }
     return {
       end,
-      api: signedInClient(session, createClient, end, () => setNeedsAccount(true)),
+      api: signedInClient(
+        session,
+        createClient,
+        end,
+        () => setNeedsAccount(true),
+        () => rememberMember(),
+      ),
     };
   }, [phase, session, createClient, navigation]);
 
@@ -257,6 +277,7 @@ export function OidcApp({
         {...(waitlistConfirmToken === undefined ? {} : { waitlistConfirmToken })}
         {...(notice === undefined ? {} : { notice })}
         busy={phase === "completing" || phase === "resuming" || leaving}
+        returning={isReturningMember()}
         onPrepare={() => session.prepare()}
         onSignIn={() => {
           setLeaving(true);
@@ -299,7 +320,10 @@ export function OidcApp({
           session.begin({ again: true }).then((url) => navigation.assign(url))
         }
         // The provider deleted the account and its sessions: leave without its sign-out page.
-        onAccountDeleted={(notice) => client.end(notice, false)}
+        onAccountDeleted={(notice) => {
+          forgetMember();
+          client.end(notice, false);
+        }}
       />
     </AccountScreenLanguage>
   );

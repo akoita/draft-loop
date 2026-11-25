@@ -389,6 +389,24 @@ describe("signed-in client", () => {
     expect(ended).toEqual([]);
   });
 
+  it("reports an account only once the API answers a call", async () => {
+    const context = setup([tokens("access-1", "refresh-1")]);
+    const session = await signIn(context);
+    let accounts = 0;
+    const client = signedInClient(
+      session,
+      api(["no_account", "ok"]).createClient,
+      () => {},
+      () => {},
+      () => accounts++,
+    );
+
+    await expect(client.call("GET /v1/health", {})).rejects.toMatchObject({ status: 403 });
+    expect(accounts).toBe(0);
+    await client.call("GET /v1/health", {});
+    expect(accounts).toBe(1);
+  });
+
   it("opens the live socket with a current access token (#2393)", async () => {
     const context = setup([tokens("access-1", "refresh-1")]);
     const session = await signIn(context);

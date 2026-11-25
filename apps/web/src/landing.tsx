@@ -180,13 +180,18 @@ export function Landing({
   signIn,
   fetchImpl,
   confirmToken,
+  returning = false,
 }: {
   /** The sign-in block for people who already have an invite or an account. */
   readonly signIn: ReactNode;
   readonly fetchImpl?: typeof fetch;
   /** The token of the waitlist confirmation link the visitor opened, if any. */
   readonly confirmToken?: string;
+  /** This browser opened an account before: Welcome back, with the waitlist folded to a link. */
+  readonly returning?: boolean;
 }) {
+  // A confirmation link opens the waitlist even for a returning browser, so its answer shows.
+  const [waitlistOpen, setWaitlistOpen] = useState(!returning || confirmToken !== undefined);
   return (
     <>
       <PreferencesBar />
@@ -197,10 +202,18 @@ export function Landing({
           {t`This is a free public test, open by invitation. It may change or pause without notice. Drafting sends the material you select to AI providers, some of them outside the EU.`}
         </p>
         <section aria-labelledby="landing-sign-in">
-          <h2 id="landing-sign-in">{t`Already invited?`}</h2>
+          <h2 id="landing-sign-in">{returning ? t`Welcome back` : t`Already invited?`}</h2>
           {signIn}
         </section>
-        <section aria-labelledby="landing-waitlist">
+        {waitlistOpen ? null : (
+          <p className="landing-other-person">
+            {t`Not your account?`}{" "}
+            <button type="button" className="link" onClick={() => setWaitlistOpen(true)}>
+              {t`Join the waitlist`}
+            </button>
+          </p>
+        )}
+        <section aria-labelledby="landing-waitlist" hidden={!waitlistOpen}>
           <h2 id="landing-waitlist">{t`Join the waitlist`}</h2>
           {confirmToken === undefined ? null : (
             <WaitlistConfirmation

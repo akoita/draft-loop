@@ -6285,6 +6285,10 @@ msgstr "Not used yet"
 msgid "Not yet generated"
 msgstr "Not yet generated"
 
+#: apps/web/src/landing.tsx
+msgid "Not your account?"
+msgstr "Not your account?"
+
 #: apps/web/src/operator-model.ts
 msgid "Note"
 msgstr "Note"
@@ -9046,6 +9050,10 @@ msgid "Sign in on Home, under Settings."
 msgstr "Sign in on Home, under Settings."
 
 #: apps/web/src/oidc-sign-in.tsx
+msgid "Sign in to pick up where you left off."
+msgstr "Sign in to pick up where you left off."
+
+#: apps/web/src/oidc-sign-in.tsx
 msgid "Sign in with the email address your invitation was sent to."
 msgstr "Sign in with the email address your invitation was sent to."
 
@@ -11690,6 +11698,10 @@ msgstr "Week by week"
 #: apps/web/src/operator-funnel.tsx
 msgid "Week of"
 msgstr "Week of"
+
+#: apps/web/src/landing.tsx
+msgid "Welcome back"
+msgstr "Welcome back"
 
 #: packages/ui/src/cover-letter-annotated-model.ts
 msgid "What about this employer made you apply? Name the one thing you would mention in an interview."
