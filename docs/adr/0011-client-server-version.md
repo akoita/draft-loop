@@ -839,10 +839,14 @@ The phases below are the engineering slices inside it.
 
 Notes on phase 4:
 
-- **Job matching** uses official job APIs and partner feeds only, never
-  scraping. Embeddings shortlist jobs, and a model scores only the top
-  ones, citing the profile's evidence. Redakloop suggests jobs and never
-  applies on the user's behalf.
+- **Job matching** uses official job APIs, partner feeds, employer-published
+  job feeds (public ATS boards and schema.org `JobPosting` pages) and single
+  pages the user picks from a search. It never crawls job boards in bulk.
+  Embeddings shortlist jobs, and a model scores only the top ones, citing the
+  profile's evidence. Redakloop suggests jobs and never applies on the user's
+  behalf. **Amended 2026-11-25:** employer-published feeds and user-picked
+  pages added, because large job platforms offer no open API for this use
+  (rollup #1361).
 - **Ranking candidates for recruiters** is high-risk under the EU AI Act,
   unlike recommending jobs to a candidate. The candidate-side version comes
   first; the recruiter side waits for legal review.
