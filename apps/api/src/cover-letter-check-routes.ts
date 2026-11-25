@@ -25,7 +25,7 @@ import type { ResearchBriefStore } from "@draft-loop/storage/research-briefs";
 import type { SavedApplicationMaterialStore } from "@draft-loop/storage/saved-application-material";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-
+import { applicationJob } from "./application-lifecycle-routes.js";
 import {
   type ApplicationMaterialParts,
   errors,
@@ -33,7 +33,6 @@ import {
   permitsAnthropic,
   providerFailureOf,
 } from "./application-material-routes.js";
-import { applicationJob } from "./application-lifecycle-routes.js";
 import { consentRecordId } from "./consent-routes.js";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import { apiError } from "./errors.js";
