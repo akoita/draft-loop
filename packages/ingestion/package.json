@@ -22,6 +22,10 @@
     "./pull-request-list": {
       "types": "./src/pull-request-list.ts",
       "import": "./src/pull-request-list.ts"
+    },
+    "./planted-instructions": {
+      "types": "./src/planted-instructions.ts",
+      "import": "./src/planted-instructions.ts"
     }
   },
   "files": [
