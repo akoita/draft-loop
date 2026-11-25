@@ -1,4 +1,5 @@
 import { extractEmbeddedJobPostText } from "./embedded-job-post.js";
+import type { HiddenHtmlText } from "./html-hidden-content.js";
 import { decodeHtmlEntities, htmlFragmentToMarkdown } from "./html-text.js";
 
 /** Largest JSON-LD block that is parsed; a larger block is skipped, not truncated. */
@@ -54,11 +55,11 @@ function organizationName(value: unknown): string {
 }
 
 /** A description is HTML; some publishers entity-escape the whole fragment, so unescape it first. */
-function descriptionMarkdown(value: unknown): string {
+function descriptionMarkdown(value: unknown, hidden?: HiddenHtmlText[]): string {
   if (typeof value !== "string") return "";
   const html =
     !value.includes("<") && /&lt;\s*\/?[a-z]/i.test(value) ? decodeHtmlEntities(value) : value;
-  return htmlFragmentToMarkdown(html);
+  return htmlFragmentToMarkdown(html, hidden);
 }
 
 /**
@@ -68,9 +69,10 @@ function descriptionMarkdown(value: unknown): string {
  * Job boards that render with JavaScript still publish the full posting here for search engines.
  * This reads only the already fetched page: nothing is fetched or followed. The result is a
  * Markdown heading naming the role and company, followed by the description with its headings
- * and list items kept, so requirement bullets survive.
+ * and list items kept, so requirement bullets survive. Text a reader cannot see is left out and
+ * added to `hidden` when it is given (#3334).
  */
-export function extractJobPostingText(html: string): string | null {
+export function extractJobPostingText(html: string, hidden?: HiddenHtmlText[]): string | null {
   let blocks = 0;
   for (const match of html.matchAll(jsonLdScriptPattern)) {
     if (!isJsonLdScript(match[1] ?? "")) continue;
@@ -88,7 +90,7 @@ export function extractJobPostingText(html: string): string | null {
     if (posting === null) continue;
     const title = plainText(posting["title"] ?? posting["name"]);
     const company = organizationName(posting["hiringOrganization"]);
-    const description = descriptionMarkdown(posting["description"]);
+    const description = descriptionMarkdown(posting["description"], hidden);
     if (description === "") continue;
     const heading = title === "" ? "" : `# ${title}`;
     const text = [heading, company === "" ? "" : `Company: ${company}`, description]
@@ -99,5 +101,5 @@ export function extractJobPostingText(html: string): string | null {
       : text;
   }
   // Some boards publish no JobPosting and render the post from embedded page state (#2857).
-  return extractEmbeddedJobPostText(html);
+  return extractEmbeddedJobPostText(html, hidden);
 }

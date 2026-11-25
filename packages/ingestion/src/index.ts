@@ -5,7 +5,8 @@ import { extname, isAbsolute, join, relative } from "node:path";
 import { inflateRawSync } from "node:zlib";
 
 import { markDocxHeadings } from "./docx-headings.js";
-import { decodeHtmlEntities, markHtmlHeadings } from "./html-text.js";
+import type { HiddenHtmlText } from "./html-hidden-content.js";
+import { decodeHtmlEntities, markHtmlHeadings, withoutHiddenHtml } from "./html-text.js";
 import { extractJobPostingText } from "./job-posting-json-ld.js";
 import { unsafeLiteralHostname } from "./network-address.js";
 import { extractPdfText } from "./pdf-text.js";
@@ -24,6 +25,12 @@ export {
   type CandidateEvidenceKindInput,
   detectCandidateEvidenceKind,
 } from "./candidate-evidence-kind-detection.js";
+export {
+  type HiddenHtmlReason,
+  type HiddenHtmlText,
+  removeHiddenHtml,
+  type VisibleHtml,
+} from "./html-hidden-content.js";
 export { expandLigatures, looksGarbled } from "./job-text-quality.js";
 
 export const supportedMediaTypes = [
@@ -157,6 +164,11 @@ export interface NormalizedSource {
   readonly text: string;
   /** Where HTML text came from; absent for the page's visible text. */
   readonly textOrigin?: "job-posting-json-ld";
+  /**
+   * What an HTML source held that a reader cannot see and that was left out of `text` (#3334),
+   * bounded; absent when nothing worth reporting was hidden.
+   */
+  readonly hiddenText?: readonly HiddenHtmlText[];
   readonly chunks: readonly SourceChunk[];
   readonly issues: readonly IngestionIssue[];
   readonly url?: UrlProvenance;
@@ -435,10 +447,11 @@ function hasInvalidPdfExtractedText(text: string): boolean {
   );
 }
 
-function extractHtml(text: string): string {
-  const withoutInactiveContent = text
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
+function extractHtml(text: string, hidden?: HiddenHtmlText[]): string {
+  const withoutInactiveContent = withoutHiddenHtml(
+    text.replace(/<!--[\s\S]*?-->/g, "").replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ""),
+    hidden,
+  );
   const withBoundaries = markHtmlHeadings(withoutInactiveContent).replace(
     /<\/?(address|article|aside|blockquote|br|dd|div|dl|dt|footer|header|hr|li|main|nav|ol|p|pre|section|table|td|th|tr|ul)\b[^>]*>/gi,
     "\n",
@@ -1161,6 +1174,7 @@ async function extractSource(
 ): Promise<{
   readonly text: string;
   readonly textOrigin?: "job-posting-json-ld";
+  readonly hiddenText?: readonly HiddenHtmlText[];
   readonly issues: readonly IngestionIssue[];
 }> {
   if (mediaType === "text/plain" || mediaType === "text/markdown") {
@@ -1177,10 +1191,16 @@ async function extractSource(
   if (mediaType === "text/html") {
     try {
       const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-      const posting = options.preferJobPostingData === true ? extractJobPostingText(decoded) : null;
-      return posting === null
-        ? { text: extractHtml(decoded), issues: [] }
-        : { text: normalizeText(posting), textOrigin: "job-posting-json-ld", issues: [] };
+      const hidden: HiddenHtmlText[] = [];
+      const posting =
+        options.preferJobPostingData === true ? extractJobPostingText(decoded, hidden) : null;
+      const text = posting === null ? extractHtml(decoded, hidden) : normalizeText(posting);
+      return {
+        text,
+        ...(posting === null ? {} : { textOrigin: "job-posting-json-ld" as const }),
+        ...(hidden.length === 0 ? {} : { hiddenText: hidden }),
+        issues: [],
+      };
     } catch {
       return { text: "", issues: [safeErrorMessage("parse", source.path)] };
     }
@@ -1302,6 +1322,7 @@ async function normalizeIngestedBytes(
       ...(extracted.textOrigin === undefined || text.length === 0
         ? {}
         : { textOrigin: extracted.textOrigin }),
+      ...(extracted.hiddenText === undefined ? {} : { hiddenText: extracted.hiddenText }),
       chunks: createChunks(
         text,
         source.path,

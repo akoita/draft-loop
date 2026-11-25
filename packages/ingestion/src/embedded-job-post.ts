@@ -1,3 +1,4 @@
+import type { HiddenHtmlText } from "./html-hidden-content.js";
 import { decodeHtmlEntities, htmlFragmentToMarkdown } from "./html-text.js";
 
 /** Largest embedded state that is parsed; a larger one is skipped, not truncated. */
@@ -92,11 +93,11 @@ function findJobPost(value: unknown, depth = 0): Record<string, unknown> | null 
 }
 
 /** HTML that some boards entity-escape whole, such as `&lt;p&gt;`, unescaped first. */
-function bodyMarkdown(value: unknown): string {
+function bodyMarkdown(value: unknown, hidden?: HiddenHtmlText[]): string {
   if (typeof value !== "string") return "";
   const html =
     !value.includes("<") && /&lt;\s*\/?[a-z]/iu.test(value) ? decodeHtmlEntities(value) : value;
-  return htmlFragmentToMarkdown(html);
+  return htmlFragmentToMarkdown(html, hidden);
 }
 
 function parsedStates(html: string): unknown[] {
@@ -117,13 +118,14 @@ function parsedStates(html: string): unknown[] {
 /**
  * The job post a JavaScript job board embeds in its page state, such as a Greenhouse job board's
  * route data, as Markdown headed by the role and company; `null` when the page embeds none. The
- * visible HTML of such a page holds little more than the title (#2857).
+ * visible HTML of such a page holds little more than the title (#2857). Text a reader cannot see
+ * is left out and added to `hidden` when it is given (#3334).
  */
-export function extractEmbeddedJobPostText(html: string): string | null {
+export function extractEmbeddedJobPostText(html: string, hidden?: HiddenHtmlText[]): string | null {
   for (const state of parsedStates(html)) {
     const post = findJobPost(state);
     if (post === null) continue;
-    const description = bodyMarkdown(post.content ?? post.description);
+    const description = bodyMarkdown(post.content ?? post.description, hidden);
     if (description === "") continue;
     const title = text(post.title);
     const company = text(post.company_name ?? post.companyName);
