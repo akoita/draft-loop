@@ -3466,6 +3466,44 @@
           "counts"
         ]
       },
+      "JobAdInstructionsInput": {
+        "type": "object",
+        "properties": {
+          "instructions": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "The sentence as the job ad has it."
+                },
+                "words": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The words or phrases it asks an AI tool to add; empty when it names none."
+                },
+                "hidden": {
+                  "type": "boolean",
+                  "description": "True when the page hid the sentence from its reader, such as in white text."
+                }
+              },
+              "required": [
+                "text",
+                "words",
+                "hidden"
+              ]
+            }
+          }
+        },
+        "required": [
+          "instructions"
+        ],
+        "description": "Instructions in the job ad written for AI tools rather than for the candidate, such as a word to add or a phrase to start with. They are left out of what the models read; hidden page text is left out whatever it says."
+      },
       "ApplicationJobInput": {
         "type": "object",
         "properties": {
@@ -3537,6 +3575,17 @@
               }
             ],
             "description": "The first copy of the job page, kept when a later read gave different text."
+          },
+          "aiInstructions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobAdInstructionsInput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Instructions written for AI tools in the job ad, or null when it has none."
           }
         },
         "required": [
@@ -3545,7 +3594,8 @@
           "url",
           "savedAt",
           "copySource",
-          "earlier"
+          "earlier",
+          "aiInstructions"
         ]
       },
       "OpportunityVersionsInput": {
@@ -14491,6 +14541,46 @@
         ],
         "additionalProperties": false
       },
+      "JobAdInstructions": {
+        "type": "object",
+        "properties": {
+          "instructions": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "The sentence as the job ad has it."
+                },
+                "words": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The words or phrases it asks an AI tool to add; empty when it names none."
+                },
+                "hidden": {
+                  "type": "boolean",
+                  "description": "True when the page hid the sentence from its reader, such as in white text."
+                }
+              },
+              "required": [
+                "text",
+                "words",
+                "hidden"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "instructions"
+        ],
+        "additionalProperties": false,
+        "description": "Instructions in the job ad written for AI tools rather than for the candidate, such as a word to add or a phrase to start with. They are left out of what the models read; hidden page text is left out whatever it says."
+      },
       "ApplicationJob": {
         "type": "object",
         "properties": {
@@ -14563,6 +14653,17 @@
               }
             ],
             "description": "The first copy of the job page, kept when a later read gave different text."
+          },
+          "aiInstructions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobAdInstructions"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Instructions written for AI tools in the job ad, or null when it has none."
           }
         },
         "required": [
@@ -14571,7 +14672,8 @@
           "url",
           "savedAt",
           "copySource",
-          "earlier"
+          "earlier",
+          "aiInstructions"
         ],
         "additionalProperties": false
       },

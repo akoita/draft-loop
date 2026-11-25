@@ -588,6 +588,10 @@ msgstr ""
 msgid "{count, plural, one {Show # fact about the employer} other {Show # facts about the employer}}"
 msgstr ""
 
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "{count, plural, one {This job ad has # instruction written for AI tools} other {This job ad has # instructions written for AI tools}}"
+msgstr ""
+
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "{count} / {limit}"
 msgstr ""
@@ -4415,6 +4419,10 @@ msgstr ""
 msgid "Help"
 msgstr ""
 
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "Hidden on the page"
+msgstr ""
+
 #. placeholder {0}: label.toLowerCase()
 #: packages/ui/src/review-panels.tsx
 msgid "Hide {0}"
@@ -4561,6 +4569,10 @@ msgstr ""
 msgid "I reviewed these destinations, data categories, retention preference, and limits."
 msgstr ""
 
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "If one is a real request from the employer, such as a word to show you read the ad, add it yourself when you write."
+msgstr ""
+
 #: apps/web/src/interview-guide-model.ts
 msgid "If you read one thing"
 msgstr ""
@@ -4624,6 +4636,10 @@ msgstr ""
 msgid "In review"
 msgstr ""
 
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "In the job ad"
+msgstr ""
+
 #: packages/ui/src/knowledge.tsx
 msgid "In use"
 msgstr ""
@@ -4682,6 +4698,10 @@ msgstr ""
 
 #: packages/ui/src/agent-setup-model.ts
 msgid "Installs the Redakloop tools, the /log-work and /tailor-cv skills and a reminder to record notable work. The token goes in your user folder, never in a project."
+msgstr ""
+
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "Instructions written for AI tools"
 msgstr ""
 
 #: packages/ui/src/profile-fact-usage.tsx
@@ -9090,6 +9110,10 @@ msgstr ""
 msgid "Sole author"
 msgstr ""
 
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "Some job ads include requests meant for AI writing tools, often in text you can't see on the page. A draft that follows one can show the reader that AI wrote it. Redakloop leaves them out of what its models read."
+msgstr ""
+
 #: apps/web/src/feedback.tsx
 #: apps/web/src/operator-model.ts
 msgid "Something else"
@@ -11844,6 +11868,10 @@ msgstr ""
 
 #: packages/ui/src/cover-letter-check-panel.tsx
 msgid "Wording that reads as machine-made"
+msgstr ""
+
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "Words it asks for:"
 msgstr ""
 
 #: packages/ui/src/agent-setup-model.ts

@@ -588,6 +588,10 @@ msgstr "{count, plural, one {Mark # confirmed gap as known} other {Mark # confir
 msgid "{count, plural, one {Show # fact about the employer} other {Show # facts about the employer}}"
 msgstr "{count, plural, one {Show # fact about the employer} other {Show # facts about the employer}}"
 
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "{count, plural, one {This job ad has # instruction written for AI tools} other {This job ad has # instructions written for AI tools}}"
+msgstr "{count, plural, one {This job ad has # instruction written for AI tools} other {This job ad has # instructions written for AI tools}}"
+
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "{count} / {limit}"
 msgstr "{count} / {limit}"
@@ -4415,6 +4419,10 @@ msgstr "Health > Notes"
 msgid "Help"
 msgstr "Help"
 
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "Hidden on the page"
+msgstr "Hidden on the page"
+
 #. placeholder {0}: label.toLowerCase()
 #: packages/ui/src/review-panels.tsx
 msgid "Hide {0}"
@@ -4562,6 +4570,10 @@ msgstr "I know apps like this"
 msgid "I reviewed these destinations, data categories, retention preference, and limits."
 msgstr "I reviewed these destinations, data categories, retention preference, and limits."
 
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "If one is a real request from the employer, such as a word to show you read the ad, add it yourself when you write."
+msgstr "If one is a real request from the employer, such as a word to show you read the ad, add it yourself when you write."
+
 #: apps/web/src/interview-guide-model.ts
 msgid "If you read one thing"
 msgstr "If you read one thing"
@@ -4625,6 +4637,10 @@ msgstr "In progress"
 msgid "In review"
 msgstr "In review"
 
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "In the job ad"
+msgstr "In the job ad"
+
 #: packages/ui/src/knowledge.tsx
 msgid "In use"
 msgstr "In use"
@@ -4684,6 +4700,10 @@ msgstr "Install redakloop-mcp once on this computer."
 #: packages/ui/src/agent-setup-model.ts
 msgid "Installs the Redakloop tools, the /log-work and /tailor-cv skills and a reminder to record notable work. The token goes in your user folder, never in a project."
 msgstr "Installs the Redakloop tools, the /log-work and /tailor-cv skills and a reminder to record notable work. The token goes in your user folder, never in a project."
+
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "Instructions written for AI tools"
+msgstr "Instructions written for AI tools"
 
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Interview only"
@@ -9091,6 +9111,10 @@ msgstr "Social announcement"
 msgid "Sole author"
 msgstr "Sole author"
 
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "Some job ads include requests meant for AI writing tools, often in text you can't see on the page. A draft that follows one can show the reader that AI wrote it. Redakloop leaves them out of what its models read."
+msgstr "Some job ads include requests meant for AI writing tools, often in text you can't see on the page. A draft that follows one can show the reader that AI wrote it. Redakloop leaves them out of what its models read."
+
 #: apps/web/src/feedback.tsx
 #: apps/web/src/operator-model.ts
 msgid "Something else"
@@ -11846,6 +11870,10 @@ msgstr "Withdrawn on {when}."
 #: packages/ui/src/cover-letter-check-panel.tsx
 msgid "Wording that reads as machine-made"
 msgstr "Wording that reads as machine-made"
+
+#: packages/ui/src/job-ad-instructions-notice.tsx
+msgid "Words it asks for:"
+msgstr "Words it asks for:"
 
 #: packages/ui/src/agent-setup-model.ts
 #: packages/ui/src/source-evidence-kind-contract.ts

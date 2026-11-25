@@ -32,6 +32,7 @@ export const englishHelpGuide: HelpGuide = {
       paragraphs: [
         "On Home, select New application. Give the job a name, paste its description or its link, then select Create application.",
         "Redakloop lists the job's requirements. Read them and fix any that look wrong, since the draft is written against them.",
+        "Some job ads include instructions meant for AI writing tools, such as a word to add, often in text you can't see. Redakloop leaves them out of what its models read and lists them on the Job tab. If one is a real request from the employer, add it yourself.",
         "Redakloop is tuned and tested on software and tech roles so far. It works for other jobs too, such as nursing, sales, teaching or a trade, so check those drafts a little more closely. Support for more professions is on our roadmap.",
       ],
       keywords: [
@@ -45,6 +46,8 @@ export const englishHelpGuide: HelpGuide = {
         "profession",
         "sector",
         "non-tech",
+        "hidden text",
+        "AI instructions",
       ],
       screenshot: {
         alt: "The New application dialog with a role name and a pasted job description.",

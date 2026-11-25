@@ -20,6 +20,15 @@ export const applicationPastedJobMaxLength = 200_000;
  * so the worker extracts that one fetch (#1812) and the person can still read the job once the
  * page expires (#2592). The brief's source records the same fetch.
  */
+/** One piece of text a job page hid from its reader, and how it was hidden (#3334). */
+export const applicationJobPageHiddenTextSchema = z
+  .object({
+    reason: z.enum(["attribute", "style", "off-screen", "white-text", "class"]),
+    text: z.string().trim().min(1).max(400),
+  })
+  .strict();
+export type ApplicationJobPageHiddenText = z.infer<typeof applicationJobPageHiddenTextSchema>;
+
 export const applicationJobPageSchema = z
   .object({
     text: z.string().trim().min(1).max(applicationPastedJobMaxLength),
@@ -27,6 +36,11 @@ export const applicationJobPageSchema = z
     fetchedAt: strictTimestampSchema,
     /** True when the person pasted this copy because the page could no longer be read (#2593). */
     pasted: z.literal(true).optional(),
+    /**
+     * What the page held that a reader could not see, left out of `text` (#3334, #3336), so the
+     * person can see it; absent when nothing worth showing was hidden.
+     */
+    hiddenText: z.array(applicationJobPageHiddenTextSchema).min(1).max(20).optional(),
   })
   .strict();
 export type ApplicationJobPage = z.infer<typeof applicationJobPageSchema>;

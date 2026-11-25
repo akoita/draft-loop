@@ -63,7 +63,24 @@ export interface ApplicationJobResult {
   readonly copySource: JobPageCopySource | null;
   /** The first copy of a URL job's page, kept when a later read differed; null otherwise. */
   readonly earlier: SavedJobPageCopy | null;
+  /**
+   * Sentences in the job ad written for AI tools, which the models never read (#3336); absent or
+   * empty when it has none. A host that cannot tell leaves it out.
+   */
+  readonly aiInstructions?: readonly JobAdInstruction[];
 }
+
+/** A sentence in a job ad written for AI tools rather than for the candidate. */
+export interface JobAdInstruction {
+  readonly text: string;
+  /** The words or phrases it asks an AI tool to add; empty when it names none. */
+  readonly words: readonly string[];
+  /** True when the page hid it from its reader. */
+  readonly hidden: boolean;
+}
+
+/** The most AI instructions that cross the bridge. */
+export const maximumJobAdInstructions = 12;
 
 /** The longest job text that crosses the bridge, in UTF-16 code units. */
 export const maximumApplicationJobTextLength = 200_000;
@@ -95,6 +112,7 @@ const resultKeys = exactKeys<ApplicationJobResult>()([
   "savedAt",
   "copySource",
   "earlier",
+  "aiInstructions",
 ]);
 
 const identifierPattern = /^[A-Za-z0-9][A-Za-z0-9._:/+@-]{0,127}$/u;
@@ -175,6 +193,8 @@ export function normalizeApplicationJobResult(value: unknown): ApplicationJobRes
         ? null
         : undefined;
   if (savedAt === undefined || earlier === undefined || copySource === undefined) return undefined;
+  const aiInstructions = jobAdInstructions(raw.aiInstructions);
+  if (aiInstructions === undefined) return undefined;
   return {
     workspaceId,
     origin,
@@ -184,5 +204,33 @@ export function normalizeApplicationJobResult(value: unknown): ApplicationJobRes
     savedAt,
     copySource,
     earlier,
+    ...(aiInstructions.length === 0 ? {} : { aiInstructions }),
   };
+}
+
+function shortText(value: unknown, limit: number): value is string {
+  return typeof value === "string" && value.length <= limit;
+}
+
+/** The AI instructions a host sent: `[]` when absent, `undefined` when malformed. */
+function jobAdInstructions(value: unknown): readonly JobAdInstruction[] | undefined {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > maximumJobAdInstructions) return undefined;
+  const instructions: JobAdInstruction[] = [];
+  for (const entry of value) {
+    const raw = record(entry);
+    if (
+      raw === undefined ||
+      Object.keys(raw).some((key) => key !== "text" && key !== "words" && key !== "hidden") ||
+      !shortText(raw.text, 2_000) ||
+      typeof raw.hidden !== "boolean" ||
+      !Array.isArray(raw.words) ||
+      raw.words.length > 12 ||
+      !raw.words.every((word) => shortText(word, 200))
+    ) {
+      return undefined;
+    }
+    instructions.push({ text: raw.text, words: [...(raw.words as string[])], hidden: raw.hidden });
+  }
+  return instructions;
 }

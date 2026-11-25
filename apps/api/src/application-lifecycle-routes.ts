@@ -17,6 +17,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
+import { jobAdInstructions, jobAdInstructionsSchema } from "./job-ad-instructions.js";
 import { applicationView, applicationViewSchema } from "./views.js";
 
 export interface ApplicationLifecycleRoutesOptions {
@@ -134,6 +135,9 @@ export const applicationJobSchema = z
     earlier: savedJobPageSchema
       .nullable()
       .describe("The first copy of the job page, kept when a later read gave different text."),
+    aiInstructions: jobAdInstructionsSchema
+      .nullable()
+      .describe("Instructions written for AI tools in the job ad, or null when it has none."),
   })
   .meta({ id: "ApplicationJob" });
 
@@ -145,7 +149,13 @@ export function applicationJob(view: ApplicationView): z.infer<typeof applicatio
   const source = view.jobSource;
   const none = { savedAt: null, copySource: null, earlier: null };
   if (source.kind === "stored-text") {
-    return { origin: "pasted-text", text: source.text, url: null, ...none };
+    return {
+      origin: "pasted-text",
+      text: source.text,
+      url: null,
+      ...none,
+      aiInstructions: jobAdInstructions(source.text),
+    };
   }
   if (source.kind === "approved-url") {
     const { page, firstPage } = source;
@@ -157,10 +167,11 @@ export function applicationJob(view: ApplicationView): z.infer<typeof applicatio
       copySource: page === undefined ? null : page.pasted === true ? "pasted" : "page",
       earlier:
         firstPage === undefined ? null : { text: firstPage.text, savedAt: firstPage.fetchedAt },
+      aiInstructions: jobAdInstructions(page?.text ?? null, page?.hiddenText),
     };
   }
   // A hosted workspace has no files, so a job named by a file path has no text to read.
-  return { origin: "unavailable", text: null, url: null, ...none };
+  return { origin: "unavailable", text: null, url: null, ...none, aiInstructions: null };
 }
 
 /** A method the hosted service always offers; a service without it refuses as unsupported. */

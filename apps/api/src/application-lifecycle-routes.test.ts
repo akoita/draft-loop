@@ -349,6 +349,7 @@ describe("application lifecycle", () => {
       savedAt: null,
       copySource: null,
       earlier: null,
+      aiInstructions: null,
     });
     expect(await read("page")).toEqual({
       origin: "url",
@@ -357,6 +358,7 @@ describe("application lifecycle", () => {
       savedAt: null,
       copySource: null,
       earlier: null,
+      aiInstructions: null,
     });
     expect(await read("saved")).toEqual({
       origin: "url",
@@ -365,6 +367,7 @@ describe("application lifecycle", () => {
       savedAt: "2030-01-05T00:00:00.000Z",
       copySource: "page",
       earlier: { text: "Platform Engineer", savedAt: "2030-01-04T00:00:00.000Z" },
+      aiInstructions: null,
     });
     expect(await read("file")).toEqual({
       origin: "unavailable",
@@ -373,6 +376,7 @@ describe("application lifecycle", () => {
       savedAt: null,
       copySource: null,
       earlier: null,
+      aiInstructions: null,
     });
   });
 });

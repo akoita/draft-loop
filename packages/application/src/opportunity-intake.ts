@@ -16,6 +16,7 @@ import {
   type IngestionResult,
   looksGarbled,
   type UrlIngestionOptions,
+  withoutPlantedInstructions,
 } from "@draft-loop/ingestion";
 import type {
   OpportunityBrief,
@@ -596,7 +597,8 @@ function extractionMaterialFor(
     status,
     mediaType: result.source.mediaType,
     checksum: result.source.checksum,
-    text: expandLigatures(result.source.text),
+    // Instructions written for AI tools never reach the model (#3336).
+    text: expandLigatures(withoutPlantedInstructions(result.source.text)),
   };
 }
 

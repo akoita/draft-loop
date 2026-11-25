@@ -154,6 +154,7 @@ export interface ApiSchemas {
       readonly text: string;
       readonly savedAt: string;
     } | null;
+    readonly aiInstructions: ApiSchemas["JobAdInstructions"] | null;
   };
   "ApplicationMaterialDraft": {
     readonly id?: string;
@@ -841,6 +842,13 @@ export interface ApiSchemas {
     readonly monthly_cap_usd?: number;
     readonly spent_this_month_usd?: number;
     readonly token: string;
+  };
+  "JobAdInstructions": {
+    readonly instructions: readonly ({
+      readonly text: string;
+      readonly words: readonly (string)[];
+      readonly hidden: boolean;
+    })[];
   };
   "KnowledgeBase": {
     readonly id: string;
