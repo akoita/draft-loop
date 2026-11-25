@@ -47,6 +47,10 @@ requirement extraction reads, so no draft, kit or interview guide follows them
 `ai_instructions` from `get_job_text`. A real request from the employer, such
 as a word that shows the candidate read the ad, is theirs to add.
 
+**Check my letter** names any word a job ad asked AI tools to add that turns up
+in the candidate's own letter (`planted_word`, #3337), so a letter written with
+another tool does not give itself away.
+
 ## How to test it
 
 - Upload a fictional Markdown file with a heading, add a rule, and check the
@@ -55,8 +59,9 @@ as a word that shows the candidate read the ad, is theirs to add.
   `apps/api/src/content-screening-routes.test.ts`,
   `apps/web/src/screening.test.tsx` and
   `packages/ingestion/src/html-hidden-content.test.ts`,
-  `packages/ingestion/src/planted-instructions.test.ts` and
-  `apps/api/src/job-ad-instructions.test.ts`.
+  `packages/ingestion/src/planted-instructions.test.ts`,
+  `apps/api/src/job-ad-instructions.test.ts` and
+  `packages/application/src/planted-word-check.test.ts`.
 
 ## Surfaces
 

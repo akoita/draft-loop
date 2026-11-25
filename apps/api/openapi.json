@@ -5946,7 +5946,8 @@
                     "heavy_dashes",
                     "list_of_three",
                     "mirrored_openings",
-                    "word_count"
+                    "word_count",
+                    "planted_word"
                   ]
                 },
                 "paragraph": {
@@ -16393,7 +16394,8 @@
                     "heavy_dashes",
                     "list_of_three",
                     "mirrored_openings",
-                    "word_count"
+                    "word_count",
+                    "planted_word"
                   ]
                 },
                 "paragraph": {

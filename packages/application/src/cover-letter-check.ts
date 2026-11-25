@@ -33,6 +33,7 @@ import {
   coverLetterSentences,
 } from "./cover-letter-claims.js";
 import type { PickedCoverLetterFact } from "./cover-letter-facts.js";
+import { plantedWordFindings } from "./planted-word-check.js";
 import { emptySuperlatives, writingTells } from "./writing-tells.js";
 
 /** Kept here too for the check's callers; the list lives with the other writing rules. */
@@ -294,6 +295,8 @@ export interface CoverLetterCheckInput {
   };
   /** The job ad's own text, for echoes: role, responsibilities, requirements and priorities. */
   readonly jobTexts: readonly string[];
+  /** Words the job ad asked AI tools to add (#3337); none when unset. */
+  readonly plantedWords?: readonly string[];
 }
 
 export type CoverLetterCheckFindings = Pick<
@@ -350,6 +353,18 @@ export async function checkCoverLetterText(
         facts: [...target.facts],
       })),
     },
-    wording: coverLetterWording(input.letter, input.jobTexts),
+    wording: [
+      ...plantedWordFindings(
+        sentences,
+        input.plantedWords ?? [],
+        input.facts.map((fact) => fact.value),
+      ).map(({ word, paragraph, sentence }) => ({
+        code: "planted_word" as const,
+        paragraph,
+        sentence,
+        match: word.slice(0, 400),
+      })),
+      ...coverLetterWording(input.letter, input.jobTexts),
+    ],
   };
 }

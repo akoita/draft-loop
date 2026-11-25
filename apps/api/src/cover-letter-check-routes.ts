@@ -25,7 +25,7 @@ import type { ResearchBriefStore } from "@draft-loop/storage/research-briefs";
 import type { SavedApplicationMaterialStore } from "@draft-loop/storage/saved-application-material";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-
+import { applicationJob } from "./application-lifecycle-routes.js";
 import {
   type ApplicationMaterialParts,
   errors,
@@ -153,6 +153,14 @@ export function registerCoverLetterCheckRoutes(
         requirements: record.requirements,
         targets,
         jobTexts,
+        // Words the job ad asked AI tools to add, from its text and what its page hid (#3337).
+        plantedWords: [
+          ...new Set(
+            (applicationJob(application).aiInstructions?.instructions ?? []).flatMap(
+              (instruction) => instruction.words,
+            ),
+          ),
+        ],
       };
 
       let skip: CoverLetterCheckSkipReason | undefined;
