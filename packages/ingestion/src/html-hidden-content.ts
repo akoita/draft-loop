@@ -76,7 +76,8 @@ const hiddenClasses = new Set([
   "screen-reader-text",
 ]);
 
-const tagPattern = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)\b((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
+// The name ends where a space, a slash or the tag's end follows, so no input backtracks into it.
+const tagPattern = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)(?=[\s/>])((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
 
 interface OpenElement {
   readonly name: string;
@@ -116,7 +117,7 @@ function styleDeclarations(style: string): Map<string, string> {
 }
 
 function isTinyFontSize(value: string): boolean {
-  const match = /^(-?\d*\.?\d+)\s*(px|pt|em|rem|%)?$/u.exec(value);
+  const match = /^(-?(?:\d+(?:\.\d*)?|\.\d+))\s*(px|pt|em|rem|%)?$/u.exec(value);
   if (match === null) return false;
   const size = Number(match[1]);
   switch (match[2]) {
@@ -148,7 +149,7 @@ function parseColour(value: string): readonly [number, number, number, number] |
     return [r ?? 0, g ?? 0, b ?? 0, a === undefined ? 1 : a / 255];
   }
   const rgb =
-    /^rgba?\(\s*(\d+(?:\.\d+)?)[\s,]+(\d+(?:\.\d+)?)[\s,]+(\d+(?:\.\d+)?)(?:\s*[,/]\s*(\d*\.?\d+)(%)?)?\s*\)$/u.exec(
+    /^rgba?\(\s*(\d+(?:\.\d+)?)[\s,]+(\d+(?:\.\d+)?)[\s,]+(\d+(?:\.\d+)?)(?:\s*[,/]\s*(\d+(?:\.\d*)?|\.\d+)(%)?)?\s*\)$/u.exec(
       colour,
     );
   if (rgb !== null) {
@@ -207,7 +208,9 @@ function hiddenReason(
     display === "none" ||
     visibility === "hidden" ||
     visibility === "collapse" ||
-    (opacity !== undefined && /^\d*\.?\d+$/u.test(opacity) && Number(opacity) < 0.1) ||
+    (opacity !== undefined &&
+      /^(?:\d+(?:\.\d*)?|\.\d+)$/u.test(opacity) &&
+      Number(opacity) < 0.1) ||
     (fontSize !== undefined && isTinyFontSize(fontSize))
   ) {
     return { reason: "style", background };
