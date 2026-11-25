@@ -3766,6 +3766,53 @@ input[type="text"].workspace-title-input {
   font-size: var(--text-sm);
 }
 
+/* Instructions in the job ad written for AI tools, left out of what the models read (#3336). */
+.job-ai-notice {
+  margin: var(--space-3) 0 0;
+  border: 1px solid var(--amber-line);
+  border-left-width: 4px;
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--amber-wash);
+  color: var(--text-1);
+  font-size: var(--text-sm);
+}
+
+.job-ai-notice-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.job-ai-notice-copy {
+  margin: var(--space-1) 0 0;
+  color: var(--text-2);
+}
+
+.job-ai-notice-list {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.job-ai-notice-item {
+  display: grid;
+  gap: 2px;
+  margin: var(--space-2) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.job-ai-notice-where {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.job-ai-notice-words {
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
 /* The first copy of a job page, kept when a later read differed (#2592). */
 .job-earlier {
   margin: var(--space-3) 0 0;

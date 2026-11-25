@@ -261,6 +261,10 @@ function applicationJobResult(
       earlier === null
         ? null
         : { ...earlier, text: earlier.text.slice(0, maximumApplicationJobTextLength) },
+    // An older server sends no AI instructions; the screens then show no notice (#3336).
+    ...((job.aiInstructions?.instructions.length ?? 0) === 0
+      ? {}
+      : { aiInstructions: job.aiInstructions?.instructions }),
   };
 }
 

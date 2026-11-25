@@ -32,6 +32,7 @@ export const frenchHelpGuide: HelpGuide = {
       paragraphs: [
         "Sur l’accueil, choisissez Nouvelle candidature. Donnez un nom à l’offre, collez sa description ou son lien, puis choisissez Créer la candidature.",
         "Redakloop liste les exigences de l’offre. Relisez-les et corrigez celles qui semblent fausses, car le brouillon est écrit en fonction d’elles.",
+        "Certaines offres contiennent des consignes destinées aux outils d’écriture par IA, comme un mot à ajouter, souvent dans un texte invisible. Redakloop les retire de ce que lisent ses modèles et les liste dans l’onglet Offre. Si l’une d’elles est une vraie demande de l’employeur, ajoutez-la vous-même.",
         "Pour l’instant, Redakloop est réglé et testé sur les métiers du logiciel et de la tech. Il fonctionne aussi pour d’autres métiers, dans les soins, la vente, l’enseignement ou l’artisanat : relisez ces brouillons un peu plus attentivement. La prise en charge de plus de métiers est prévue dans notre feuille de route.",
       ],
       keywords: [
@@ -45,6 +46,8 @@ export const frenchHelpGuide: HelpGuide = {
         "métier",
         "profession",
         "secteur",
+        "texte caché",
+        "consignes pour l’IA",
       ],
       screenshot: {
         alt: "La fenêtre Nouvelle candidature avec le nom du poste et l’annonce collée.",

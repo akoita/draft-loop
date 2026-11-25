@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
-import { expandLigatures } from "@draft-loop/ingestion";
+import { expandLigatures, withoutPlantedInstructions } from "@draft-loop/ingestion";
 import type { OpportunityBriefSource } from "@draft-loop/schemas";
 import type { ApplicationJobSource } from "@draft-loop/schemas/application";
 import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
@@ -150,7 +150,8 @@ export async function extractApplicationBrief(
           status: "available",
           mediaType: "text/plain",
           checksum,
-          text: expandLigatures(text),
+          // Instructions written for AI tools never reach the model (#3336).
+          text: expandLigatures(withoutPlantedInstructions(text)),
         },
       ],
       ...(command.signal === undefined ? {} : { signal: command.signal }),

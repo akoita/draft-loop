@@ -9,7 +9,10 @@ import {
   ingestUrl,
   type UrlFetcher,
 } from "@draft-loop/ingestion";
-import { applicationPastedJobMaxLength } from "@draft-loop/schemas/application";
+import {
+  type ApplicationJobPage,
+  applicationPastedJobMaxLength,
+} from "@draft-loop/schemas/application";
 import type { FastifyBaseLogger } from "fastify";
 
 import {
@@ -36,9 +39,7 @@ export interface JobPageFetch {
    * The page's text and where and when it was fetched, or undefined when nothing was read. The
    * text is bounded to what an application keeps as pasted text.
    */
-  readonly page: () =>
-    | { readonly text: string; readonly finalUrl: string; readonly fetchedAt: string }
-    | undefined;
+  readonly page: () => ApplicationJobPage | undefined;
   /** The fetcher's first issue code once the fetch has ended, or undefined. */
   readonly issueCode: () => IngestionIssueCode | undefined;
 }
@@ -133,7 +134,17 @@ export function jobPageFetch(
       const provenance = source?.url ?? source?.source.url;
       const text = source?.text.trim() ?? "";
       if (provenance === undefined || text === "") return undefined;
-      return { text, finalUrl: provenance.finalUrl, fetchedAt: provenance.fetchedAt };
+      // What the page hid from its reader, kept so the Job tab can show it (#3336).
+      const hiddenText = (source?.hiddenText ?? [])
+        .map(({ reason, text: hidden }) => ({ reason, text: hidden.trim() }))
+        .filter(({ text: hidden }) => hidden !== "")
+        .slice(0, 20);
+      return {
+        text,
+        finalUrl: provenance.finalUrl,
+        fetchedAt: provenance.fetchedAt,
+        ...(hiddenText.length === 0 ? {} : { hiddenText }),
+      };
     },
     issueCode: () => result?.issues[0]?.code,
   };

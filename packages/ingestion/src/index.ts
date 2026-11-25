@@ -32,6 +32,13 @@ export {
   type VisibleHtml,
 } from "./html-hidden-content.js";
 export { expandLigatures, looksGarbled } from "./job-text-quality.js";
+export {
+  findPlantedInstructions,
+  type PlantedInstruction,
+  type PlantedInstructionCue,
+  plantedWords,
+  withoutPlantedInstructions,
+} from "./planted-instructions.js";
 
 export const supportedMediaTypes = [
   "text/plain",

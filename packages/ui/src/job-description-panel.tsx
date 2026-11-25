@@ -9,6 +9,7 @@ import { t } from "@lingui/core/macro";
 
 import { type JSX, useEffect, useRef, useState } from "react";
 import type { ApplicationJobResult } from "./application-job-contract.js";
+import { JobAdInstructionsNotice } from "./job-ad-instructions-notice.js";
 import { formatDate } from "./locale-format.js";
 import type { ReviewWorkPanelProps } from "./review-work-tabs.js";
 
@@ -182,6 +183,9 @@ export function JobDescriptionView({
           ) : null}
         </div>
       </div>
+      {load.kind === "ready" ? (
+        <JobAdInstructionsNotice instructions={load.job.aiInstructions ?? []} />
+      ) : null}
       {load.kind === "loading" ? (
         <p className="job-status" role="status">{t`Reading the job description…`}</p>
       ) : load.kind === "failed" ? (
