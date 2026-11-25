@@ -35,13 +35,20 @@ quote. A flagged or unscreened source is quarantined, and a run that needs it
 answers `409 material_quarantined`. An owner or admin releases one result with
 a short reason that is not candidate material.
 
+**Hidden page text** is left out when a job page is imported. Text a reader
+cannot see on the page, such as white, zero-size, off-screen or `display: none`
+text, never reaches the job ad's text, so an instruction hidden there for AI
+tools is not read by the models. The import keeps a short list of what it left
+out (#3334); showing it on the Job tab is planned in #3336.
+
 ## How to test it
 
 - Upload a fictional Markdown file with a heading, add a rule, and check the
   next run's material in the [local server stack](../operations/local-server-stack.md).
 - Focused tests: `apps/api/src/sensitivity-rules-routes.test.ts`,
-  `apps/api/src/content-screening-routes.test.ts` and
-  `apps/web/src/screening.test.tsx`.
+  `apps/api/src/content-screening-routes.test.ts`,
+  `apps/web/src/screening.test.tsx` and
+  `packages/ingestion/src/html-hidden-content.test.ts`.
 
 ## Surfaces
 
@@ -59,6 +66,9 @@ a short reason that is not candidate material.
   on its own.
 - A release covers one screening result; a newer result answers
   `409 result_superseded`.
+- Hidden page text is found from the page's own markup and inline styles only.
+  Text hidden by a stylesheet class other than the common screen-reader ones is
+  kept; screening still reads it.
 
 ## Related
 

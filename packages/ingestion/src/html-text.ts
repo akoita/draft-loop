@@ -1,3 +1,9 @@
+import {
+  type HiddenHtmlText,
+  removeHiddenHtml,
+  withoutInactiveHtml,
+} from "./html-hidden-content.js";
+
 const namedEntities: Readonly<Record<string, string>> = {
   amp: "&",
   apos: "'",
@@ -35,13 +41,22 @@ const blockBoundaryTags =
   /<\/?(address|article|aside|blockquote|br|dd|div|dl|dt|footer|header|hr|main|nav|ol|p|pre|section|table|td|th|tr|ul)\b[^>]*>/gi;
 
 /**
+ * The fragment without the elements a reader cannot see (#3334); what they held is added to
+ * `hidden` when it is given.
+ */
+export function withoutHiddenHtml(html: string, hidden?: HiddenHtmlText[]): string {
+  const visible = removeHiddenHtml(html);
+  hidden?.push(...visible.hidden);
+  return visible.html;
+}
+
+/**
  * Converts an HTML fragment to readable Markdown-flavoured text: headings become `#` lines, list
  * items become `- ` bullets, block elements become line breaks and every other tag is dropped.
+ * Elements a reader cannot see are dropped with their text, and reported in `hidden` when given.
  */
-export function htmlFragmentToMarkdown(html: string): string {
-  const withoutInactive = html
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
+export function htmlFragmentToMarkdown(html: string, hidden?: HiddenHtmlText[]): string {
+  const withoutInactive = withoutHiddenHtml(withoutInactiveHtml(html), hidden);
   const structured = withoutInactive
     .replace(/<h([1-6])\b[^>]*>/gi, (_match, level: string) => `\n\n${"#".repeat(Number(level))} `)
     .replace(/<\/h[1-6]\s*>/gi, "\n\n")
