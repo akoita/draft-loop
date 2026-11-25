@@ -91,6 +91,10 @@ function wordingLabel(code: CoverLetterWordingCode, match: string | null): strin
       const words = match ?? "";
       return t`Length: ${words} words; aim for 250 to 350`;
     }
+    case "planted_word": {
+      const word = match ?? "";
+      return t`"${word}" is a word the job ad asked AI tools to add. Keep it only if you mean it.`;
+    }
   }
 }
 

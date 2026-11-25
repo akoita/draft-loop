@@ -48,6 +48,7 @@ export const coverLetterWordingCodes = [
   "list_of_three",
   "mirrored_openings",
   "word_count",
+  "planted_word",
 ] as const;
 
 export const coverLetterClaimFindingSchema = z

@@ -524,7 +524,7 @@ export interface ApiSchemas {
       })[];
     };
     readonly wording: readonly ({
-      readonly code: "job_ad_echo" | "empty_superlative" | "stock_phrase" | "heavy_dashes" | "list_of_three" | "mirrored_openings" | "word_count";
+      readonly code: "job_ad_echo" | "empty_superlative" | "stock_phrase" | "heavy_dashes" | "list_of_three" | "mirrored_openings" | "word_count" | "planted_word";
       readonly paragraph?: number;
       readonly sentence?: string;
       readonly match?: string;

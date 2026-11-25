@@ -164,6 +164,10 @@ msgstr " : son ébauche devient celle que vous approuvez et exportez. Aucune ex�
 msgid "'s reasoning level is above its default, so it writes more output tokens than this scenario assumes. Raise its output tokens to match; no multiplier is shown until real runs have measured one."
 msgstr " a un niveau de raisonnement supérieur à sa valeur par défaut : il écrit donc plus de jetons de sortie que ce scénario ne le prévoit. Augmentez ses jetons de sortie en conséquence ; aucun multiplicateur n’est affiché tant que des exécutions réelles n’en ont pas mesuré un."
 
+#: packages/ui/src/cover-letter-check-panel.tsx
+msgid "\"{word}\" is a word the job ad asked AI tools to add. Keep it only if you mean it."
+msgstr "« {word} » est un mot que l'offre demande aux outils d'IA d'ajouter. Gardez-le seulement si vous le voulez vraiment."
+
 #: packages/ui/src/model-profile-picker.tsx
 msgid "(default)"
 msgstr "(par défaut)"
@@ -4565,8 +4569,8 @@ msgid "I reviewed these destinations, data categories, retention preference, and
 msgstr "J’ai vérifié ces destinations, catégories de données, préférence de conservation et limites."
 
 #: packages/ui/src/job-ad-instructions-notice.tsx
-msgid "If one is a real request from the employer, such as a word to show you read the ad, add it yourself when you write."
-msgstr "Si l'une d'elles est une vraie demande de l'employeur, par exemple un mot pour montrer que vous avez lu l'offre, ajoutez-la vous-même en écrivant."
+msgid "If one is a real request from the employer, such as a word to show you read the ad, add it yourself when you write. Check my letter points out these words in your letter."
+msgstr "Si l'une d'elles est une vraie demande de l'employeur, par exemple un mot pour montrer que vous avez lu l'offre, ajoutez-la vous-même en écrivant. Vérifier ma lettre signale ces mots dans votre lettre."
 
 #: apps/web/src/interview-guide-model.ts
 msgid "If you read one thing"

@@ -44,7 +44,7 @@ export function JobAdInstructionsNotice({
           </li>
         ))}
       </ul>
-      <p className="job-ai-notice-copy">{t`If one is a real request from the employer, such as a word to show you read the ad, add it yourself when you write.`}</p>
+      <p className="job-ai-notice-copy">{t`If one is a real request from the employer, such as a word to show you read the ad, add it yourself when you write. Check my letter points out these words in your letter.`}</p>
     </section>
   );
 }
