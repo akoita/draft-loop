@@ -249,6 +249,49 @@ function plainText(html: string): string {
     .trim();
 }
 
+/**
+ * Removes comments and `<script>` and `<style>` elements with their content, by scanning for their
+ * ends rather than with a regular expression, so the work stays linear on any input. A comment or
+ * element left open runs to the end of the input and is removed with it.
+ */
+export function withoutInactiveHtml(html: string): string {
+  const lower = html.toLowerCase();
+  let output = "";
+  let from = 0;
+  let at = lower.indexOf("<", from);
+  while (at >= 0) {
+    let end = -1;
+    if (lower.startsWith("<!--", at)) {
+      const close = lower.indexOf("-->", at + 4);
+      end = close < 0 ? html.length : close + 3;
+    } else {
+      const name = /^<(script|style)(?=[\s/>])/u.exec(lower.slice(at, at + 8))?.[1];
+      if (name !== undefined) end = inactiveElementEnd(lower, at, name);
+    }
+    if (end < 0) {
+      at = lower.indexOf("<", at + 1);
+      continue;
+    }
+    output += html.slice(from, at);
+    from = end;
+    at = lower.indexOf("<", from);
+  }
+  return output + html.slice(from);
+}
+
+/** Where a script or style element that opens at `start` ends, closing tag included. */
+function inactiveElementEnd(lower: string, start: number, name: string): number {
+  const closing = `</${name}`;
+  let at = lower.indexOf(closing, start);
+  while (at >= 0) {
+    let after = at + closing.length;
+    while (after < lower.length && /\s/u.test(lower[after] ?? "")) after += 1;
+    if (lower[after] === ">") return after + 1;
+    at = lower.indexOf(closing, at + closing.length);
+  }
+  return lower.length;
+}
+
 /** Removes the hidden elements of an HTML fragment and reports what they held. */
 export function removeHiddenHtml(html: string): VisibleHtml {
   const stack: OpenElement[] = [];

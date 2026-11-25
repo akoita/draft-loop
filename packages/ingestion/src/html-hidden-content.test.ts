@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { maxReportedHiddenTexts, removeHiddenHtml } from "./html-hidden-content.js";
+import {
+  maxReportedHiddenTexts,
+  removeHiddenHtml,
+  withoutInactiveHtml,
+} from "./html-hidden-content.js";
 import { htmlFragmentToMarkdown } from "./html-text.js";
 import { ingestUrl } from "./index.js";
 
@@ -173,5 +177,24 @@ describe("hidden text in job page import", () => {
     );
 
     expect(result.source?.hiddenText).toBeUndefined();
+  });
+});
+
+describe("withoutInactiveHtml", () => {
+  it("removes comments, scripts and styles, closed or left open", () => {
+    expect(
+      withoutInactiveHtml(
+        '<p>A</p><!-- note --><SCRIPT type="x">if (a < b) {}</script ><style>p{}</style><p>B</p><scripted>C</scripted>',
+      ),
+    ).toBe("<p>A</p><p>B</p><scripted>C</scripted>");
+    expect(withoutInactiveHtml("<p>A</p><!-- open")).toBe("<p>A</p>");
+    expect(withoutInactiveHtml("<p>A</p><script>open </scriptx> still")).toBe("<p>A</p>");
+  });
+
+  it("stays fast on many unclosed comment starts", () => {
+    const started = Date.now();
+    withoutInactiveHtml("<!--".repeat(50_000));
+    withoutInactiveHtml("<script ".repeat(50_000));
+    expect(Date.now() - started).toBeLessThan(1000);
   });
 });

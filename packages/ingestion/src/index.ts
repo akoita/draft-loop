@@ -5,7 +5,7 @@ import { extname, isAbsolute, join, relative } from "node:path";
 import { inflateRawSync } from "node:zlib";
 
 import { markDocxHeadings } from "./docx-headings.js";
-import type { HiddenHtmlText } from "./html-hidden-content.js";
+import { type HiddenHtmlText, withoutInactiveHtml } from "./html-hidden-content.js";
 import { decodeHtmlEntities, markHtmlHeadings, withoutHiddenHtml } from "./html-text.js";
 import { extractJobPostingText } from "./job-posting-json-ld.js";
 import { unsafeLiteralHostname } from "./network-address.js";
@@ -448,10 +448,7 @@ function hasInvalidPdfExtractedText(text: string): boolean {
 }
 
 function extractHtml(text: string, hidden?: HiddenHtmlText[]): string {
-  const withoutScripts = text
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
-  const withoutInactiveContent = withoutHiddenHtml(withoutScripts, hidden);
+  const withoutInactiveContent = withoutHiddenHtml(withoutInactiveHtml(text), hidden);
   const withBoundaries = markHtmlHeadings(withoutInactiveContent).replace(
     /<\/?(address|article|aside|blockquote|br|dd|div|dl|dt|footer|header|hr|li|main|nav|ol|p|pre|section|table|td|th|tr|ul)\b[^>]*>/gi,
     "\n",
