@@ -6279,6 +6279,10 @@ msgstr "Pas encore utilisées"
 msgid "Not yet generated"
 msgstr "Pas encore généré"
 
+#: apps/web/src/landing.tsx
+msgid "Not your account?"
+msgstr "Ce n’est pas votre compte ?"
+
 #: apps/web/src/operator-model.ts
 msgid "Note"
 msgstr "Note"
@@ -9040,6 +9044,10 @@ msgid "Sign in on Home, under Settings."
 msgstr "Connectez-vous dans Accueil, sous Réglages."
 
 #: apps/web/src/oidc-sign-in.tsx
+msgid "Sign in to pick up where you left off."
+msgstr "Connectez-vous pour reprendre là où vous en étiez."
+
+#: apps/web/src/oidc-sign-in.tsx
 msgid "Sign in with the email address your invitation was sent to."
 msgstr "Connectez-vous avec l’adresse e-mail à laquelle votre invitation a été envoyée."
 
@@ -11684,6 +11692,10 @@ msgstr "Semaine par semaine"
 #: apps/web/src/operator-funnel.tsx
 msgid "Week of"
 msgstr "Semaine du"
+
+#: apps/web/src/landing.tsx
+msgid "Welcome back"
+msgstr "Content de vous revoir"
 
 #: packages/ui/src/cover-letter-annotated-model.ts
 msgid "What about this employer made you apply? Name the one thing you would mention in an interview."

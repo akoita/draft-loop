@@ -96,6 +96,11 @@ had a password, or failed; call it again for the failures.
 | Has an account         | Nothing is stored and no mail is sent               | Goes into the app; a new tab opens it directly while the provider's session lasts       |
 | Invite withdrawn       | Joins like a new visitor                            | Same as a new visitor                                                                   |
 
+A browser that has reached an account keeps a flag, never an email or token,
+after sign-out. Its landing page then says "Welcome back" and folds the
+waitlist behind a "Not your account?" link. Deleting the account clears the
+flag.
+
 The waitlist answers every case the same way, so it reveals nobody. A wrong
 code, another email's code or a used code is refused, and five refusals make
 the sign-in wait 15 minutes.

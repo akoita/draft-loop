@@ -6284,6 +6284,10 @@ msgstr ""
 msgid "Not yet generated"
 msgstr ""
 
+#: apps/web/src/landing.tsx
+msgid "Not your account?"
+msgstr ""
+
 #: apps/web/src/operator-model.ts
 msgid "Note"
 msgstr ""
@@ -9045,6 +9049,10 @@ msgid "Sign in on Home, under Settings."
 msgstr ""
 
 #: apps/web/src/oidc-sign-in.tsx
+msgid "Sign in to pick up where you left off."
+msgstr ""
+
+#: apps/web/src/oidc-sign-in.tsx
 msgid "Sign in with the email address your invitation was sent to."
 msgstr ""
 
@@ -11688,6 +11696,10 @@ msgstr ""
 
 #: apps/web/src/operator-funnel.tsx
 msgid "Week of"
+msgstr ""
+
+#: apps/web/src/landing.tsx
+msgid "Welcome back"
 msgstr ""
 
 #: packages/ui/src/cover-letter-annotated-model.ts

@@ -394,6 +394,8 @@ export function signedInClient(
    * beta sign-up with an invite code (#2503). Without it, such a person is signed out.
    */
   onNoAccount?: () => void,
+  /** Called after a call the API answered, which proves the sign-in has an account. */
+  onAccount?: () => void,
 ): ApiClient {
   const noAccount = () =>
     onNoAccount === undefined ? onEnd(signInNotices().notMember, true) : onNoAccount();
@@ -407,6 +409,12 @@ export function signedInClient(
   }
 
   async function attempt<T>(call: (client: ApiClient) => Promise<T>): Promise<T> {
+    const answer = await attemptOnce(call);
+    onAccount?.();
+    return answer;
+  }
+
+  async function attemptOnce<T>(call: (client: ApiClient) => Promise<T>): Promise<T> {
     const token = await currentToken();
     try {
       return await call(createClient(token));

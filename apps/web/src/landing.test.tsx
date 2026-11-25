@@ -136,4 +136,32 @@ describe("the landing page", () => {
     expect(open).toContain("Join the waitlist");
     expect(open).toContain("Sign in");
   });
+
+  it("greets a returning member with Sign in and folds the waitlist to a link", () => {
+    const html = renderToStaticMarkup(<OidcSignIn waitlist returning onSignIn={() => {}} />);
+
+    expect(html).toContain("Welcome back");
+    expect(html).toContain("Sign in to pick up where you left off.");
+    expect(html).not.toContain("Already invited?");
+    expect(html).toContain("Not your account?");
+    expect(html).toMatch(/<section aria-labelledby="landing-waitlist" hidden="">/u);
+  });
+
+  it("opens the waitlist for a returning browser that follows a confirmation link", () => {
+    const html = renderToStaticMarkup(
+      <Landing returning confirmToken="token" signIn={<button type="button">Sign in</button>} />,
+    );
+
+    expect(html).toContain("Welcome back");
+    expect(html).not.toContain("Not your account?");
+    expect(html).toMatch(/<section aria-labelledby="landing-waitlist">/u);
+  });
+
+  it("shows a new visitor the invitation text and the open waitlist", () => {
+    const html = renderToStaticMarkup(<OidcSignIn waitlist onSignIn={() => {}} />);
+
+    expect(html).toContain("Already invited?");
+    expect(html).not.toContain("Not your account?");
+    expect(html).toMatch(/<section aria-labelledby="landing-waitlist">/u);
+  });
 });
