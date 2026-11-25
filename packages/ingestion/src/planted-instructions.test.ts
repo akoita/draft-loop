@@ -141,3 +141,17 @@ describe("withoutPlantedInstructions", () => {
     expect(withoutPlantedInstructions(ad)).toBe(ad);
   });
 });
+
+describe("splitSentences on long punctuation runs", () => {
+  it("stays fast and splits only before white space", () => {
+    const started = Date.now();
+    expect(splitSentences(`${"!".repeat(100_000)}x`)).toHaveLength(1);
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(splitSentences('One!! "Two?" Three…\n\nFour').map((s) => s.text)).toEqual([
+      "One!!",
+      '"Two?"',
+      "Three…",
+      "Four",
+    ]);
+  });
+});

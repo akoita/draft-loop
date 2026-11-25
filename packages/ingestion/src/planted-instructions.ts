@@ -134,7 +134,6 @@ interface Sentence {
 /** The sentences of a text with their offsets: split after . ! ? and at line breaks. */
 export function splitSentences(text: string): Sentence[] {
   const sentences: Sentence[] = [];
-  const boundary = /[.!?…]+["'”’»)]*(?=\s)|\n+/gu;
   let start = 0;
   const push = (end: number) => {
     const raw = text.slice(start, end);
@@ -148,14 +147,35 @@ export function splitSentences(text: string): Sentence[] {
       });
     }
   };
-  for (const match of text.matchAll(boundary)) {
-    const end = match.index + (match[0].startsWith("\n") ? 0 : match[0].length);
-    push(end);
-    start = match.index + match[0].length;
+  // One pass over the text, so a long run of punctuation costs no more than its length.
+  let index = 0;
+  while (index < text.length) {
+    const character = text[index] ?? "";
+    if (character === "\n") {
+      let after = index;
+      while (text[after] === "\n") after += 1;
+      push(index);
+      start = after;
+      index = after;
+    } else if (sentenceEnds.has(character)) {
+      let after = index;
+      while (sentenceEnds.has(text[after] ?? "")) after += 1;
+      while (sentenceClosers.has(text[after] ?? "")) after += 1;
+      if (/\s/u.test(text[after] ?? "")) {
+        push(after);
+        start = after;
+      }
+      index = after;
+    } else {
+      index += 1;
+    }
   }
   push(text.length);
   return sentences;
 }
+
+const sentenceEnds = new Set([".", "!", "?", "…"]);
+const sentenceClosers = new Set(['"', "'", "”", "’", "»", ")"]);
 
 function cueOf(sentence: string): PlantedInstructionCue | undefined {
   const folded = foldForContentScreening(sentence);
