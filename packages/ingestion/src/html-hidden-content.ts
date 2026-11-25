@@ -77,7 +77,8 @@ const hiddenClasses = new Set([
 ]);
 
 // The name ends where a space, a slash or the tag's end follows, so no input backtracks into it.
-const tagPattern = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)(?=[\s/>])((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
+// No run inside a tag crosses a "<", so a scan that finds no ">" stops at the next tag's start.
+const tagPattern = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)(?=[\s/>])((?:[^<>"']|"[^<"]*"|'[^<']*')*)>/g;
 
 interface OpenElement {
   readonly name: string;
@@ -232,10 +233,18 @@ function hiddenReason(
   return { background };
 }
 
-/** The text of a fragment: tags become spaces, and no angle bracket is left to read as markup. */
+/** The text of a fragment: the runs between its tags, decoded, with no angle bracket left. */
 function plainText(html: string): string {
-  return decodeHtmlEntities(html.replace(tagPattern, " ").replace(/[<>]/gu, " "))
-    .replace(/[<>]/gu, " ")
+  const runs: string[] = [];
+  let from = 0;
+  for (const match of html.matchAll(tagPattern)) {
+    runs.push(html.slice(from, match.index));
+    from = match.index + match[0].length;
+  }
+  runs.push(html.slice(from));
+  return [...decodeHtmlEntities(runs.join(" "))]
+    .map((character) => (character === "<" || character === ">" ? " " : character))
+    .join("")
     .replace(/\s+/gu, " ")
     .trim();
 }
